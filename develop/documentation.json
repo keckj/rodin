@@ -1,1 +1,1 @@
-{"attempt": 1, "color": "d49b16", "commit": "6d46db65ed39127826a03093c7ebc231eb422f3a", "label": "Documentation", "labelColor": "555", "message": "running", "run": "42493247725", "schemaVersion": 1, "style": "flat"}
+{"attempt": 1, "color": "c62828", "commit": "6d46db65ed39127826a03093c7ebc231eb422f3a", "label": "Documentation", "labelColor": "555", "message": "failing", "run": "42493247725", "schemaVersion": 1, "style": "flat", "verified_status": "failure"}
