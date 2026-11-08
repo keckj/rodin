@@ -5,7 +5,7 @@
   <title>Rodin::Math::LinearSystem class | Rodin</title>
   <link rel="stylesheet" href="mcss-22c93d2587ab.css" />
   <link rel="stylesheet" href="rodin-62701ba7f0b9.css" />
-  <link rel="stylesheet" href="rodin-theme-bc48e2782da9.css" />
+  <link rel="stylesheet" href="rodin-theme-1337632f765f.css" />
   <link rel="icon" href="favicon-monogram.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#18191c" />
@@ -185,7 +185,14 @@ $ b $
 <span class="k">class</span><span class="w"> </span><span class="nc">LinearSystem</span><span class="o">&lt;</span>
 <span class="w">  </span><span class="o">::</span><span class="n">Mat</span><span class="p">,</span>
 <span class="w">  </span><span class="o">::</span><span class="n">Vec</span><span class="o">&gt;</span><span class="p">;</span>
-</pre></details></td><td>Specialization of LinearSystem for PETSc objects (Mat and Vec).</td></tr><tr><td><a href="class_rodin_1_1_math_1_1_linear_system_3_01_math_1_1_matrix_3_01_matrix_scalar_01_4_00_01_math_15ff6377f4abbe0f99737ee6c6a9ae9b0.html"><code>Math::Matrix&lt;MatrixScalar&gt;, Math::Vector&lt;VectorScalar&gt;</code></a><details><summary>Full specialization</summary><pre class="m-code rodin-declaration"><span class="k">template</span><span class="w"> </span><span class="o">&lt;</span>
+</pre></details></td><td>Specialization of LinearSystem for PETSc objects (Mat and Vec).</td></tr><tr><td><a href="class_rodin_1_1_math_1_1_linear_system_3_1_1_rodin_1_1_kokkos_1_1_sparse_matrix_3_01_matrix_scal1cca3d11c0af662e84df1c77176d32a4.html"><code>::Rodin::Kokkos::SparseMatrix&lt;MatrixScalar, …&gt;, Math::Vector&lt;VectorScalar&gt;</code></a><details><summary>Full specialization</summary><pre class="m-code rodin-declaration"><span class="k">template</span><span class="w"> </span><span class="o">&lt;</span>
+<span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">MatrixScalar</span><span class="p">,</span>
+<span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">Backend</span><span class="p">,</span>
+<span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">VectorScalar</span><span class="o">&gt;</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LinearSystem</span><span class="o">&lt;</span>
+<span class="w">  </span><span class="o">::</span><span class="n">Rodin</span><span class="o">::</span><span class="nc">Kokkos</span><span class="o">::</span><a href="class_rodin_1_1_kokkos_1_1_sparse_matrix.html"><span class="nc">SparseMatrix</span></a><span class="o">&lt;</span><span class="w"> </span><span class="n">MatrixScalar</span><span class="p">,</span><span class="w"> </span><span class="nc">Backend</span><span class="w"> </span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">Math</span><span class="o">::</span><a href="class_rodin_1_1_math_1_1_vector.html"><span class="nc">Vector</span></a><span class="o">&lt;</span><span class="w"> </span><span class="n">VectorScalar</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="p">;</span>
+</pre></details></td><td>Linear system with a Kokkos::SparseMatrix operator and host vectors.</td></tr><tr><td><a href="class_rodin_1_1_math_1_1_linear_system_3_01_math_1_1_matrix_3_01_matrix_scalar_01_4_00_01_math_15ff6377f4abbe0f99737ee6c6a9ae9b0.html"><code>Math::Matrix&lt;MatrixScalar&gt;, Math::Vector&lt;VectorScalar&gt;</code></a><details><summary>Full specialization</summary><pre class="m-code rodin-declaration"><span class="k">template</span><span class="w"> </span><span class="o">&lt;</span>
 <span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">MatrixScalar</span><span class="p">,</span>
 <span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">VectorScalar</span><span class="o">&gt;</span>
 <span class="k">class</span><span class="w"> </span><a href="class_rodin_1_1_math_1_1_linear_system_3_01_math_1_1_matrix_3_01_matrix_scalar_01_4_00_01_math_15ff6377f4abbe0f99737ee6c6a9ae9b0.html#a2850820e01b07ba2d7b572aecb1a2657"><span class="nc">LinearSystem</span></a><span class="o">&lt;</span>
@@ -236,7 +243,7 @@ $ b $
     </div>
   </div>
 </div>
-<script src="search-v2-27108c4bc94e.js"></script>
+<script src="search-v2-af72fdebce49.js"></script>
 <script src="searchdata-v2.js" async="async"></script>
 <footer><nav>
   <div class="m-container">

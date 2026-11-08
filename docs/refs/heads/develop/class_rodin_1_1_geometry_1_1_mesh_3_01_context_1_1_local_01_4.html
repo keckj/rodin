@@ -5,7 +5,7 @@
   <title>Rodin::Geometry::Mesh&lt;Context::Local&gt; class | Rodin</title>
   <link rel="stylesheet" href="mcss-22c93d2587ab.css" />
   <link rel="stylesheet" href="rodin-62701ba7f0b9.css" />
-  <link rel="stylesheet" href="rodin-theme-bc48e2782da9.css" />
+  <link rel="stylesheet" href="rodin-theme-1337632f765f.css" />
   <link rel="icon" href="favicon-monogram.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#18191c" />
@@ -319,6 +319,10 @@ $ u $
               const <a href="group___rodin_types.html#gaaa7028d8cff093953627586709836fcb" class="m-doc">FlatSet</a>&lt;<a href="namespace_rodin_1_1_geometry.html#aad3269c6d75ba79d0d3bde699227ea90" class="m-doc">Attribute</a>&gt;&amp; attrs) -&gt; <a href="#a2a23c7c0c4e0da252b7bc0e13b6f81d8" class="m-doc">Mesh</a>&amp; <span class="m-label m-flat m-warning">virtual</span></span>
             </dt>
             <dd>Traces faces using a simple attribute mapping restricted to a set of cell attributes.</dd>
+            <dt>
+              <span class="m-doc-wrap-bumper">auto <a href="#ad9d0a621424d0f8536dc6606708671ef" class="m-doc">renumber</a>(</span><span class="m-doc-wrap">) const -&gt; <a href="#a2a23c7c0c4e0da252b7bc0e13b6f81d8" class="m-doc">Mesh</a></span>
+            </dt>
+            <dd>Returns a copy of the mesh whose numbering follows space.</dd>
             <dt>
               <span class="m-doc-wrap-bumper">auto <a href="#aa66d766684c6856007643ea05ce1479e" class="m-doc">asSubMesh</a>(</span><span class="m-doc-wrap">) -&gt; <a href="class_rodin_1_1_geometry_1_1_sub_mesh_base.html" class="m-doc">SubMeshBase</a>&amp; <span class="m-label m-flat m-warning">override</span></span>
             </dt>
@@ -1963,6 +1967,24 @@ $ D \longrightarrow d $
               </tfoot>
             </table>
           </div></section>
+          <section class="m-doc-details" id="ad9d0a621424d0f8536dc6606708671ef"><div>
+            <h3>
+              <div class="m-doc-template">
+                template&lt;&gt;
+              </div>
+              <span class="m-doc-wrap-bumper"><a href="#a2a23c7c0c4e0da252b7bc0e13b6f81d8" class="m-doc">Mesh</a> </span><span class="m-doc-wrap"><span class="m-doc-wrap-bumper"><a href="#ad9d0a621424d0f8536dc6606708671ef" class="m-doc-self">renumber</a>(</span><span class="m-doc-wrap">) const</span></span>
+            </h3>
+            <p>Returns a copy of the mesh whose numbering follows space.</p>
+            <table class="m-table m-fullwidth m-flat">
+              <tfoot>
+                <tr>
+                  <th style="width: 1%">Returns</th>
+                  <td>Renumbered copy of this mesh.</td>
+                </tr>
+              </tfoot>
+            </table>
+<p>The vertices are ordered along a Morton curve of their coordinates in the bounding box, so that vertices close in space get close indices. The polytopes of every other dimension held by the connectivity are then ordered by their smallest new vertex index, ties keeping their original order. Coordinates, vertex lists, orientations and attributes are carried over unchanged; only the indices change. Connectivity other than the polytope to vertex lists is not carried and must be computed again, and polytope transformations set on this mesh are not carried either: the copy has the affine geometry of its vertices.</p><p>Assembly on a device sums the contributions of the cells in index order, so a mesh whose cell and vertex numberings are unrelated, such as one produced by a mesher, scatters its contributions across the matrix. Renumbering it once before building the spaces restores the locality. The numbering seen by the user changes, so the method is never applied implicitly.</p>
+          </div></section>
           <section class="m-doc-details" id="aa66d766684c6856007643ea05ce1479e"><div>
             <h3>
               <div class="m-doc-template">
@@ -3030,7 +3052,7 @@ $ x: K \rightarrow \tau $
     </div>
   </div>
 </div>
-<script src="search-v2-27108c4bc94e.js"></script>
+<script src="search-v2-af72fdebce49.js"></script>
 <script src="searchdata-v2.js" async="async"></script>
 <footer><nav>
   <div class="m-container">

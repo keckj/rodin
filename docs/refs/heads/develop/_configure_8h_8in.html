@@ -5,7 +5,7 @@
   <title>Rodin/Configure.h.in file | Rodin</title>
   <link rel="stylesheet" href="mcss-22c93d2587ab.css" />
   <link rel="stylesheet" href="rodin-62701ba7f0b9.css" />
-  <link rel="stylesheet" href="rodin-theme-bc48e2782da9.css" />
+  <link rel="stylesheet" href="rodin-theme-1337632f765f.css" />
   <link rel="icon" href="favicon-monogram.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#18191c" />
@@ -126,6 +126,14 @@
               <span class="m-doc-wrap-bumper">#define <a href="#a3be27ead3c1fa7361accf8f911510278" class="m-doc">RODIN_USE_MPI</a></span>
             </dt>
             <dd>Indicates if Rodin is built with MPI support.</dd>
+            <dt id="afb3b16e5eea05facc06df0aa1d9fb21b">
+              <span class="m-doc-wrap-bumper">#define <a href="#afb3b16e5eea05facc06df0aa1d9fb21b" class="m-doc-self">RODIN_USE_KOKKOS</a></span>
+            </dt>
+            <dd>Indicates if Rodin is built with Kokkos support.</dd>
+            <dt>
+              <span class="m-doc-wrap-bumper">#define <a href="#a731c6b5ef137979607238be077b5d816" class="m-doc">RODIN_USE_KOKKOSKERNELS</a></span>
+            </dt>
+            <dd>Indicates if Rodin is built with Kokkos-Kernels support, which provides the device Krylov solvers of the Rodin::KokkosKernels target.</dd>
             <dt>
               <span class="m-doc-wrap-bumper">#define <a href="#aa56e582b227e4882a005b6155c1e0cf9" class="m-doc">RODIN_USE_OPENMP</a></span>
             </dt>
@@ -142,6 +150,18 @@
               <span class="m-doc-wrap-bumper">#define <a href="#add0bc94ecce21cd08ab42a7040f8d0a2" class="m-doc">RODIN_USE_MUMPS</a></span>
             </dt>
             <dd>Indicates if Rodin is built with MUMPS support.</dd>
+            <dt>
+              <span class="m-doc-wrap-bumper">#define <a href="#a9f02df025cfabf6f31ff1c23e2db2219" class="m-doc">RODIN_USE_CUDSS</a></span>
+            </dt>
+            <dd>Indicates if Rodin is built with NVIDIA cuDSS support.</dd>
+            <dt>
+              <span class="m-doc-wrap-bumper">#define <a href="#ae4a05838c4f89aaa69efc516b4421402" class="m-doc">RODIN_USE_ROCSOLVER</a></span>
+            </dt>
+            <dd>Indicates if Rodin is built with AMD rocSOLVER support.</dd>
+            <dt>
+              <span class="m-doc-wrap-bumper">#define <a href="#a679cb82b4884cb6907e534c661dd88d2" class="m-doc">RODIN_USE_HYPRE</a></span>
+            </dt>
+            <dd>Indicates if Rodin is built with hypre support.</dd>
             <dt>
               <span class="m-doc-wrap-bumper">#define <a href="#a4e9ec1d1d4ee333ea46724b4f6a6b590" class="m-doc">RODIN_USE_SPQR</a></span>
             </dt>
@@ -225,12 +245,21 @@
 <span class="c1">// Code depending on MPI support</span>
 <span class="cp">#endif</span></pre>
           </div></section>
+          <section class="m-doc-details" id="a731c6b5ef137979607238be077b5d816"><div>
+            <h3>
+              <span class="m-doc-wrap-bumper">#define <a href="#a731c6b5ef137979607238be077b5d816" class="m-doc-self">RODIN_USE_KOKKOSKERNELS</a></span>
+            </h3>
+            <p>Indicates if Rodin is built with Kokkos-Kernels support, which provides the device Krylov solvers of the Rodin::KokkosKernels target.</p>
+<h4 id="autotoc_md18">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_USE_KOKKOSKERNELS</span>
+<span class="c1">// Code depending on Kokkos-Kernels</span>
+<span class="cp">#endif</span></pre>
+          </div></section>
           <section class="m-doc-details" id="aa56e582b227e4882a005b6155c1e0cf9"><div>
             <h3>
               <span class="m-doc-wrap-bumper">#define <a href="#aa56e582b227e4882a005b6155c1e0cf9" class="m-doc-self">RODIN_USE_OPENMP</a></span>
             </h3>
             <p>Indicates if Rodin is built with OpenMP support.</p>
-<h4 id="autotoc_md18">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_OPENMP</span>
+<h4 id="autotoc_md19">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_OPENMP</span>
 <span class="c1">// Code depending on OpenMP support</span>
 <span class="cp">#endif</span></pre>
           </div></section>
@@ -239,7 +268,7 @@
               <span class="m-doc-wrap-bumper">#define <a href="#a7c73d0d67b5bfcb7bee02ae2d3cc162d" class="m-doc-self">RODIN_USE_UMFPACK</a></span>
             </h3>
             <p>Indicates if Rodin is built with SuiteSparse support.</p>
-<h4 id="autotoc_md19">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_UMFPACK</span>
+<h4 id="autotoc_md20">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_UMFPACK</span>
 <span class="c1">// Code depending on UMFPACK</span>
 <span class="cp">#endif</span></pre>
           </div></section>
@@ -248,7 +277,7 @@
               <span class="m-doc-wrap-bumper">#define <a href="#a76e3d27c29b338542ea969d5b846b400" class="m-doc-self">RODIN_USE_PARU</a></span>
             </h3>
             <p>Indicates if Rodin is built with SuiteSparse:ParU support.</p>
-<h4 id="autotoc_md20">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_PARU</span>
+<h4 id="autotoc_md21">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_PARU</span>
 <span class="c1">// Code depending on ParU</span>
 <span class="cp">#endif</span></pre>
           </div></section>
@@ -257,8 +286,35 @@
               <span class="m-doc-wrap-bumper">#define <a href="#add0bc94ecce21cd08ab42a7040f8d0a2" class="m-doc-self">RODIN_USE_MUMPS</a></span>
             </h3>
             <p>Indicates if Rodin is built with MUMPS support.</p>
-<h4 id="autotoc_md21">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_MUMPS</span>
+<h4 id="autotoc_md22">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_MUMPS</span>
 <span class="c1">// Code depending on MUMPS</span>
+<span class="cp">#endif</span></pre>
+          </div></section>
+          <section class="m-doc-details" id="a9f02df025cfabf6f31ff1c23e2db2219"><div>
+            <h3>
+              <span class="m-doc-wrap-bumper">#define <a href="#a9f02df025cfabf6f31ff1c23e2db2219" class="m-doc-self">RODIN_USE_CUDSS</a></span>
+            </h3>
+            <p>Indicates if Rodin is built with NVIDIA cuDSS support.</p>
+<h4 id="autotoc_md23">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_USE_CUDSS</span>
+<span class="c1">// Code depending on cuDSS</span>
+<span class="cp">#endif</span></pre>
+          </div></section>
+          <section class="m-doc-details" id="ae4a05838c4f89aaa69efc516b4421402"><div>
+            <h3>
+              <span class="m-doc-wrap-bumper">#define <a href="#ae4a05838c4f89aaa69efc516b4421402" class="m-doc-self">RODIN_USE_ROCSOLVER</a></span>
+            </h3>
+            <p>Indicates if Rodin is built with AMD rocSOLVER support.</p>
+<h4 id="autotoc_md24">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_USE_ROCSOLVER</span>
+<span class="c1">// Code depending on rocSOLVER</span>
+<span class="cp">#endif</span></pre>
+          </div></section>
+          <section class="m-doc-details" id="a679cb82b4884cb6907e534c661dd88d2"><div>
+            <h3>
+              <span class="m-doc-wrap-bumper">#define <a href="#a679cb82b4884cb6907e534c661dd88d2" class="m-doc-self">RODIN_USE_HYPRE</a></span>
+            </h3>
+            <p>Indicates if Rodin is built with hypre support.</p>
+<h4 id="autotoc_md25">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_USE_HYPRE</span>
+<span class="c1">// Code depending on hypre</span>
 <span class="cp">#endif</span></pre>
           </div></section>
           <section class="m-doc-details" id="a4e9ec1d1d4ee333ea46724b4f6a6b590"><div>
@@ -266,7 +322,7 @@
               <span class="m-doc-wrap-bumper">#define <a href="#a4e9ec1d1d4ee333ea46724b4f6a6b590" class="m-doc-self">RODIN_USE_SPQR</a></span>
             </h3>
             <p>Indicates if Rodin is built with SuiteSparse support.</p>
-<h4 id="autotoc_md22">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_SPQR</span>
+<h4 id="autotoc_md26">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_SPQR</span>
 <span class="c1">// Code depending on SPQR</span>
 <span class="cp">#endif</span></pre>
           </div></section>
@@ -275,7 +331,7 @@
               <span class="m-doc-wrap-bumper">#define <a href="#a4bd3e8b54b4a173e1c8136658a1093ad" class="m-doc-self">RODIN_USE_CHOLMOD</a></span>
             </h3>
             <p>Indicates if Rodin is built with SuiteSparse support.</p>
-<h4 id="autotoc_md23">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_CHOLMOD</span>
+<h4 id="autotoc_md27">Utilization</h4><pre class="m-code"><span class="cp">#ifndef RODIN_USE_CHOLMOD</span>
 <span class="c1">// Code depending on CHOLMOD</span>
 <span class="cp">#endif</span></pre>
           </div></section>
@@ -291,21 +347,21 @@
               <span class="m-doc-wrap-bumper">#define <a href="#a8210f6f07335fa8b8dcf599281e63e27" class="m-doc-self">RODIN_RESOURCES_DIR</a></span>
             </h3>
             <p>Indicates the Rodin resources directory.</p>
-<h4 id="autotoc_md24">Utilization</h4><pre class="m-code"><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">RODIN_RESOURCES_DIR</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span></pre>
+<h4 id="autotoc_md28">Utilization</h4><pre class="m-code"><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">RODIN_RESOURCES_DIR</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span></pre>
           </div></section>
           <section class="m-doc-details" id="aaad26963ee56fef661d8d9e025018c4c"><div>
             <h3>
               <span class="m-doc-wrap-bumper">#define <a href="#aaad26963ee56fef661d8d9e025018c4c" class="m-doc-self">RODIN_THIRD_PARTY_DIR</a></span>
             </h3>
             <p>Indicates the Rodin third-party source directory.</p>
-<h4 id="autotoc_md25">Utilization</h4><pre class="m-code"><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">RODIN_THIRD_PARTY_DIR</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span></pre>
+<h4 id="autotoc_md29">Utilization</h4><pre class="m-code"><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">RODIN_THIRD_PARTY_DIR</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span></pre>
           </div></section>
           <section class="m-doc-details" id="a0fe6c09738be7522e7e7af3424dbb10a"><div>
             <h3>
               <span class="m-doc-wrap-bumper">#define <a href="#a0fe6c09738be7522e7e7af3424dbb10a" class="m-doc-self">RODIN_THREAD_SAFE</a></span>
             </h3>
             <p>Indicates if Rodin is built with thread safety enabled.</p>
-<h4 id="autotoc_md26">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_THREAD_SAFE</span>
+<h4 id="autotoc_md30">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_THREAD_SAFE</span>
 <span class="w">  </span><span class="c1">// Code that requires thread safety features.</span>
 <span class="cp">#endif</span></pre>
           </div></section>
@@ -314,7 +370,7 @@
               <span class="m-doc-wrap-bumper">#define <a href="#a5ed30f72ba5c3e021127abca33020f5c" class="m-doc-self">RODIN_MULTITHREADED</a></span>
             </h3>
             <p>Indicates if Rodin supports multithreading.</p>
-<h4 id="autotoc_md27">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_MULTITHREADED</span>
+<h4 id="autotoc_md31">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_MULTITHREADED</span>
 <span class="w">  </span><span class="c1">// Code that leverages multithreading capabilities.</span>
 <span class="cp">#endif</span></pre>
           </div></section>
@@ -323,7 +379,7 @@
               <span class="m-doc-wrap-bumper">#define <a href="#a02e476f33e8d5257e12e4e896f446b02" class="m-doc-self">RODIN_USE_APPLE_ACCELERATE</a></span>
             </h3>
             <p>Indicates if Rodin is built with Apple Accelerate support.</p>
-<h4 id="autotoc_md28">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_USE_APPLE_ACCELERATE</span>
+<h4 id="autotoc_md32">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_USE_APPLE_ACCELERATE</span>
 <span class="w">  </span><span class="c1">// Code that uses the Apple Accelerate framework for optimized computations.</span>
 <span class="cp">#endif</span></pre>
           </div></section>
@@ -332,7 +388,7 @@
               <span class="m-doc-wrap-bumper">#define <a href="#ae5bb37e09db60bb9bc53013339319bae" class="m-doc-self">RODIN_USE_SCOTCH</a></span>
             </h3>
             <p>Indicates if Rodin is built with Scotch support.</p>
-<h4 id="autotoc_md29">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_USE_SCOTCH</span>
+<h4 id="autotoc_md33">Utilization</h4><pre class="m-code"><span class="cp">#ifdef RODIN_USE_SCOTCH</span>
 <span class="w">  </span><span class="c1">// Code that uses the Scotch library for partioning.</span>
 <span class="cp">#endif</span></pre>
           </div></section>
@@ -382,7 +438,7 @@
     </div>
   </div>
 </div>
-<script src="search-v2-27108c4bc94e.js"></script>
+<script src="search-v2-af72fdebce49.js"></script>
 <script src="searchdata-v2.js" async="async"></script>
 <footer><nav>
   <div class="m-container">
