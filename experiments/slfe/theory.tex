@@ -1,0 +1,164 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath,amssymb,amsthm,geometry,hyperref}
+\geometry{margin=2.4cm}
+\newtheorem{proposition}{Proposition}
+\title{Cubature caractéristique à moments compatibles\\Note théorique du prototype SLFE GPU}
+\author{Note de recherche expérimentale}
+\date{15 novembre 2026}
+\begin{document}
+\maketitle
+
+\section{Problème et hypothèses}
+Soit $F:\Omega_s\to\Omega_t$ un difféomorphisme préservant le volume,
+sans échange aux frontières, éventuellement périodiques. Les espaces éléments
+finis $V_s,V_t$ contiennent la constante. Leurs matrices de masse exactes,
+symétriques définies positives, sont notées $M_s,M_t$. Les matrices
+d'évaluation $E_s,E_t$ sont définies sur des points $a_\ell$ et leurs images
+$F(a_\ell)$. Une même matrice diagonale $W=\operatorname{diag}(w_\ell)$
+sert à construire le transfert
+\[
+ T=M_t^{-1}E_t^TWE_s.
+\]
+Il s'agit de la réalisation par cubature du transfert faible conservatif.
+Les poids concernent la cubature, et ne sont pas les coefficients du transfert
+dans une base modale ou nodale.
+
+\begin{proposition}
+Si $w_\ell\geq0$ et
+\[
+ E_s^TWE_s=M_s,\qquad E_t^TWE_t=M_t,
+\]
+alors $T$ conserve la masse, reproduit la constante et est contractant pour
+les normes discrètes $L^2$ définies par les matrices de masse.
+\end{proposition}
+\begin{proof}
+Soient $e_s,e_t$ les coefficients représentant la constante, de sorte que
+$E_se_s=E_te_t=\mathbf1$. Alors
+\[
+ M_tTe_s=E_t^TW\mathbf1=E_t^TWE_te_t=M_te_t,
+\]
+et
+\[
+ e_t^TM_tTc=e_t^TE_t^TWE_sc
+ =e_s^TE_s^TWE_sc=e_s^TM_sc.
+\]
+Enfin, les matrices $U_s=W^{1/2}E_sM_s^{-1/2}$ et
+$U_t=W^{1/2}E_tM_t^{-1/2}$ ont des colonnes orthonormales. Par conséquent,
+\[
+ M_t^{1/2}TM_s^{-1/2}=U_t^TU_s,
+ \qquad \|Tc\|_{M_t}\leq\|c\|_{M_s}.
+\]
+\end{proof}
+
+Cette proposition ne garantit pas la positivité du champ reconstruit.
+L'orthogonalité, la conservation, la monotonie et la positivité sont des
+propriétés distinctes. Elle ne démontre pas non plus l'existence de poids
+positifs sur un ensemble de particules fixé.
+
+Pour des éléments affines DG $P_p$, chaque produit de fonctions de base
+appartient à $P_{2p}$. Les égalités de Gram s'obtiennent donc en imposant
+les moments jusqu'au degré $2p$ séparément dans chaque élément de départ
+et d'arrivée. La représentation modale orthonormale donne une matrice de
+masse locale égale à l'aire multipliée par l'identité.
+
+\section{Précision et défauts de cubature}
+La contraction ne suffit pas à établir un ordre de convergence. Il faut
+contrôler séparément l'erreur de consistance du couplage croisé
+$E_t^TWE_s$, celle des trajectoires et leur accumulation temporelle.
+Si $F$ est affine et si un polynôme transporté est représentable dans les
+deux espaces, les moments d'arrivée jusqu'au degré $2p$ suffisent à sa
+reproduction, sous réserve de compatibilité avec les frontières.
+Une translation périodique d'un champ lisse demande une véritable étude
+de raffinement, et ne se réduit pas à ce test polynomial.
+
+Si les défauts de Gram normalisés vérifient
+\[
+ \|M_i^{-1/2}(E_i^TWE_i-M_i)M_i^{-1/2}\|_2\leq\varepsilon_i,
+\]
+alors, pour des poids non négatifs,
+\[
+ \|M_t^{1/2}TM_s^{-1/2}\|_2
+ \leq\sqrt{(1+\varepsilon_s)(1+\varepsilon_t)}.
+\]
+Un petit résidu du solveur de moments ne doit donc pas être présenté comme
+une preuve de contraction exacte.
+
+\section{Extension compressible}
+Pour $J_\ell=\det DF(a_\ell)>0$, une construction compatible utilise
+\[
+ E_s^TWE_s=M_s,\qquad E_t^T\operatorname{diag}(J_\ell)WE_t=M_t,
+ \qquad T=M_t^{-1}E_t^TWE_s.
+\]
+La masse reste conservée. Le champ constant n'est généralement pas invariant
+pour une densité conservative. Le même argument donne
+\[
+ \|Tc\|_{M_t}\leq (\min_\ell J_\ell)^{-1/2}\|c\|_{M_s}.
+\]
+La précision du Jacobien et la fidélité des points transportés sont ici des
+conditions supplémentaires. Une masse numérique conservée ne suffit pas à
+valider l'équation compressible.
+
+\section{Construction expérimentale et limites}
+Le prototype ajuste les poids d'une quadrature de départ en minimisant
+\[
+ \frac12\sum_\ell\frac{(w_\ell-w_\ell^0)^2}{w_\ell^0}
+ \quad\text{sous les contraintes de moments des deux maillages.}
+\]
+La variante signée est un problème de moindres carrés. La variante positive
+expérimentale supprime les sites obtenant des poids négatifs puis recalcule
+les poids. Cette stratégie restreinte peut échouer même si une autre
+configuration active est faisable. Elle ne constitue pas un solveur complet
+de programmation quadratique ni un certificat d'infaisabilité.
+
+Les systèmes peuvent être très mal conditionnés : les contraintes de départ
+et d'arrivée deviennent presque dépendantes pour certaines combinaisons
+polynomiales. Une SVD GPU dense sert uniquement de diagnostic sur de petits
+systèmes. Une réalisation utile sur de grands maillages demande un traitement
+de cette structure, un préconditionnement efficace ou une construction locale.
+
+Une variante par projections alternées de Dykstra est également disponible
+pour le diagnostic du problème quadratique positif. Sa limite d'itérations
+doit être distinguée de la faisabilité mathématique. Les expériences de
+compression montrent que l'enrichissement du support peut rétablir les
+contraintes alors que la recherche sur un support plus pauvre échoue.
+
+\section{Obstruction du support à petit déplacement}
+\begin{proposition}
+Considérons une translation $F(a)=a+\delta$, $\delta\ne0$, et un même
+maillage de départ et d'arrivée. Supposons qu'une cellule $K$ n'échange
+aucune particule avec ses voisines : tous ses points restent dans $K$ et
+aucun point extérieur n'y arrive. Il est impossible d'imposer simultanément
+les moments de degré zéro et un exacts au départ et à l'arrivée dans $K$,
+même avec des poids signés.
+\end{proposition}
+\begin{proof}
+Dans une carte locale, les mêmes indices $I_K$ interviennent des deux côtés.
+Les contraintes imposent
+\[
+ \sum_{\ell\in I_K}w_\ell=|K|,\qquad
+ \sum_{\ell\in I_K}w_\ell a_\ell=\int_K x\,dx,
+ \qquad
+ \sum_{\ell\in I_K}w_\ell(a_\ell+\delta)=\int_K x\,dx.
+\]
+La soustraction des deux dernières égalités donne $|K|\delta=0$, une
+contradiction. L'argument ne fait aucune hypothèse de signe sur les poids.
+\end{proof}
+Pour un support fini strictement intérieur aux cellules, un déplacement
+non nul suffisamment petit ne fait traverser aucune interface. Il existe
+donc un régime où la compatibilité est impossible pour tout $p\geq1$.
+Ce résultat concerne un support fixe. Il ne condamne pas une construction
+qui adapte les points aux interfaces et au déplacement, mais démontre
+qu'augmenter une fois pour toutes le degré de quadrature ne résout pas le
+problème lorsque le pas tend vers zéro. Les compteurs de cellules isolées
+de la campagne permettent de détecter cette obstruction géométrique,
+distincte de l'échec d'un solveur sur un support potentiellement faisable.
+
+L'intérêt potentiel est de conserver des trajectoires non linéaires exactes
+sans construire leurs cellules images courbes. Les gains GPU, la convergence,
+la robustesse à la déformation et l'originalité par rapport aux travaux de
+remaillage conservatif par optimisation restent à établir expérimentalement
+et bibliographiquement.
+\end{document}

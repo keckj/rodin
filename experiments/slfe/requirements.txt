@@ -1,0 +1,6 @@
+# Environment used for the campaign. A working CUDA driver/toolkit is required.
+cupy-cuda12x==13.6.0
+numpy==2.2.6
+matplotlib==3.10.3
+# Symox 0.1.0 is the user's local installation from Documents/symox.
+# report.py additionally invokes the system LuaLaTeX and pdfLaTeX tools.

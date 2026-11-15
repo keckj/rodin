@@ -1,0 +1,62 @@
+[
+  {
+    "key": "colera2021",
+    "title": "A nearly-conservative, high-order, forward Lagrange–Galerkin method for the resolution of scalar hyperbolic conservation laws",
+    "url": "https://doi.org/10.1016/j.cma.2020.113654",
+    "role": "Antécédent direct cité dans la note initiale. L'accès au texte via le DOI a échoué pendant cette session ; ne pas prétendre à une lecture intégrale."
+  },
+  {
+    "key": "colera2022",
+    "title": "A nearly-conservative, high-order, forward Lagrange–Galerkin method for the resolution of compressible flows on unstructured triangular meshes",
+    "url": "https://www.sciencedirect.com/science/article/abs/pii/S0021999122005332",
+    "role": "Le résumé décrit des espaces continus d'ordre élevé sur triangles et des bilans conservés sous intégration exacte. La combinaison forward, triangles, ordre élevé n'est pas nouvelle."
+  },
+  {
+    "key": "cai2016",
+    "title": "A high order conservative semi-Lagrangian discontinuous Galerkin method for two-dimensional transport simulations",
+    "url": "https://arxiv.org/abs/1612.06977",
+    "role": "Antécédent SL-DG conservatif d'ordre élevé, avec intégration géométrique et formulation de Galerkin caractéristique."
+  },
+  {
+    "key": "cai2025",
+    "title": "A Third-order Conservative Semi-Lagrangian Discontinuous Galerkin Scheme For the Transport Equation on Curvilinear Unstructured Meshes",
+    "url": "https://arxiv.org/abs/2511.10100",
+    "role": "Prépublication de novembre 2025. Le résumé annonce un schéma d'ordre trois sur triangles curvilignes et un transfert conservatif par intersections. Concurrent essentiel pour un projet de papier."
+  },
+  {
+    "key": "ullrich2015",
+    "title": "Arbitrary-Order Conservative and Consistent Remapping and a Theory of Linear Maps: Part I",
+    "url": "https://doi.org/10.1175/mwr-d-14-00343.1",
+    "role": "Théorie algébrique antérieure des transferts conservatifs et cohérents. Les seules contraintes de masse et de constante ne suffisent pas comme revendication originale."
+  },
+  {
+    "key": "ullrich2016",
+    "title": "Arbitrary-Order Conservative and Consistent Remapping and a Theory of Linear Maps: Part II",
+    "url": "https://journals.ametsoc.org/view/journals/mwre/144/4/mwr-d-15-0301.1.xml",
+    "role": "Extension comprenant des transferts FE vers FE. Comparaison indispensable de la construction des opérateurs et de leurs contraintes."
+  },
+  {
+    "key": "optimization2013",
+    "title": "Optimization-based remap and transport: A divide and conquer strategy for feature-preserving discretizations",
+    "url": "https://www.sciencedirect.com/science/article/pii/S0021999113002416",
+    "role": "Le remaillage par optimisation et contraintes de conservation est établi. L'optimisation de poids ne constitue pas en elle-même une nouveauté."
+  },
+  {
+    "key": "kozdon2014",
+    "title": "Stable Coupling of Nonconforming, High-Order Finite Difference Methods",
+    "url": "https://arxiv.org/abs/1410.5746",
+    "role": "Antécédent des projections compatibles avec une norme d'énergie et d'un espace intermédiaire. Le lien avec la proposition de Gram doit être étudié avant toute revendication théorique."
+  },
+  {
+    "key": "sl2019",
+    "title": "An explicit semi-Lagrangian, spectral method for solution of Lagrangian transport equations in Eulerian-Lagrangian formulations",
+    "url": "https://arxiv.org/abs/1910.06476",
+    "role": "Particules initialisées aux points de Gauss et reconstruction par moindres carrés avec contraintes de masse et d'énergie. Antécédent proche du vocabulaire proposé."
+  },
+  {
+    "key": "mira2022",
+    "title": "Metrics for Intercomparison of Remapping Algorithms (MIRA) protocol applied to Earth system models",
+    "url": "https://gmd.copernicus.org/articles/15/6601/2022/gmd-15-6601-2022.html",
+    "role": "Cadre de comparaison des erreurs, de la conservation et des effets de transferts répétés."
+  }
+]
