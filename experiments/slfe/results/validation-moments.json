@@ -1,0 +1,380 @@
+{
+  "passed": true,
+  "records": [
+    {
+      "n": 4,
+      "p": 1,
+      "subdivisions": 3,
+      "courant": 0.731,
+      "seed": 17,
+      "steps": 16,
+      "dt": 0.18275,
+      "moment_degree": null,
+      "fit": "positive",
+      "solver": "dense",
+      "positivity": "active",
+      "particles": 9216,
+      "quadrature_per_cell": 288,
+      "build_seconds": 0.31990525795845315,
+      "iterations": 1,
+      "initial_residual": 0.011672810204876117,
+      "final_residual": 5.551115123125783e-17,
+      "relative_moment_residual": 2.924402071335163e-16,
+      "minimum_weight_ratio": 0.6604708440225298,
+      "negative_weight_fraction": 0.0,
+      "weight_change_rms": 0.05191409932729049,
+      "storage_bytes": 589824,
+      "diagnostics": [
+        {
+          "pass": 0,
+          "iterations": 1,
+          "cg_info": 0,
+          "residual": 5.551115123125783e-17,
+          "minimum_weight_ratio": 0.6604708440225298
+        }
+      ],
+      "dense_nonzero_condition": 499.8017992989407,
+      "coarse_columns": null,
+      "coarse_retained": null,
+      "jacobian_min": 1.0,
+      "jacobian_max": 1.0,
+      "constant_error": 1.1102230246251565e-15,
+      "random_mass_error": 8.326672684688674e-17,
+      "random_energy_ratio": 0.32431978767859476,
+      "accepted_moments": true,
+      "accepted_positive": true,
+      "l2_geometric": 0.12098714335791244,
+      "l1": [
+        0.10104452766391239
+      ],
+      "l2": [
+        0.12085036012179377
+      ],
+      "linf_sampled": [
+        0.2860164419881509
+      ],
+      "min_sampled": [
+        0.7226438781704906
+      ],
+      "max_sampled": [
+        1.2615384187023018
+      ],
+      "crossing_fraction": 0.9578993055555556,
+      "isolated_cells": 0,
+      "singular_max": 0.9999999999999997,
+      "singular_above_one": 0
+    },
+    {
+      "n": 4,
+      "p": 2,
+      "subdivisions": 3,
+      "courant": 0.731,
+      "seed": 17,
+      "steps": 16,
+      "dt": 0.18275,
+      "moment_degree": null,
+      "fit": "positive",
+      "solver": "dense",
+      "positivity": "active",
+      "particles": 9216,
+      "quadrature_per_cell": 288,
+      "build_seconds": 0.4076282060123049,
+      "iterations": 1,
+      "initial_residual": 0.014506051157433981,
+      "final_residual": 5.898059818321144e-17,
+      "relative_moment_residual": 3.5535369415622956e-16,
+      "minimum_weight_ratio": 0.09827360173464636,
+      "negative_weight_fraction": 0.0,
+      "weight_change_rms": 0.11521035541180741,
+      "storage_bytes": 1032192,
+      "diagnostics": [
+        {
+          "pass": 0,
+          "iterations": 1,
+          "cg_info": 0,
+          "residual": 5.724587470723463e-17,
+          "minimum_weight_ratio": 0.09827360173464636
+        }
+      ],
+      "dense_nonzero_condition": 264558.34893554676,
+      "coarse_columns": null,
+      "coarse_retained": null,
+      "jacobian_min": 1.0,
+      "jacobian_max": 1.0,
+      "constant_error": 6.661338147750939e-16,
+      "random_mass_error": 4.163336342344337e-17,
+      "random_energy_ratio": 0.4115290372723467,
+      "accepted_moments": true,
+      "accepted_positive": true,
+      "l2_geometric": 0.03405624103363532,
+      "l1": [
+        0.029243615546448404
+      ],
+      "l2": [
+        0.034177572717265015
+      ],
+      "linf_sampled": [
+        0.16491627197777925
+      ],
+      "min_sampled": [
+        0.5668240494659426
+      ],
+      "max_sampled": [
+        1.4854483375149015
+      ],
+      "crossing_fraction": 0.9578993055555556,
+      "isolated_cells": 0,
+      "singular_max": 1.0,
+      "singular_above_one": 0
+    },
+    {
+      "check": "small_translation_isolated_cell_obstruction",
+      "result": {
+        "n": 4,
+        "p": 1,
+        "subdivisions": 1,
+        "courant": 1e-05,
+        "seed": 17,
+        "steps": 1,
+        "dt": 2.5e-06,
+        "moment_degree": null,
+        "fit": "signed",
+        "solver": "dense",
+        "positivity": "active",
+        "particles": 1024,
+        "quadrature_per_cell": 32,
+        "build_seconds": 0.05190946604125202,
+        "iterations": 1,
+        "initial_residual": 1.2718320088613705e-05,
+        "final_residual": 6.359469710580379e-06,
+        "relative_moment_residual": 4.280848594413964e-05,
+        "minimum_weight_ratio": 0.9998686276367486,
+        "negative_weight_fraction": 0.0,
+        "weight_change_rms": 3.586825988824646e-05,
+        "storage_bytes": 65536,
+        "diagnostics": [
+          {
+            "pass": 0,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 6.3594697105821135e-06,
+            "minimum_weight_ratio": 0.9998686276367486
+          }
+        ],
+        "dense_nonzero_condition": 1.000104830690727,
+        "coarse_columns": null,
+        "coarse_retained": null,
+        "jacobian_min": 1.0,
+        "jacobian_max": 1.0,
+        "constant_error": 4.2808485944153055e-05,
+        "random_mass_error": 1.9324794803959877e-06,
+        "random_energy_ratio": 0.9999999971463951,
+        "accepted_moments": false,
+        "accepted_positive": true,
+        "l2_geometric": 0.047923534227281434,
+        "l1": [
+          0.03379089707589783
+        ],
+        "l2": [
+          0.047923541830367754
+        ],
+        "linf_sampled": [
+          0.4034984013537797
+        ],
+        "min_sampled": [
+          0.38404807034432537
+        ],
+        "max_sampled": [
+          1.6007882772706044
+        ],
+        "crossing_fraction": 0.0,
+        "isolated_cells": 32,
+        "singular_max": 0.9999999998226369,
+        "singular_above_one": 0
+      }
+    },
+    {
+      "check": "insufficient_positive_support_reported",
+      "summary": {
+        "fit": "positive",
+        "solver": "dense",
+        "positivity": "active",
+        "particles": 9216,
+        "quadrature_per_cell": 288,
+        "build_seconds": 1.7013185049872845,
+        "iterations": 20,
+        "initial_residual": 0.007771130798618988,
+        "final_residual": 0.07436463979568145,
+        "relative_moment_residual": 0.4702077240735471,
+        "minimum_weight_ratio": 0.0,
+        "negative_weight_fraction": 0.0,
+        "weight_change_rms": 15.329409618650844,
+        "storage_bytes": 589824,
+        "diagnostics": [
+          {
+            "pass": 0,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 1.3877787807814457e-16,
+            "minimum_weight_ratio": -29.375620236344815
+          },
+          {
+            "pass": 1,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 1.3877787807814457e-16,
+            "minimum_weight_ratio": -39.797530585949865
+          },
+          {
+            "pass": 2,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 3.0704605524789486e-16,
+            "minimum_weight_ratio": -26.720433365209995
+          },
+          {
+            "pass": 3,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 3.885780586188048e-16,
+            "minimum_weight_ratio": -33.89541795434973
+          },
+          {
+            "pass": 4,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 4.163336342344337e-16,
+            "minimum_weight_ratio": -9.957848527698937
+          },
+          {
+            "pass": 5,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 4.0245584642661925e-16,
+            "minimum_weight_ratio": -29.393607301420545
+          },
+          {
+            "pass": 6,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 6.661338147750939e-16,
+            "minimum_weight_ratio": -27.851837541624008
+          },
+          {
+            "pass": 7,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 8.187894806610529e-16,
+            "minimum_weight_ratio": -79.51096253867144
+          },
+          {
+            "pass": 8,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 1.0433819606914252e-15,
+            "minimum_weight_ratio": -98.6429104413271
+          },
+          {
+            "pass": 9,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 2.1788126858268697e-15,
+            "minimum_weight_ratio": -503.20382740240854
+          },
+          {
+            "pass": 10,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 9.211381657436846e-15,
+            "minimum_weight_ratio": -5931.372988673823
+          },
+          {
+            "pass": 11,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 0.006852632528378547,
+            "minimum_weight_ratio": -30821785.169962097
+          },
+          {
+            "pass": 12,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 0.053519319512639996,
+            "minimum_weight_ratio": -630204.5218052247
+          },
+          {
+            "pass": 13,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 0.0701838459192958,
+            "minimum_weight_ratio": -7689.606857102338
+          },
+          {
+            "pass": 14,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 0.07022551232720031,
+            "minimum_weight_ratio": -48055.583042734106
+          },
+          {
+            "pass": 15,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 0.07449213444991476,
+            "minimum_weight_ratio": -17907792.762486696
+          },
+          {
+            "pass": 16,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 0.07416726430401872,
+            "minimum_weight_ratio": -2646961907.323328
+          },
+          {
+            "pass": 17,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 0.07437402006554515,
+            "minimum_weight_ratio": -93310.42540704063
+          },
+          {
+            "pass": 18,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 0.07436463979568958,
+            "minimum_weight_ratio": -152.90569638172644
+          },
+          {
+            "pass": 19,
+            "iterations": 1,
+            "cg_info": 0,
+            "residual": 0.07436463979568145,
+            "minimum_weight_ratio": 0.0
+          }
+        ],
+        "dense_nonzero_condition": 126.13595200560366,
+        "coarse_columns": null,
+        "coarse_retained": null,
+        "jacobian_min": 0.9100572413024961,
+        "jacobian_max": 1.0988319687875956
+      },
+      "interpretation": "Restricted active-set failure, not an infeasibility proof"
+    },
+    {
+      "check": "compressible_mass_and_bound",
+      "mass_error": 2.220446049250313e-16,
+      "energy_ratio": 0.7559448723706944,
+      "bound": 1.0988319758898957
+    },
+    {
+      "check": "lambda_gpu_moments",
+      "kernel": "L2_1",
+      "mass_error": 7.771561172376096e-16
+    },
+    {
+      "check": "lambda_gpu_moments",
+      "kernel": "L4_2",
+      "mass_error": 3.952393967665557e-14
+    }
+  ]
+}

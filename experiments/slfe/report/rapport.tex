@@ -1,0 +1,160 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage{fontspec}
+\usepackage[french]{babel}
+\usepackage{amsmath,amssymb,geometry,graphicx,booktabs,hyperref,float}
+\geometry{margin=2cm}
+\hypersetup{colorlinks=true,urlcolor=blue,linkcolor=blue,hypertexnames=false,
+pdftitle={SLFE GPU research campaign},pdfauthor={SLFE research experiment}}
+\setlength{\emergencystretch}{3em}
+\title{SLFE sur RTX 5090\\Résultats et pistes de recherche}
+\author{Campagne GPU, branche SLFE}
+\date{15/11/2026 à 21:39:36}
+\begin{document}\maketitle\tableofcontents
+Rapport provisoire, campagne en cours. Généré le 15/11/2026 à 21:39:36 (Europe/Paris).
+
+558 expériences enregistrées sur RTX 5090, dont 0 échecs d'exécution. Un calcul terminé n'est pas nécessairement une méthode validée : les résidus et les poids sont contrôlés séparément.
+
+\section{Ce que les expériences permettent de conclure}
+La voie semi-lagrangienne FE fonctionne sur les triangles testés : le transfert géométrique GPU conserve la masse et retrouve les ordres spatiaux attendus pour la translation. Le dépôt direct de points de quadrature peut conserver la masse tout en amplifiant des perturbations et en perdant la précision.
+
+Une construction par cubature commune à moments compatibles a été implémentée. Sous deux identités de Gram et des poids non négatifs, une preuve donne conservation, reproduction de la constante et contraction en norme L2 pour un flot incompressible. Les petits cas acceptés illustrent ce mécanisme. Le coût et le conditionnement de la construction restent les obstacles principaux.
+
+Une obstruction mathématique précise a aussi été identifiée : à déplacement non nul, une cellule qui n'échange aucune particule ne peut satisfaire simultanément les moments de degré un au départ et à l'arrivée, même avec des poids signés. Un support fixe intérieur aux éléments est donc insuffisant lorsque le pas tend vers zéro. Il faudra adapter les points aux interfaces et au flot.
+
+Aucune nouveauté révolutionnaire n'est établie par cette campagne. Le résultat utile pour la suite est un choix de problème précis : construire cette compatibilité sans intersection de cellules courbes, avec un coût local ou quasi linéaire et un contrôle explicite de la faisabilité. Les travaux sur les remaps conservatifs, les projections compatibles et l'optimisation imposent une comparaison approfondie.
+
+\section{Périmètre réel et reproductibilité}
+Toutes les simulations, localisations, intersections, projections, SVD et réductions numériques sont exécutées sur CUDA via CuPy. Symox génère et vérifie les bases et noyaux avant les calculs. Python pilote les lancements ; les figures et ce rapport sont produits sur l'hôte. Le code est un prototype de recherche dans experiments/slfe, pas encore un opérateur intégré au langage variationnel de Rodin.
+
+Le domaine est un tore périodique 2D. Les maillages contiennent 2 n² triangles affines, avec sommets perturbés et diagonales variables. Le localisateur exploite leur origine en grille : il n'est pas un BVH pour maillages importés quelconques. Les espaces DG P0 à P3 sont modaux, orthonormaux en moyenne sur le triangle de référence. Le calcul est en double précision, sur un GPU et sans MPI.
+
+Les profils lisses, trajectoires et références sont définis dans gpu.py et flows.py. Les erreurs FE sont intégrées par une quadrature de degré 18 indépendante de celle du transfert. Les extrema sont échantillonnés, et ne sont pas des bornes mathématiques certifiées. Les fichiers JSONL conservent paramètres, durées, échecs et empreintes SHA-256 du code.
+
+\begin{center}\small\begin{tabular}{lll}\toprule
+Campagne & Calculs & Échecs\\\midrule
+translation & 170 & 0\\
+spectrum & 20 & 0\\
+cartesian & 56 & 0\\
+performance & 51 & 0\\
+long\_time & 36 & 0\\
+deformation & 135 & 0\\
+moments & 80 & 0\\
+curved\_moments & 10 & 0\\
+\bottomrule\end{tabular}\end{center}
+\section{Validation indépendante}
+validation : statut True, 38 contrôles enregistrés.
+
+validation-moments : statut True, 7 contrôles enregistrés.
+
+geometry-control : statut True, 48 contrôles enregistrés.
+
+Compute Sanitizer : ========= ERROR SUMMARY: 0 errors
+
+Les contrôles comprennent les moments de quadrature contre une formule factorielle exacte, l'orthogonalité des bases, l'identité sans déplacement, les constantes, les bilans de masse, l'identité de l'adjoint, une seconde quadrature des intersections et le raffinement spatial. Une perte artificielle de 1 \% de masse est rejetée par les tests. Les hypothèses de positivité et de compatibilité du candidat sont vérifiées avant toute interprétation de sa contraction.
+
+\section{Translation : ordre, masse et temps long}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{translation.pdf}\caption{Raffinement du maillage, même durée finale et même nombre de transferts. Les trajectoires de translation sont exactes.}\end{figure}
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Degré & n & Erreur L2 & Taux final & Défaut masse\\\midrule
+1 & 128 & 6.86e-05 & 1.996 & 3.486e-14\\
+2 & 128 & 9.603e-07 & 2.986 & 3.508e-14\\
+3 & 128 & 1.374e-08 & 3.969 & 2.309e-14\\
+\bottomrule\end{tabular}\end{center}
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Degré & Transferts & Erreur L2 & Défaut masse & Énergie finale / initiale\\\midrule
+1 & 10000 & 0.0008001 & 1.546e-13 & 0.9948\\
+2 & 10000 & 3.505e-06 & 1.557e-13 & 1\\
+3 & 10000 & 7.465e-08 & 1.036e-13 & 1\\
+\bottomrule\end{tabular}\end{center}
+Le temps long utilise une bosse périodique lisse et une durée finale de 10. Augmenter le nombre de projections peut augmenter l'erreur, même lorsque la trajectoire est exacte.
+
+\section{Le dépôt brut ne suffit pas}
+\begin{center}\small\begin{tabular}{llll}\toprule
+Points / cellule & Erreur L2 & Défaut masse & Défaut constante\\\midrule
+6 & 4.436e+04 & 5.04e-14 & 2.774\\
+16 & 0.4798 & 7.183e-14 & 1.225\\
+32 & 0.3147 & 6.528e-14 & 0.7554\\
+128 & 0.104 & 6.306e-14 & 0.2063\\
+512 & 0.04278 & 6.595e-14 & 0.08453\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{amplification.pdf}\caption{SVD GPU de l'opérateur normalisé par la matrice de masse. Une valeur singulière supérieure à un établit une amplification possible en un pas, pas à elle seule une divergence asymptotique.}\end{figure}
+\section{Flots déformants : le rôle du Jacobien}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{deformation.pdf}\caption{Les images des cellules sont ici approchées par les triangles de leurs sommets transportés. Augmenter le degré du champ ne corrige pas cette approximation géométrique.}\end{figure}
+Pour un cisaillement exactement incompressible, l'interpolation affine de la carte sur des triangles perturbés peut avoir un Jacobien différent de un. La densité transportée change alors même si le champ initial est constant. Le contrôle indépendant utilise la norme exacte avant projection, somme sur les cellules de aire(K) × (J\_K − 1)² / J\_K. La projection orthogonale ne peut qu'abaisser cette norme. Le maillage non perturbé sert de contrôle où ce défaut disparaît pour le cisaillement choisi.
+
+\section{Cubature à moments compatibles : résultat et prix}
+Les poids sont ajustés pour reproduire les moments jusqu'au degré 2p dans chaque cellule de départ et d'arrivée. La note theory.pdf contient les hypothèses et la preuve. Les coefficients du transfert FE peuvent être signés ; la non-négativité des poids de cubature sert à la preuve d'énergie et ne constitue pas un limiteur de positivité du champ.
+
+Sur les 80 cas du balayage principal, 36 satisfont simultanément le seuil de résidu relatif de moments (1e-9) et celui de non-négativité des poids (-1e-12 en rapport au poids initial). Ces nombres incluent les variantes et les échecs ; ils ne définissent pas un taux universel de succès.
+
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Subdivision & Résidu moments & Erreur L2 & L2 géométrique & Construction (s)\\\midrule
+1 & 0.3695 & 0.9261 & 0.002885 & 12.44\\
+2 & 1.963e-15 & 0.002901 & 0.002885 & 21.95\\
+3 & 1.048e-15 & 0.002888 & 0.002885 & 19.56\\
+4 & 3.771e-15 & 0.002887 & 0.002885 & 11.77\\
+\bottomrule\end{tabular}\end{center}
+La SVD dense établit un diagnostic de faisabilité sur de petits systèmes, mais ne constitue pas un algorithme compétitif de grand calcul. Le gradient conjugué sur les équations normales souffre du carré du conditionnement. Une correction grossière par modes de Fourier a été explorée sur le tore ; elle ne fournit pas à ce stade un préconditionneur général pour domaines non structurés.
+
+La suppression irréversible des sites de poids négatif est une recherche active restreinte. Son échec ne prouve pas l'infaisabilité du problème positif. Une variante par projections de Dykstra est conservée comme diagnostic. Les cas dont les moments ne convergent pas ne bénéficient pas de la preuve de stabilité.
+
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Flot & Pas & Erreur L2 & Résidu moments & Accepté\\\midrule
+\bottomrule\end{tabular}\end{center}
+Les lignes non acceptées documentent un échec de construction. Leur erreur de champ n'est pas une mesure de précision d'un opérateur satisfaisant le théorème.
+
+\section{GPU et référence HySoP}
+Les noyaux Lambda 2,1 et Lambda 4,2 ont été reconstruits avec Symox à partir des contraintes mathématiques lues dans HySoP, puis évalués dans des kernels CUDA. Il s'agit d'une référence cartésienne des mêmes noyaux, pas d'un benchmark du runtime HySoP complet. Les moments exacts et leur réalisation GPU font l'objet de contrôles distincts.
+
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Degré & Champs & DDL / champ & Application (ms) & Blocs (Mo)\\\midrule
+1 & 1 & 393216 & 0.03059 & 63.94\\
+1 & 4 & 393216 & 0.05971 & 63.94\\
+1 & 16 & 393216 & 0.206 & 63.94\\
+2 & 1 & 786432 & 0.1669 & 236.6\\
+2 & 4 & 786432 & 0.1991 & 236.6\\
+2 & 16 & 786432 & 0.5727 & 236.6\\
+3 & 1 & 1310720 & 0.4269 & 645.8\\
+3 & 4 & 1310720 & 0.4788 & 645.8\\
+3 & 16 & 1310720 & 1.481 & 645.8\\
+\bottomrule\end{tabular}\end{center}
+Les temps d'application sont des médianes d'événements CUDA après échauffement et incluent la remise à zéro du résultat. Les lancements Python, les caches et la fréquence du GPU peuvent affecter les petits temps. Les temps de construction uniques peuvent inclure la compilation paresseuse d'opérations CuPy ; ils ne doivent pas être pris pour des mesures asymptotiques stabilisées.
+
+Pour une vitesse constante, les blocs sont construits une fois puis réutilisés. Un flot variable peut imposer une reconstruction à chaque pas : il faut alors inclure ce coût, ainsi que les trajectoires. Aucun gain global face à un solveur eulérien GPU n'est établi ici, et aucune comparaison CPU/GPU n'a été réalisée.
+
+\section{Positionnement pour un papier ambitieux}
+La contribution à viser serait une construction de transfert garantissant masse, consistance et énergie, capable de traiter des caractéristiques courbes sans intersections coûteuses et avec un coût GPU mesuré à précision comparable. L'égalité des deux Gram fournit un cahier des charges mathématique ; son établissement efficace est le problème ouvert mis en évidence par cette campagne.
+
+Les prochaines preuves doivent porter sur l'existence de poids pour un support transporté, la consistance et la convergence, le comportement quand le pas tend vers zéro et le coût du solveur. Les prochaines expériences doivent dépasser le localisateur de grille, inclure un vrai concurrent eulérien GPU, des vitesses FE, les frontières et la 3D. Une revendication de nouveauté doit distinguer cette construction des remaps par optimisation et des projections compatibles existantes.
+
+A nearly-conservative, high-order, forward Lagrange–Galerkin method for the resolution of scalar hyperbolic conservation laws. \url{https://doi.org/10.1016/j.cma.2020.113654}. Antécédent direct cité dans la note initiale. L'accès au texte via le DOI a échoué pendant cette session ; ne pas prétendre à une lecture intégrale.
+
+A nearly-conservative, high-order, forward Lagrange–Galerkin method for the resolution of compressible flows on unstructured triangular meshes. \url{https://www.sciencedirect.com/science/article/abs/pii/S0021999122005332}. Le résumé décrit des espaces continus d'ordre élevé sur triangles et des bilans conservés sous intégration exacte. La combinaison forward, triangles, ordre élevé n'est pas nouvelle.
+
+A high order conservative semi-Lagrangian discontinuous Galerkin method for two-dimensional transport simulations. \url{https://arxiv.org/abs/1612.06977}. Antécédent SL-DG conservatif d'ordre élevé, avec intégration géométrique et formulation de Galerkin caractéristique.
+
+A Third-order Conservative Semi-Lagrangian Discontinuous Galerkin Scheme For the Transport Equation on Curvilinear Unstructured Meshes. \url{https://arxiv.org/abs/2511.10100}. Prépublication de novembre 2025. Le résumé annonce un schéma d'ordre trois sur triangles curvilignes et un transfert conservatif par intersections. Concurrent essentiel pour un projet de papier.
+
+Arbitrary-Order Conservative and Consistent Remapping and a Theory of Linear Maps: Part I. \url{https://doi.org/10.1175/mwr-d-14-00343.1}. Théorie algébrique antérieure des transferts conservatifs et cohérents. Les seules contraintes de masse et de constante ne suffisent pas comme revendication originale.
+
+Arbitrary-Order Conservative and Consistent Remapping and a Theory of Linear Maps: Part II. \url{https://journals.ametsoc.org/view/journals/mwre/144/4/mwr-d-15-0301.1.xml}. Extension comprenant des transferts FE vers FE. Comparaison indispensable de la construction des opérateurs et de leurs contraintes.
+
+Optimization-based remap and transport: A divide and conquer strategy for feature-preserving discretizations. \url{https://www.sciencedirect.com/science/article/pii/S0021999113002416}. Le remaillage par optimisation et contraintes de conservation est établi. L'optimisation de poids ne constitue pas en elle-même une nouveauté.
+
+Stable Coupling of Nonconforming, High-Order Finite Difference Methods. \url{https://arxiv.org/abs/1410.5746}. Antécédent des projections compatibles avec une norme d'énergie et d'un espace intermédiaire. Le lien avec la proposition de Gram doit être étudié avant toute revendication théorique.
+
+An explicit semi-Lagrangian, spectral method for solution of Lagrangian transport equations in Eulerian-Lagrangian formulations. \url{https://arxiv.org/abs/1910.06476}. Particules initialisées aux points de Gauss et reconstruction par moindres carrés avec contraintes de masse et d'énergie. Antécédent proche du vocabulaire proposé.
+
+Metrics for Intercomparison of Remapping Algorithms (MIRA) protocol applied to Earth system models. \url{https://gmd.copernicus.org/articles/15/6601/2022/gmd-15-6601-2022.html}. Cadre de comparaison des erreurs, de la conservation et des effets de transferts répétés.
+
+\section{Artefacts et commandes}
+Sources : branche SLFE du fork keckj/rodin, répertoire experiments/slfe. Aucune publication vers cbritopacheco/rodin. Les résultats complets sont dans le répertoire slfe-results ; les données de synthèse et le rapport sont copiés sur la branche lors de la publication.
+
+\begin{verbatim}
+python3 experiments/slfe/symbolic.py
+python3 experiments/slfe/validate.py --output /tmp/slfe-validation.json
+python3 experiments/slfe/campaign.py --suite translation --output /tmp/slfe-results
+python3 experiments/slfe/research.py --suite moments --output /tmp/slfe-results
+python3 experiments/slfe/report.py --input /tmp/slfe-results --output /tmp/slfe-report
+\end{verbatim}
+\end{document}

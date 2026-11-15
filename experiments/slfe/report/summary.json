@@ -1,0 +1,21 @@
+{
+  "generated": "15/11/2026 \u00e0 21:39:36",
+  "final": false,
+  "counts": {
+    "translation": 170,
+    "spectrum": 20,
+    "cartesian": 56,
+    "performance": 51,
+    "long_time": 36,
+    "deformation": 135,
+    "moments": 80,
+    "curved_moments": 10,
+    "robustness": 0,
+    "support": 0
+  },
+  "execution_failures": 0,
+  "moment_cases": 80,
+  "accepted_moment_cases": 36,
+  "robustness_cases": 0,
+  "pdf": "/home/keckj/Documents/slfe-results/report/rapport.pdf"
+}

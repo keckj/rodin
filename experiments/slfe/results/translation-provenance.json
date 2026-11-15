@@ -1,0 +1,20 @@
+{
+  "utc": "2026-11-15T20:07:20Z",
+  "git": "838bc93ae7192682c3939353a725a22a349bd872",
+  "source_sha256": {
+    "campaign.py": "e6a291611f732588ba743f379a1eb458dc4e0a242f52f02fecff270e5f817900",
+    "symbolic.py": "1aeea1bb6bfa89c3a1cbcaf18d712b4551d3abc0656d5cd2b0fdfddd60791354",
+    "transfer.cu": "520eedcf46956d8e7806a430bf5fb7a3ecd813feff5fb30e0264267f82fd5257",
+    "moments.py": "e4b9e15ac39eb13aae9e41dc822084f3603d51da40c35ea10dbd93928402916a",
+    "basis.cuh": "067d7dde2ffed83d1159eefcfb434a94fbbb562bea7d30768f5db1ac1f77dbd2",
+    "validate.py": "3d6296852c6d19234614a1d9775e71031042a7686617367f97b421ceaffd271d",
+    "gpu.py": "63659f9a5fbfbd3d806b588e16e3eb70aeb03a68b3062f8663a3e5e442504800",
+    "symbolic.json": "3fe2f294f613777861bf03ba2a26ece3cae8cda67e5a7b3f486285ec85907f64",
+    "cartesian.py": "a27d6a2b8996333ab260b0553c75c3e6eccbffc95f5fd1d3c38bbffd53e95cc2"
+  },
+  "python": "3.10.12",
+  "cupy": "13.6.0",
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "cuda_driver": 13020,
+  "cuda_runtime": 12090
+}
