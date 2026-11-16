@@ -19,7 +19,7 @@ class MomentTransfer:
     def __init__(self, space, flow, t0, t1, qdegree=12, subdivisions=1,
                  fit="signed", tolerance=1e-10, maxiter=2000, active_passes=20,
                  moment_degree=None, solver="cg", jacobian=None, coarse_radius=2,
-                 positivity="active", projection_steps=10000):
+                 positivity="active", projection_steps=10000, particle_data=None):
         if fit not in ("raw", "signed", "positive"):
             raise ValueError(fit)
         if space.degree > 2:
@@ -45,6 +45,18 @@ class MomentTransfer:
         self.source = cp.repeat(cp.arange(mesh.cells, dtype=cp.int32), q.shape[0])
         references = cp.tile(q[:, :2], (mesh.cells, 1))
         physical = mesh.points(q).reshape(-1, 2)
+        initial_weights = (2*mesh.areas[:, None]*q[None, :, 2]).ravel()
+        if particle_data is not None:
+            if solver == "coarse":
+                raise ValueError("Fourier diagnostic assumes the original tensor particle layout")
+            self.source, references, initial_weights = particle_data
+            count = self.source.size
+            self.count = count
+            self.nq = None
+            t = mesh.triangles[self.source]
+            physical = t[:, 0]+references[:, :1]*(t[:, 1]-t[:, 0])+references[:, 1:]*(t[:, 2]-t[:, 0])
+            if float(cp.min(initial_weights)) <= 0:
+                raise ValueError("Custom particle weights must be strictly positive")
         moved = cp.ascontiguousarray(flow(physical, t0, t1))
         jac = cp.ones(count, dtype=cp.float64) if jacobian is None else jacobian(physical, t0, t1).reshape(-1)
         if float(cp.min(jac)) <= 0:
@@ -60,7 +72,7 @@ class MomentTransfer:
             raise RuntimeError("Moment particle location failed")
         self.sb = space.basis(references)
         self.tb = space.basis(target_references)
-        self.weights = (2*mesh.areas[:, None]*q[None, :, 2]).ravel()
+        self.weights = initial_weights
         initial = self.weights.copy()
         ms = moment_space.basis(references)
         mt = moment_space.basis(target_references)

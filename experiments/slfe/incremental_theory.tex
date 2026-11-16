@@ -1,0 +1,138 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath,amssymb,amsthm,geometry,hyperref}
+\geometry{margin=2.4cm}
+\newtheorem{proposition}{Proposition}
+\title{Transport incrémental FE par espace auxiliaire\\Conservation, contraction et limite de petit pas}
+\author{Prototype GPU SLFE, branche du fork keckj/rodin}
+\date{16 novembre 2026}
+\begin{document}\maketitle
+
+\section{Construction}
+Soient $V_h$ un espace DG $P_p$ sur triangles et $W_H$ un espace DG
+cartésien $Q_q$. Les deux espaces contiennent la constante et représentent
+le même domaine périodique. Leurs normes sont les normes $L^2$ exactes.
+La projection orthogonale $R=P_{W_H}|_{V_h}$ a pour adjoint
+$R^*=P_{V_h}|_{W_H}$. Les matrices sont
+\[
+ R=M_W^{-1}B,\qquad R^*=M_V^{-1}B^T,
+ \qquad B_{ji}=\int_\Omega \psi_j\varphi_i.
+\]
+Le couplage $B$ est statique : il ne dépend ni de la vitesse, ni du pas.
+Le calcul des intersections triangle--rectangle est effectué une fois.
+Les intersections mobiles de cellules transportées ne sont pas nécessaires
+à cette construction. La précision des intégrales statiques reste essentielle.
+
+Soit $S_{\Delta t}:W_H\to W_H$ un transport conservatif, préservant la
+constante et contractant dans la norme $M_W$. Le transfert proposé est
+\[
+ \boxed{T_{\Delta t}=I+R^*(S_{\Delta t}-I)R.}
+\]
+Il projette le champ vers le support auxiliaire, y calcule son évolution,
+puis retourne seulement l'incrément. Une projection du champ entier
+donnerait $R^*S_{\Delta t}R$ et introduirait $R^*R$ même sans déplacement.
+
+\section{Propriétés discrètes}
+\begin{proposition}
+Si $R$ et $S$ satisfont les hypothèses ci-dessus, $T$ conserve la masse,
+préserve la constante et vérifie $\|Tv\|_{M_V}\leq\|v\|_{M_V}$.
+Si $S_0=I$, alors $T_0=I$.
+\end{proposition}
+\begin{proof}
+Pour la constante $1_V$, $R1_V=1_W$, d'où $T1_V=1_V$.
+En notant $d=(S-I)Rv$, la conservation dans $W_H$ et l'adjonction donnent
+\[
+ \langle1_V,Tv-v\rangle_V=\langle R1_V,d\rangle_W
+ =\langle1_W,(S-I)Rv\rangle_W=0.
+\]
+Comme $\|R^*d\|_V\leq\|d\|_W$,
+\begin{align*}
+ \|Tv\|_V^2
+ &=\|v\|_V^2+2\langle Rv,d\rangle_W+\|R^*d\|_V^2\\
+ &\leq\|v\|_V^2+\|SRv\|_W^2-\|Rv\|_W^2
+ \leq\|v\|_V^2.
+\end{align*}
+L'identité à pas nul résulte directement de la formule de $T$.
+\end{proof}
+
+La dissipation se décompose exactement en
+\[
+ \|v\|_V^2-\|Tv\|_V^2
+ =\underbrace{\|Rv\|_W^2-\|SRv\|_W^2}_{\text{transport auxiliaire}}
+ +\underbrace{\|d\|_W^2-\|R^*d\|_V^2}_{\text{retour de l'incrément}}.
+\]
+Cette preuve s'applique au transfert linéaire entier et donc à la différence
+de deux champs. Aucun limiteur dépendant du champ ni ajustement de moments
+positifs n'est requis. Elle n'implique pas la positivité des valeurs du champ.
+
+Si $S_{\Delta t}=I+\Delta t L_W+o(\Delta t)$, alors
+\[
+ T_{\Delta t}=I+\Delta t R^*L_WR+o(\Delta t).
+\]
+Il n'existe donc pas de dissipation fixe due à une double projection à
+chaque pas lorsque $\Delta t\to0$. Le générateur obtenu reste celui d'un
+problème spatial approché ; l'identité à pas nul ne prouve pas sa consistance.
+
+\section{Réalisation sur GPU}
+La base triangulaire est modale et orthonormale en moyenne. Le support
+cartésien utilise les noeuds de Gauss tensorisés, dont la matrice de masse
+est exactement diagonale pour $Q_q$. Le produit croisé est un polynôme de
+degré total au plus $p+2q$ sur chaque intersection affine. Une quadrature
+de ce degré fournit les matrices statiques à l'arrondi près.
+
+Pour la translation, $S$ est composé de deux projections DG 1D exactes.
+Chaque direction ne couple que deux cellules voisines du pied décalé par
+la partie entière du déplacement. Le nombre de blocs par ligne ne dépend
+donc pas du nombre de cellules franchies.
+
+Pour le cisaillement $u=(a\sin(2\pi y),0)$, chaque ligne de noeuds de Gauss
+en $y$ possède sa propre translation en $x$. Chaque ligne est contractante
+dans sa norme de Gauss ; leur somme pondérée l'est également. L'énergie
+discrète correspond à la norme $L^2$ exacte du polynôme $Q_q$ reconstruit.
+La variation non polynomiale en $y$ introduit une erreur de consistance
+distincte de cette propriété de stabilité.
+
+Le code ne fournit pas encore de transport auxiliaire général pour une
+vitesse FE non séparable. Une décomposition arbitraire en directions ne
+doit pas être supposée contractante pour un flot incompressible quelconque.
+
+\section{Résolution auxiliaire et limites}
+Si $v\in\ker R$, alors $Tv=v$ : les modes invisibles au support auxiliaire
+restent immobiles. Pour $q=p$ et un carré auxiliaire par carré logique de
+deux triangles, les dimensions sont $\dim V_h=n^2(p+1)(p+2)$ et
+$\dim W_H=n^2(p+1)^2$. Un noyau est donc inévitable. Les expériences
+rapportent cette dimension et comparent des supports plus fins. Le rang
+complet observé sur un support enrichi ne constitue pas une garantie pour
+toutes les géométries.
+
+L'ordre spatial, l'erreur de phase et l'accumulation temporelle sont mesurés
+séparément. Une preuve uniforme de convergence, une stratégie de choix de
+$H,q$, les frontières non périodiques, le transport compressible, un support
+auxiliaire adapté à des géométries complexes et le coût MPI restent ouverts.
+
+Le bilan global de masse provient du transfert de l'incrément conservatif.
+Il ne suffit pas à identifier un flux physique unique sur chaque face du
+maillage FE d'origine ; cette propriété locale nécessite une analyse distincte.
+
+\section{Positionnement}
+Le transfert d'incréments possède des antécédents explicites dans les
+méthodes FLIP. Les projections adjointes et les espaces auxiliaires sont
+également des outils établis. La contribution éventuelle ne peut donc pas
+être l'idée générale de retourner une variation. La formulation FE avec
+projections $L^2$ statiques, le transport DG auxiliaire contractant, le
+traitement des modes invisibles, les bornes de consistance et les coûts GPU
+doivent être comparés précisément aux travaux antérieurs.
+
+\begin{thebibliography}{9}
+\bibitem{flip} J. U. Brackbill et H. M. Ruppel,
+\emph{FLIP: A method for adaptively zoned, particle-in-cell calculations
+of fluid flows in two dimensions}, J. Comput. Phys. 65 (1986), 314--343.
+\bibitem{assign} D. Duque et P. Español,
+\emph{Assignment of fields from particles to mesh},
+\url{https://arxiv.org/abs/1610.05258}.
+\bibitem{coflip} \emph{Fluid Implicit Particles on Coadjoint Orbits},
+\url{https://arxiv.org/abs/2406.01936}.
+\end{thebibliography}
+\end{document}

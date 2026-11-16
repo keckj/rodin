@@ -1,5 +1,63 @@
 # SLFE GPU research experiment
 
+## Follow-up: incremental auxiliary-space transport
+
+The 16 November follow-up introduces a different linear construction:
+
+`T = I + R* (S - I) R`.
+
+`R` is the static exact L2 projection from triangular DG Pp to Cartesian DG
+Qp, `R*` its mass adjoint, and `S` a conservative, contractive Cartesian DG
+transport. Returning the increment gives mass conservation, L2 contraction
+and the identity at zero displacement. The proof and its hypotheses are in
+[`incremental_theory.tex`](incremental_theory.tex), with the
+[follow-up PDF](report_incremental/rapport_increments.pdf) and
+[compiled proof](report_incremental/incremental_theory.pdf).
+
+`carrier.py` and `carrier.cu` implement static cross-mass construction and
+matrix-free applications on CUDA. `carrier_study.py` records independent
+validation, spatial refinement, small-step, long-time and resolution studies.
+All 73 primary follow-up cases completed; 48 full-transfer SVD checks and a
+Compute Sanitizer run passed. Data are in `results_incremental/`.
+
+```python
+from gpu import Mesh, Space, smooth
+from carrier import Carrier
+
+mesh = Mesh(32)
+space = Space(mesh, 3)
+carrier = Carrier(space, n=2*mesh.n)
+transport = carrier.transport(1/16, flow="shear")
+coefficients = space.project(smooth)
+coefficients = transport.apply(coefficients)
+```
+
+The current carrier supports translation and horizontal incompressible shear.
+It is not a general velocity FE solver. At equal grid resolution and degree,
+the carrier has fewer degrees of freedom than the triangular space and leaves
+some modes stationary; the finer carrier in this example removes the nullspace
+in the small systems checked by SVD. Accuracy, carrier resolution and general
+flow extensions remain research questions. Increment transfer has FLIP
+antecedents; novelty is not asserted for that principle.
+
+```sh
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/carrier_study.py --suite validation --output /tmp/slfe-incremental
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/carrier_study.py --suite convergence --output /tmp/slfe-incremental
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/carrier_study.py --suite small_steps --output /tmp/slfe-incremental
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/carrier_study.py --suite long_time --output /tmp/slfe-incremental
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/carrier_study.py --suite resolution --output /tmp/slfe-incremental
+```
+
+Other follow-up experiments are retained separately. `normalized.py` implements
+interface-layer quadrature and a local Gram correction: the latter failed
+spatial consistency checks and is not the selected method. `flux.py` and
+`ray_flux.cu` provide a characteristic face-flux comparison with an optional
+nonlinear energy constraint. Their exploratory JSONL files are distinct from
+the reproducible `carrier-*` study records and are not counted as validations
+of the selected incremental algorithm.
+
+## Original overnight campaign
+
 Branch `SLFE`, based on `838bc93ae71`. Research deadline: 16 November 2026,
 08:00 Europe/Paris. Only `https://github.com/keckj/rodin.git` is an authorized
 publication destination. The original worktree and HySoP remain untouched.

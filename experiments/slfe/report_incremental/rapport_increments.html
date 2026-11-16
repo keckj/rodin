@@ -1,0 +1,51 @@
+<!doctype html><html lang='fr'><meta charset='utf-8'><title>SLFE : transport incrémental par espace auxiliaire</title><style>body{max-width:1050px;margin:40px auto;padding:0 24px;font:17px/1.6 system-ui;color:#152c3a}h2{margin-top:2em}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #cbd5de;padding:8px;text-align:left}img{max-width:100%}figcaption{font-size:14px}</style><h1>SLFE : transport incrémental par espace auxiliaire</h1><p>Complément au rapport de nuit. Généré le 16/11/2026 à 09:25, heure de Paris. Les résultats ci-dessous concernent un nouvel algorithme, implémenté après la campagne initiale.</p>
+<h2>Changement algorithmique</h2>
+<p>Le champ reste représenté dans les éléments finis triangulaires. Un support cartésien DG auxiliaire reçoit une projection L2 du champ, effectue le transport, puis retourne seulement l&#x27;incrément. Les échanges FE–support sont des projections adjointes préassemblées par intersection statique. Aucun ajustement global de moments ni intersection de cellules transportées n&#x27;intervient pendant les pas de cette variante.</p>
+<p><strong>T = I + R* (S − I) R</strong>, avec R la projection FE vers le support et R* son adjoint de masse.</p>
+<p>Si R est contractant et préserve la constante, et si S conserve la masse, la constante et la norme L2 au sens large, le transfert T conserve la masse et la constante et est contractant. Il vaut exactement l&#x27;identité lorsque S vaut l&#x27;identité. La note incremental_theory.pdf donne une preuve et la décomposition de la dissipation. Le transfert est linéaire et ne comporte pas de limiteur dépendant du champ.</p>
+<p>Ces hypothèses sont réalisées par le prototype pour la translation et le cisaillement horizontal incompressible, en double précision sur RTX 5090. Les projections statiques couplent des triangles affines Pp à des carrés Qp ; le transport auxiliaire est une projection DG 1D par ligne de noeuds de Gauss, puis par colonne pour la translation 2D. La vitesse peut varier non linéairement entre les lignes dans le cas du cisaillement.</p>
+<h2>Contrôles indépendants</h2>
+<p>73 cas enregistrés, 0 échecs d&#x27;exécution. Les six validations combinent P1, P2, P3 et deux résolutions auxiliaires. Elles comprennent une seconde quadrature des intersections, les moments exacts de Gauss, l&#x27;adjoint comparé à une matrice dense indépendante, les constantes, la masse, la contraction de R et 48 SVD des transferts complets, dont les identités à pas nul.</p>
+<div class='table'><table><thead><tr><th>Degré</th><th>H = h / facteur</th><th>Norme R</th><th>Noyau minimal</th><th>Norme T, max.</th></tr></thead><tbody>
+<tr><td>1</td><td>1</td><td>1</td><td>32</td><td>1</td></tr>
+<tr><td>1</td><td>2</td><td>1</td><td>0</td><td>1</td></tr>
+<tr><td>2</td><td>1</td><td>1</td><td>48</td><td>1</td></tr>
+<tr><td>2</td><td>2</td><td>1</td><td>0</td><td>1</td></tr>
+<tr><td>3</td><td>1</td><td>1</td><td>64</td><td>1</td></tr>
+<tr><td>3</td><td>2</td><td>1</td><td>0</td><td>1</td></tr>
+</tbody></table></div>
+<p>Compute Sanitizer : ========= ERROR SUMMARY: 0 errors</p>
+<h2>Précision sur un flot non affine</h2>
+<figure><img src='incremental-convergence.svg' alt='Même champ, même maillage triangulaire et même durée. La référence géométrique utilise les images affines des cellules ; le nouveau support évalue le cisaillement aux noeuds de Gauss.'><figcaption>Même champ, même maillage triangulaire et même durée. La référence géométrique utilise les images affines des cellules ; le nouveau support évalue le cisaillement aux noeuds de Gauss.</figcaption></figure>
+<div class='table'><table><thead><tr><th>n</th><th>Erreur géométrique</th><th>Erreur incrémentale</th><th>Rapport erreurs</th><th>Défaut masse</th></tr></thead><tbody>
+<tr><td>8</td><td>0.02649</td><td>0.001525</td><td>17.36</td><td>4.441e-16</td></tr>
+<tr><td>16</td><td>0.00717</td><td>9.207e-05</td><td>77.87</td><td>6.661e-16</td></tr>
+<tr><td>32</td><td>0.001995</td><td>7.893e-06</td><td>252.7</td><td>9.992e-16</td></tr>
+<tr><td>64</td><td>0.0005453</td><td>5.333e-07</td><td>1023</td><td>6.661e-16</td></tr>
+<tr><td>128</td><td>0.0004042</td><td>3.469e-08</td><td>1.165e+04</td><td>1.221e-15</td></tr>
+</tbody></table></div>
+<p>Le dernier taux de raffinement P3 est 3.942. Les erreurs sont intégrées avec la quadrature indépendante de degré 18. Cette amélioration corrige principalement la limitation géométrique de la référence sur ce flot ; elle ne mesure pas un gain face à toutes les méthodes SLDG utilisant une géométrie courbe d&#x27;ordre élevé.</p>
+<h2>Petits pas et temps long</h2>
+<figure><img src='incremental-small-steps.svg' alt='Les deux variantes emploient exactement les mêmes projections statiques et le même transport auxiliaire. Le retour du champ entier applique une double projection à chaque pas.'><figcaption>Les deux variantes emploient exactement les mêmes projections statiques et le même transport auxiliaire. Le retour du champ entier applique une double projection à chaque pas.</figcaption></figure>
+<div class='table'><table><thead><tr><th>Degré</th><th>Facteur</th><th>Pas</th><th>Erreur L2</th><th>Défaut masse</th><th>Énergie finale / initiale</th></tr></thead><tbody>
+<tr><td>2</td><td>1</td><td>10000</td><td>7.162e-05</td><td>1.035e-12</td><td>1</td></tr>
+<tr><td>2</td><td>2</td><td>10000</td><td>7.618e-05</td><td>9.344e-13</td><td>1</td></tr>
+<tr><td>3</td><td>1</td><td>10000</td><td>3.258e-06</td><td>6.684e-14</td><td>1</td></tr>
+<tr><td>3</td><td>2</td><td>10000</td><td>3.355e-06</td><td>2.072e-12</td><td>1</td></tr>
+</tbody></table></div>
+<p>Le temps long correspond à une translation pendant 10 unités de temps, avec 10 000 pas et n=32. Les différences à l&#x27;arrondi ne sont pas corrigées par un rétablissement global de masse ou une renormalisation d&#x27;énergie.</p>
+<h2>Résolution auxiliaire et coût</h2>
+<p>À résolution égale et degré égal, l&#x27;espace cartésien possède moins de degrés de liberté que l&#x27;espace triangulaire. Certains modes FE appartiennent nécessairement au noyau de R et restent immobiles sous T. Les SVD avec un support deux fois plus fin dans chaque direction ne détectent plus ce noyau sur les petits maillages testés. Le choix du support fait donc partie de la méthode ; le théorème d&#x27;énergie ne suffit pas à le choisir.</p>
+<div class='table'><table><thead><tr><th>Facteur</th><th>Erreur L2</th><th>Couplage (Mo)</th><th>Préassemblage (s)</th><th>Application (ms)</th></tr></thead><tbody>
+<tr><td>1</td><td>5.333e-07</td><td>41.9</td><td>0.07861</td><td>0.1011</td></tr>
+<tr><td>2</td><td>5.308e-07</td><td>78.6</td><td>0.09198</td><td>0.1131</td></tr>
+<tr><td>3</td><td>5.169e-07</td><td>125.8</td><td>0.109</td><td>0.2041</td></tr>
+</tbody></table></div>
+<p>Les applications sont chronométrées par événements CUDA après échauffement, avec allocations du prototype et lancements Python. Le préassemblage statique est mesuré séparément et peut inclure des coûts de cache. Aucune accélération globale face à un solveur eulérien GPU n&#x27;est établie. Pour une vitesse variable, les poids du transport auxiliaire changent, mais les couplages entre maillages restent réutilisables.</p>
+<h2>Ce qui reste à établir pour un papier</h2>
+<p>La construction donne maintenant un algorithme linéaire exécuté sur GPU, une preuve conditionnelle de conservation et de contraction, l&#x27;identité à déplacement nul et des résultats d&#x27;ordre élevé sur un flot non affine. Il reste à démontrer une borne de consistance uniforme, traiter les modes mal résolus par le support et construire un transport auxiliaire adapté aux vitesses FE générales. Les frontières, la compressibilité et le calcul distribué ne sont pas implémentés dans cette variante.</p>
+<p>Le retour d&#x27;incréments a des antécédents dans FLIP ; les projections de masse conservatives et stables sont également établies. Une nouveauté ne peut pas être revendiquée sur ces seuls ingrédients. Le positionnement doit porter sur leur réalisation FE statique, les propriétés de l&#x27;opérateur complet, le contrôle du support et le coût à erreur fixée. La preuve et les références sont jointes dans incremental_theory.pdf.</p>
+<p><a href='https://arxiv.org/html/1610.05258v1'>Duque et Español, Assignment of fields from particles to mesh</a> ; <a href='https://arxiv.org/abs/2406.01936'>Fluid Implicit Particles on Coadjoint Orbits</a>.</p>
+<h2>Autres pistes examinées</h2>
+<p>Les bandes de quadrature adaptées aux faces rendent faisables les premiers cas de petit déplacement qui échouaient avec des points intérieurs fixes, mais le solveur complet de moments reste coûteux. La correction locale des Gram après équilibrage des seules masses assure des invariants mais a échoué au test de convergence : elle est conservée comme expérience rejetée. Une variante par flux caractéristiques aux faces donne aussi une bonne précision en cisaillement ; son contrôle d&#x27;énergie est non linéaire. Elle constitue une comparaison exploratoire distincte du transfert linéaire incrémental présenté ici.</p>
+<p>Reproduction : python3 experiments/slfe/carrier_study.py --suite validation --output DIR, puis les suites convergence, small_steps, long_time et resolution. Les JSONL contiennent les paramètres, les versions et les empreintes SHA-256 des sources.</p>

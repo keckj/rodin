@@ -1,0 +1,4 @@
+{"n": 8, "p": 1, "flow": "translation", "steps": 16, "l2": 0.023750324751103627, "mass": 2.220446049250313e-16, "alpha_min": 1.0, "energy": 0.9948823772582106, "build_seconds": 0.6408367000403814, "segments": 4442}
+{"n": 16, "p": 1, "flow": "translation", "steps": 16, "l2": 0.004511230389931861, "mass": 0.0, "alpha_min": 1.0, "energy": 0.9997952779709613, "build_seconds": 0.0042671660194173455, "segments": 27270}
+{"n": 32, "p": 1, "flow": "translation", "steps": 16, "l2": 0.0011327557714535777, "mass": 2.220446049250313e-16, "alpha_min": 1.0, "energy": 0.9999889823565703, "build_seconds": 0.005990666977595538, "segments": 190088}
+{"n": 64, "p": 1, "flow": "translation", "steps": 16, "l2": 0.00029074867931675786, "mass": 0.0, "alpha_min": 1.0, "energy": 0.9999992549101314, "build_seconds": 0.008485144004225731, "segments": 1479486}

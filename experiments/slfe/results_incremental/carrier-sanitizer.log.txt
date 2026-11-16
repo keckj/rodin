@@ -1,0 +1,14 @@
+========= COMPUTE-SANITIZER
+{"start": "3d650e95232c1ae6", "p": 1, "factor": 1}
+{"done": "3d650e95232c1ae6", "status": "ok", "seconds": 3.896879695006646}
+{"start": "e7ef820b7c521021", "p": 1, "factor": 2}
+{"done": "e7ef820b7c521021", "status": "ok", "seconds": 3.5842514960095286}
+{"start": "62ab77ced93d5815", "p": 2, "factor": 1}
+{"done": "62ab77ced93d5815", "status": "ok", "seconds": 7.170129070000257}
+{"start": "5e57fc2e071124fe", "p": 2, "factor": 2}
+{"done": "5e57fc2e071124fe", "status": "ok", "seconds": 7.493407296016812}
+{"start": "f04897b5b25c0681", "p": 3, "factor": 1}
+{"done": "f04897b5b25c0681", "status": "ok", "seconds": 12.61809198698029}
+{"start": "b353d8373da55564", "p": 3, "factor": 2}
+{"done": "b353d8373da55564", "status": "ok", "seconds": 13.340157007041853}
+========= ERROR SUMMARY: 0 errors

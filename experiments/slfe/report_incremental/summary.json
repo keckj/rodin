@@ -1,0 +1,12 @@
+{
+  "generated": "16/11/2026 \u00e0 09:25",
+  "counts": {
+    "validation": 6,
+    "convergence": 30,
+    "small_steps": 24,
+    "long_time": 4,
+    "resolution": 9
+  },
+  "execution_failures": 0,
+  "max_mass_error": 2.6261659513693303e-11
+}
