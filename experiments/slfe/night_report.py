@@ -23,6 +23,7 @@ def main():
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     apply_style()
+    plt.rcParams["svg.hashsalt"] = "slfe-night2"
     r = Report(args.output)
     stamp = datetime.now(ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %H:%M")
     raw = {
@@ -32,6 +33,17 @@ def main():
             "adaptive-memory",
             "adaptive-projected",
             "adaptive-physics",
+            "adaptive-chebyshev",
+            "moving-separated",
+            "adaptive-separated",
+            "memory-stress",
+            "separated-refinement",
+            "roundtrip-smoke",
+            "roundtrip-long",
+            "source-smoke",
+            "source-full",
+            "product-pilot",
+            "products",
             "moving-resolution",
             "moving-fields",
         )
@@ -329,6 +341,300 @@ def main():
             "night-physics",
             "Transport et réaction calculés sur GPU. L'amélioration due à la projection de mémoire persiste dans ce couplage linéaire; cela ne valide pas encore une physique non linéaire ou un transport à vitesse FE générale.",
         )
+    accelerated = [x["result"] for x in raw["adaptive-chebyshev"]]
+    if accelerated:
+        r.section("Accélération de la projection de mémoire")
+        r.paragraph(
+            "Le carré d'un résidu de Chebyshev fournit un filtre compris entre zéro et un sur tout le spectre admissible, même sous l'échelle de ciblage choisie. Il conserve donc la contraction et l'observation FE à chaque troncature. Les techniques polynomiales sont classiques; l'intérêt mesuré ici concerne leur insertion dans le transfert de mémoire. L'échelle 0,1 fonctionne mieux que 0,01 sur ce cas; aucune supériorité universelle du réglage n'est établie."
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        for ax, n in zip(axes, (64, 128)):
+            selected = [x for x in projected if x["nfe"] == n]
+            ax.plot(
+                [x["projection_iterations"] - 1 for x in selected],
+                [x["l2"][0] / x["best_fe_l2"][0] for x in selected],
+                "o-",
+                label="Itération simple",
+            )
+            for scale in (0.01, 0.1):
+                selected = [
+                    x
+                    for x in accelerated
+                    if x["nfe"] == n and x["filter_scale"] == scale
+                ]
+                ax.plot(
+                    [2 * x["projection_iterations"] - 1 for x in selected],
+                    [x["l2"][0] / x["best_fe_l2"][0] for x in selected],
+                    "o-",
+                    label=f"Chebyshev : s={scale}",
+                )
+            ax.axhline(1, color="black", linestyle="--")
+            ax.set(
+                title=f"FE : 2 × {n}² triangles",
+                xlabel="Produits R R* par changement",
+                ylabel="Erreur L2 / plancher FE",
+            )
+            ax.legend(fontsize=8)
+            ax.grid(alpha=0.2)
+        r.save_figure(
+            fig,
+            "night-chebyshev",
+            "Coût algébrique du filtre, hors transferts communs de préparation. Sept produits avec le filtre ciblé à 0,1 atteignent ici la précision de quinze produits avec l'itération simple. Les reconstructions géométriques restent dominantes dans le temps total.",
+        )
+    stress = [x["result"] for x in raw["memory-stress"]]
+    if stress:
+        r.paragraph(
+            "Les trois transferts subissent chacun 2000 changements entre trois supports de graduations 0, 0,95 et 0,9999, entrelacés avec cisaillements et rotations locales de modes FE. Ces rotations sont un test algébrique isométrique, pas une réaction physique. Quatre champs aléatoires sont suivis; le champ FE est inchangé bit à bit au transfert."
+        )
+        r.table(
+            ["Transfert", "Changements", "Défaut FE relatif max", "Défaut masse max"],
+            [
+                [
+                    x["method"],
+                    x["steps"],
+                    x["maxima"]["observation_error"],
+                    x["maxima"]["mass_error"],
+                ]
+                for x in stress
+            ],
+        )
+    separated = [x["result"] for x in raw["moving-separated"]]
+    if separated:
+        r.section("Plusieurs structures : répartir les cellules selon l'énergie")
+        r.paragraph(
+            "Quatre champs distincts sont maintenant initialisés avec des centres espacés jusqu'à 0,15 autour de la position centrale. Le centre d'énergie unique ne suffit plus. Une alternative répartit les intervalles selon les marginales d'énergie dans x, y, x+y et x−y : histogrammes périodiques sur GPU, lissage gaussien de largeur 0,005, puissance 1/4, fond uniforme de 25 %, puis inversion de la masse cumulée. C'est une heuristique d'équidistribution; la stabilité vient des projections contractantes, pas d'une prétendue estimation d'erreur par ce moniteur."
+        )
+        fig, axes = plt.subplots(1, 3, figsize=(11, 4))
+        for ax, spread in zip(axes, (0.008, 0.05, 0.15)):
+            for policy, label in (
+                ("centroid", "Centre unique"),
+                ("energy", "Équidistribution"),
+            ):
+                entries = sorted(
+                    [
+                        x
+                        for x in separated
+                        if x["spread"] == spread and x["mesh_policy"] == policy
+                    ],
+                    key=lambda x: x["naux"],
+                )
+                ax.loglog(
+                    [x["naux"] for x in entries],
+                    [max(x["l2"]) for x in entries],
+                    "o-",
+                    label=label,
+                )
+            entries = [x for x in separated if x["spread"] == spread]
+            ax.axhline(
+                max(entries[0]["best_fe_l2"]),
+                color="black",
+                linestyle="--",
+                label="Plancher FE max",
+            )
+            ax.set(
+                title=f"Dispersion : {spread}",
+                xlabel="Cellules auxiliaires par axe",
+                ylabel="Erreur L2 maximale",
+            )
+            ax.legend(fontsize=8)
+            ax.grid(alpha=0.2)
+        r.save_figure(
+            fig,
+            "night-separated",
+            "Dix-huit cas à quatre champs et 128 pas. Le maillage FE est fixé : son plancher se dégrade lorsque des profils passent dans ses régions moins fines. Le moniteur d'énergie rapproche l'erreur de ce plancher, sans résoudre cette limite FE.",
+        )
+        if (args.output / "night-separated-fields.pdf").exists():
+            r.figure(
+                "night-separated-fields",
+                "Champs calculés pour une dispersion 0,15. Les champs affichés sont les sommes des quatre profils; les cartes d'erreur prennent le maximum des erreurs ponctuelles individuelles. Les valeurs L2 indiquées sont les maxima sur les quatre champs.",
+            )
+    coupled_separated = [x["result"] for x in raw["adaptive-separated"]]
+    if coupled_separated:
+        r.paragraph(
+            f"Extension au couplage FE : {len(coupled_separated)} cas disponibles avec quatre structures séparées, avec ou sans réaction. Le tableau inclut le maillage FE raffiné pour lever le précédent plancher. Les erreurs sont prises sur le pire des quatre champs."
+        )
+        r.table(
+            ["FE n", "Réaction", "Support", "Itér.", "L2 max", "Plancher max"],
+            [
+                [
+                    x["nfe"],
+                    "oui" if x["reaction"] else "non",
+                    "énergie" if x["mesh_policy"] == "energy" else "centre",
+                    x["projection_iterations"],
+                    max(x["l2"]),
+                    max(x["best_fe_l2"]),
+                ]
+                for x in coupled_separated
+            ],
+        )
+    refined = [x["result"] for x in raw["separated-refinement"]]
+    if refined:
+        r.paragraph(
+            "Le raffinement FE révèle une erreur auxiliaire auparavant masquée. L'étude suivante augmente séparément le nombre de cellules auxiliaires et le nombre de pas, sur le maillage FE n=256. Une amélioration de mémoire ne peut pas supprimer une erreur d'advection ou de résolution dans le support auxiliaire."
+        )
+        r.table(
+            ["Aux. n", "Pas", "Réaction", "Itér.", "L2 max", "Plancher max"],
+            [
+                [
+                    x["naux"],
+                    x["steps"],
+                    "oui" if x["reaction"] else "non",
+                    x["projection_iterations"],
+                    max(x["l2"]),
+                    max(x["best_fe_l2"]),
+                ]
+                for x in refined
+            ],
+        )
+    roundtrip = [x["result"] for x in raw["roundtrip-smoke"]]
+    if roundtrip:
+        r.section("Déformer puis revenir : erreur accumulée sans référence numérique")
+        r.paragraph(
+            "Le flot autonome est suivi pendant une durée T, puis sa vitesse est inversée pendant la même durée. La solution exacte finale est le profil initial : aucune intégration de caractéristiques n'est nécessaire pour cette référence. Les partitions restent adaptées au champ calculé pendant les deux trajets. La dissipation et les pertes de mémoire ne s'annulent pas lors du retour."
+        )
+        r.table(
+            ["Durée aller", "Transfert", "Changements", "L2 max", "Retour FE max"],
+            [
+                [
+                    x["half_duration"],
+                    x["method"],
+                    x["changes"],
+                    max(x["l2"]),
+                    max(x["fe_return_l2"]),
+                ]
+                for x in roundtrip
+            ],
+        )
+    extended = [x["result"] for x in raw["roundtrip-long"]]
+    if extended:
+        r.paragraph(
+            f"Campagne de déformation élargie : {len(extended)} cas sur 48 enregistrés. Les erreurs affichées portent sur le pire des quatre champs; les cas qui n'atteignent pas la tolérance restent présents."
+        )
+        for duration in (0.25, 1.0):
+            fig, axes = plt.subplots(2, 2, figsize=(10, 7))
+            for ax, (nfe, naux) in zip(
+                axes.ravel(), ((128, 64), (128, 128), (256, 64), (256, 128))
+            ):
+                entries = [
+                    x
+                    for x in extended
+                    if x["nfe"] == nfe
+                    and x["naux"] == naux
+                    and x["half_duration"] == duration
+                ]
+                for method in ("reset", "projected", "chebyshev"):
+                    selected = sorted(
+                        [x for x in entries if x["method"] == method],
+                        key=lambda x: x["steps_per_leg"],
+                    )
+                    if selected:
+                        ax.loglog(
+                            [x["steps_per_leg"] for x in selected],
+                            [max(x["l2"]) for x in selected],
+                            "o-",
+                            label=method,
+                        )
+                if entries:
+                    ax.axhline(
+                        max(entries[0]["best_fe_l2"]),
+                        color="black",
+                        linestyle="--",
+                        label="Plancher FE",
+                    )
+                    ax.legend(fontsize=8)
+                ax.set(
+                    title=f"FE n={nfe} · auxiliaire n={naux}",
+                    xlabel="Pas par trajet",
+                    ylabel="Erreur L2 maximale",
+                )
+                ax.grid(alpha=0.2)
+            r.save_figure(
+                fig,
+                "night-return-" + str(duration).replace(".", "-"),
+                f"Aller-retour de durée totale {2*duration}. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n'est pas encore enregistré.",
+            )
+    sources = [x["result"] for x in raw["source-full"] or raw["source-smoke"]]
+    if sources:
+        r.section("Apparition d'une structure par une source FE")
+        r.paragraph(
+            "Une nouvelle bosse centrée en (0,8; 0,75) est ajoutée par une source FE impulsionnelle à t=0,125, après un début de transport d'une autre bosse. Le maillage triangulaire est perturbé, sans graduation. L'adaptation compare l'énergie de l'état auxiliaire à celle du champ FE observé. Le second moniteur peut voir une structure créée par la physique FE avant qu'elle soit bien représentée dans l'auxiliaire. La référence transporte séparément les deux profils analytiques."
+        )
+        r.paragraph(
+            "La source injecte de l'énergie. Son travail est mesuré par la différence d'énergie FE, et l'identité entre ce travail et la variation de l'énergie augmentée est contrôlée. Le bilan de masse ajoute la masse de la source. Une contraction globale n'est pas revendiquée à travers cette impulsion."
+        )
+        r.table(
+            ["FE n", "Aux. n", "Largeur", "Moniteur", "L2", "Plancher FE"],
+            [
+                [
+                    x["nfe"],
+                    x["naux"],
+                    x["width"],
+                    x["monitor"],
+                    max(x["l2"]),
+                    max(x["best_fe_l2"]),
+                ]
+                for x in sources
+            ],
+        )
+    products = [x["result"] for x in raw["products"] or raw["product-pilot"]]
+    if products:
+        r.section("Exploration : vitesses issues de produits de fonctions de courant")
+        r.paragraph(
+            "Une fonction de courant somme de produits a(y)b(x) transforme l'advection en somme de commutateurs de cisaillements. Le prototype réutilise une formule publiée de Casas, Escorihuela-Tomàs et Moreno Casares (2025), PCP16. Ses seize cisaillements Fourier sont unitaires; son ordre cinq dans la racine du pas correspond à l'ordre deux dans le temps physique, à grille fixée. Les coefficients et cette théorie de composition sont attribués aux auteurs. L'intérêt recherché ici est une extension des vitesses admissibles dans le couplage FE, dont la nouveauté et l'avantage de coût ne sont pas établis."
+        )
+        r.paragraph(
+            "Les tests emploient un ou deux tourbillons gaussiens périodiques, dont la fonction de courant possède de nombreux modes de Fourier mais peu de produits séparables. Un oracle matriciel GPU contrôle le commutateur, l'unitarité, les constantes, l'inverse et le défaut temporel. Une intégration indépendante de caractéristiques contrôle l'erreur physique. Une erreur nodale RMS est distinguée de l'erreur FE intégrée."
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        for rank, ax in zip((1, 2), axes):
+            for n in (127, 255, 511):
+                for method in ("group4", "pcp16"):
+                    selected = sorted(
+                        [
+                            x
+                            for x in products
+                            if x["rank"] == rank
+                            and x["n"] == n
+                            and x["method"] == method
+                            and x["nfe"] is None
+                        ],
+                        key=lambda x: x["steps"],
+                    )
+                    if selected:
+                        ax.loglog(
+                            [x["steps"] for x in selected],
+                            [max(x["l2"]) for x in selected],
+                            "o-",
+                            label=f"{method}, n={n}",
+                        )
+            ax.set(
+                title=f"{rank} produit(s)",
+                xlabel="Nombre de pas",
+                ylabel="Erreur RMS nodale",
+            )
+            if ax.lines:
+                ax.legend(fontsize=8)
+            ax.grid(alpha=0.2)
+        r.save_figure(
+            fig,
+            "night-products",
+            "La grille de 127 points peut imposer un plancher spatial. Les résultats nodaux exploratoires ne constituent pas un benchmark de performance FE ni une validation d'une vitesse FE arbitraire.",
+        )
+        fe_products = [x for x in products if x["nfe"] is not None]
+        if fe_products:
+            r.table(
+                ["Produits", "FE n", "Pas", "L2 FE", "Plancher FE"],
+                [
+                    [
+                        x["rank"],
+                        x["nfe"],
+                        x["steps"],
+                        max(x["l2"]),
+                        max(x["best_fe_l2"]),
+                    ]
+                    for x in fe_products
+                ],
+            )
     r.section("Raffinement : identité validée, contrôleur insuffisant")
     nested = json.loads((args.input / "nested-validation.json").read_text())["results"]
     r.table(
@@ -380,7 +686,33 @@ def main():
         "Résultat négatif conservé : changer le classement des cellules ne suffit pas à rendre le contrôleur efficace.",
     )
     r.section("Contrôles et limites pour un article")
-    for name in ("nested-sanitizer", "memory-transfer-sanitizer", "ambient-sanitizer"):
+    r.paragraph(
+        "La note établit également une borne d'erreur pour des supports variables : une transition contractante qui envoie l'état minimal J_n v sur J_(n+1) v n'ajoute pas de terme explicite dépendant du nombre de remaillages. Les défauts locaux de transport restent dans la borne, notamment le commutateur entre projection et générateur. Ce résultat conditionnel ne fournit ni un ordre de convergence pour les noyaux actuels ni une garantie d'efficacité du contrôleur."
+    )
+    expected = {
+        "matched": 18,
+        "adaptive-physics": 24,
+        "adaptive-chebyshev": 12,
+        "moving-separated": 18,
+        "adaptive-separated": 12,
+        "memory-stress": 3,
+        "separated-refinement": 12,
+        "roundtrip-smoke": 6,
+        "roundtrip-long": 48,
+        "source-full": 16,
+        "products": 32,
+    }
+    r.table(
+        ["Campagne", "Enregistrés", "Prévus"],
+        [[name, len(raw[name]), count] for name, count in expected.items()],
+    )
+    for name in (
+        "nested-sanitizer",
+        "memory-transfer-sanitizer",
+        "ambient-sanitizer",
+        "chebyshev-sanitizer",
+        "energy-mesh-sanitizer",
+    ):
         path = args.input / (name + ".log")
         if path.exists():
             lines = [
@@ -400,6 +732,18 @@ def main():
         "La piste d'article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d'énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture."
     )
     references = [
+        (
+            "Casas, Escorihuela-Tomàs et Moreno Casares (2025), formules de commutateurs",
+            "https://doi.org/10.1007/s11128-025-04659-z",
+        ),
+        (
+            "Adams, Finn, Knepley et Pusztay, rééchantillonnage par projection FE",
+            "https://arxiv.org/abs/2501.13681",
+        ),
+        (
+            "Golub et Varga (1961), semi-itérations de Chebyshev",
+            "https://gdz.sub.uni-goettingen.de/download/pdf/PPN362160546_0003/PPN362160546_0003.pdf",
+        ),
         (
             "Besse, Deriaz et Madaule (2017), adaptation multirésolution SL-DG",
             "https://www.oca.eu/images/LAGRANGE/pages_perso/nbesse/pub/NBesse_jcp17.pdf",

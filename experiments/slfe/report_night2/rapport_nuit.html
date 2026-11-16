@@ -1,4 +1,4 @@
-<!doctype html><html lang='fr'><meta charset='utf-8'><title>SLFE : supports mobiles et transfert de mémoire</title><style>body{max-width:1080px;margin:40px auto;padding:0 24px;font:17px/1.6 system-ui;color:#152c3a}h2{margin-top:2em}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #ccd6df;padding:8px;text-align:left}img{max-width:100%}figcaption{font-size:14px}</style><h1>SLFE : supports mobiles et transfert de mémoire</h1><p>Résultats disponibles le 16/11/2026 à 23:59 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les figures représentent les solutions calculées, avec une référence indépendante par caractéristiques.</p>
+<!doctype html><html lang='fr'><meta charset='utf-8'><title>SLFE : supports mobiles et transfert de mémoire</title><style>body{max-width:1080px;margin:40px auto;padding:0 24px;font:17px/1.6 system-ui;color:#152c3a}h2{margin-top:2em}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #ccd6df;padding:8px;text-align:left}img{max-width:100%}figcaption{font-size:14px}</style><h1>SLFE : supports mobiles et transfert de mémoire</h1><p>Résultats disponibles le 17/11/2026 à 00:34 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les figures représentent les solutions calculées, avec une référence indépendante par caractéristiques.</p>
 <h2>Résultat et portée</h2>
 <p>Un support auxiliaire mobile résout le défaut observé lorsque la bosse quitte la zone fine d&#x27;une grille fixe. Le couplage FE avec mémoire accepte désormais un changement de support contractant, et un raffinement exactement emboîté sans perte d&#x27;énergie. Les formules s&#x27;exécutent sans racine ni inversion de matrice. Ces propriétés sont démontrées dans restart_theory.pdf et vérifiées sur GPU; elles n&#x27;établissent ni une nouveauté bibliographique, ni une convergence générale vers l&#x27;EDP.</p>
 <p>Deux méthodes sont distinguées : le couplage avec mémoire maintient le champ FE à chaque changement; la référence d&#x27;advection pure transporte uniquement le champ DG auxiliaire entre une projection FE initiale et une projection FE finale. Cette seconde méthode est la plus rapide ici, mais elle n&#x27;offre pas les opérations physiques FE intermédiaires du couplage.</p>
@@ -42,6 +42,66 @@
 <h2>Couplage avec une réaction FE spatiale</h2>
 <p>Une réaction de taux 1+0,5 sin(2πx) est appliquée par l&#x27;exponentielle exacte de son générateur Galerkin local, en deux demi-pas autour de chaque advection. Chaque mise à jour FE est réinjectée dans la mémoire. La référence indépendante intègre simultanément la trajectoire et l&#x27;exposant de réaction. L&#x27;énergie doit décroître; la masse n&#x27;est plus conservée par cette EDP.</p>
 <figure><img src='night-physics.svg' alt='Transport et réaction calculés sur GPU. L&#x27;amélioration due à la projection de mémoire persiste dans ce couplage linéaire; cela ne valide pas encore une physique non linéaire ou un transport à vitesse FE générale.'><figcaption>Transport et réaction calculés sur GPU. L&#x27;amélioration due à la projection de mémoire persiste dans ce couplage linéaire; cela ne valide pas encore une physique non linéaire ou un transport à vitesse FE générale.</figcaption></figure>
+<h2>Accélération de la projection de mémoire</h2>
+<p>Le carré d&#x27;un résidu de Chebyshev fournit un filtre compris entre zéro et un sur tout le spectre admissible, même sous l&#x27;échelle de ciblage choisie. Il conserve donc la contraction et l&#x27;observation FE à chaque troncature. Les techniques polynomiales sont classiques; l&#x27;intérêt mesuré ici concerne leur insertion dans le transfert de mémoire. L&#x27;échelle 0,1 fonctionne mieux que 0,01 sur ce cas; aucune supériorité universelle du réglage n&#x27;est établie.</p>
+<figure><img src='night-chebyshev.svg' alt='Coût algébrique du filtre, hors transferts communs de préparation. Sept produits avec le filtre ciblé à 0,1 atteignent ici la précision de quinze produits avec l&#x27;itération simple. Les reconstructions géométriques restent dominantes dans le temps total.'><figcaption>Coût algébrique du filtre, hors transferts communs de préparation. Sept produits avec le filtre ciblé à 0,1 atteignent ici la précision de quinze produits avec l&#x27;itération simple. Les reconstructions géométriques restent dominantes dans le temps total.</figcaption></figure>
+<p>Les trois transferts subissent chacun 2000 changements entre trois supports de graduations 0, 0,95 et 0,9999, entrelacés avec cisaillements et rotations locales de modes FE. Ces rotations sont un test algébrique isométrique, pas une réaction physique. Quatre champs aléatoires sont suivis; le champ FE est inchangé bit à bit au transfert.</p>
+<div class='table'><table><thead><tr><th>Transfert</th><th>Changements</th><th>Défaut FE relatif max</th><th>Défaut masse max</th></tr></thead><tbody>
+<tr><td>partial</td><td>2000</td><td>6.88e-17</td><td>4.846e-14</td></tr>
+<tr><td>richardson</td><td>2000</td><td>7.58e-17</td><td>4.802e-14</td></tr>
+<tr><td>chebyshev</td><td>2000</td><td>8.025e-17</td><td>4.813e-14</td></tr>
+</tbody></table></div>
+<h2>Plusieurs structures : répartir les cellules selon l&#x27;énergie</h2>
+<p>Quatre champs distincts sont maintenant initialisés avec des centres espacés jusqu&#x27;à 0,15 autour de la position centrale. Le centre d&#x27;énergie unique ne suffit plus. Une alternative répartit les intervalles selon les marginales d&#x27;énergie dans x, y, x+y et x−y : histogrammes périodiques sur GPU, lissage gaussien de largeur 0,005, puissance 1/4, fond uniforme de 25 %, puis inversion de la masse cumulée. C&#x27;est une heuristique d&#x27;équidistribution; la stabilité vient des projections contractantes, pas d&#x27;une prétendue estimation d&#x27;erreur par ce moniteur.</p>
+<figure><img src='night-separated.svg' alt='Dix-huit cas à quatre champs et 128 pas. Le maillage FE est fixé : son plancher se dégrade lorsque des profils passent dans ses régions moins fines. Le moniteur d&#x27;énergie rapproche l&#x27;erreur de ce plancher, sans résoudre cette limite FE.'><figcaption>Dix-huit cas à quatre champs et 128 pas. Le maillage FE est fixé : son plancher se dégrade lorsque des profils passent dans ses régions moins fines. Le moniteur d&#x27;énergie rapproche l&#x27;erreur de ce plancher, sans résoudre cette limite FE.</figcaption></figure>
+<figure><img src='night-separated-fields.svg' alt='Champs calculés pour une dispersion 0,15. Les champs affichés sont les sommes des quatre profils; les cartes d&#x27;erreur prennent le maximum des erreurs ponctuelles individuelles. Les valeurs L2 indiquées sont les maxima sur les quatre champs.'><figcaption>Champs calculés pour une dispersion 0,15. Les champs affichés sont les sommes des quatre profils; les cartes d&#x27;erreur prennent le maximum des erreurs ponctuelles individuelles. Les valeurs L2 indiquées sont les maxima sur les quatre champs.</figcaption></figure>
+<p>Extension au couplage FE : 12 cas disponibles avec quatre structures séparées, avec ou sans réaction. Le tableau inclut le maillage FE raffiné pour lever le précédent plancher. Les erreurs sont prises sur le pire des quatre champs.</p>
+<div class='table'><table><thead><tr><th>FE n</th><th>Réaction</th><th>Support</th><th>Itér.</th><th>L2 max</th><th>Plancher max</th></tr></thead><tbody>
+<tr><td>128</td><td>non</td><td>centre</td><td>8</td><td>0.07137</td><td>0.005891</td></tr>
+<tr><td>128</td><td>non</td><td>énergie</td><td>0</td><td>0.008536</td><td>0.005891</td></tr>
+<tr><td>128</td><td>non</td><td>énergie</td><td>8</td><td>0.005928</td><td>0.005891</td></tr>
+<tr><td>128</td><td>oui</td><td>centre</td><td>8</td><td>0.05704</td><td>0.004135</td></tr>
+<tr><td>128</td><td>oui</td><td>énergie</td><td>0</td><td>0.005985</td><td>0.004135</td></tr>
+<tr><td>128</td><td>oui</td><td>énergie</td><td>8</td><td>0.004161</td><td>0.004135</td></tr>
+<tr><td>256</td><td>non</td><td>centre</td><td>8</td><td>0.0734</td><td>0.0003436</td></tr>
+<tr><td>256</td><td>non</td><td>énergie</td><td>0</td><td>0.0009183</td><td>0.0003436</td></tr>
+<tr><td>256</td><td>non</td><td>énergie</td><td>8</td><td>0.0009188</td><td>0.0003436</td></tr>
+<tr><td>256</td><td>oui</td><td>centre</td><td>8</td><td>0.05817</td><td>0.0002408</td></tr>
+<tr><td>256</td><td>oui</td><td>énergie</td><td>0</td><td>0.000704</td><td>0.0002408</td></tr>
+<tr><td>256</td><td>oui</td><td>énergie</td><td>8</td><td>0.0007014</td><td>0.0002408</td></tr>
+</tbody></table></div>
+<p>Le raffinement FE révèle une erreur auxiliaire auparavant masquée. L&#x27;étude suivante augmente séparément le nombre de cellules auxiliaires et le nombre de pas, sur le maillage FE n=256. Une amélioration de mémoire ne peut pas supprimer une erreur d&#x27;advection ou de résolution dans le support auxiliaire.</p>
+<div class='table'><table><thead><tr><th>Aux. n</th><th>Pas</th><th>Réaction</th><th>Itér.</th><th>L2 max</th><th>Plancher max</th></tr></thead><tbody>
+<tr><td>64</td><td>256</td><td>non</td><td>0</td><td>0.0005846</td><td>0.0003436</td></tr>
+<tr><td>64</td><td>256</td><td>non</td><td>8</td><td>0.0005897</td><td>0.0003436</td></tr>
+<tr><td>64</td><td>256</td><td>oui</td><td>0</td><td>0.0004556</td><td>0.0002408</td></tr>
+<tr><td>64</td><td>256</td><td>oui</td><td>8</td><td>0.0004553</td><td>0.0002408</td></tr>
+<tr><td>128</td><td>128</td><td>non</td><td>0</td><td>0.0004025</td><td>0.0003436</td></tr>
+<tr><td>128</td><td>128</td><td>non</td><td>8</td><td>0.0003467</td><td>0.0003436</td></tr>
+<tr><td>128</td><td>128</td><td>oui</td><td>0</td><td>0.0002809</td><td>0.0002408</td></tr>
+<tr><td>128</td><td>128</td><td>oui</td><td>8</td><td>0.000243</td><td>0.0002408</td></tr>
+<tr><td>128</td><td>256</td><td>non</td><td>0</td><td>0.0004471</td><td>0.0003436</td></tr>
+<tr><td>128</td><td>256</td><td>non</td><td>8</td><td>0.0003447</td><td>0.0003436</td></tr>
+<tr><td>128</td><td>256</td><td>oui</td><td>0</td><td>0.0003117</td><td>0.0002408</td></tr>
+<tr><td>128</td><td>256</td><td>oui</td><td>8</td><td>0.0002416</td><td>0.0002408</td></tr>
+</tbody></table></div>
+<h2>Déformer puis revenir : erreur accumulée sans référence numérique</h2>
+<p>Le flot autonome est suivi pendant une durée T, puis sa vitesse est inversée pendant la même durée. La solution exacte finale est le profil initial : aucune intégration de caractéristiques n&#x27;est nécessaire pour cette référence. Les partitions restent adaptées au champ calculé pendant les deux trajets. La dissipation et les pertes de mémoire ne s&#x27;annulent pas lors du retour.</p>
+<div class='table'><table><thead><tr><th>Durée aller</th><th>Transfert</th><th>Changements</th><th>L2 max</th><th>Retour FE max</th></tr></thead><tbody>
+<tr><td>0.25</td><td>reset</td><td>63</td><td>0.006669</td><td>0.006668</td></tr>
+<tr><td>0.25</td><td>projected</td><td>63</td><td>0.0008691</td><td>0.0008622</td></tr>
+<tr><td>0.25</td><td>chebyshev</td><td>63</td><td>0.0007821</td><td>0.0007821</td></tr>
+<tr><td>0.5</td><td>reset</td><td>63</td><td>0.06498</td><td>0.06498</td></tr>
+<tr><td>0.5</td><td>projected</td><td>63</td><td>0.01545</td><td>0.01545</td></tr>
+<tr><td>0.5</td><td>chebyshev</td><td>63</td><td>0.01491</td><td>0.01491</td></tr>
+</tbody></table></div>
+<p>Campagne de déformation élargie : 10 cas sur 48 enregistrés. Les erreurs affichées portent sur le pire des quatre champs; les cas qui n&#x27;atteignent pas la tolérance restent présents.</p>
+<figure><img src='night-return-0-25.svg' alt='Aller-retour de durée totale 0.5. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n&#x27;est pas encore enregistré.'><figcaption>Aller-retour de durée totale 0.5. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n&#x27;est pas encore enregistré.</figcaption></figure>
+<figure><img src='night-return-1-0.svg' alt='Aller-retour de durée totale 2.0. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n&#x27;est pas encore enregistré.'><figcaption>Aller-retour de durée totale 2.0. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n&#x27;est pas encore enregistré.</figcaption></figure>
+<h2>Exploration : vitesses issues de produits de fonctions de courant</h2>
+<p>Une fonction de courant somme de produits a(y)b(x) transforme l&#x27;advection en somme de commutateurs de cisaillements. Le prototype réutilise une formule publiée de Casas, Escorihuela-Tomàs et Moreno Casares (2025), PCP16. Ses seize cisaillements Fourier sont unitaires; son ordre cinq dans la racine du pas correspond à l&#x27;ordre deux dans le temps physique, à grille fixée. Les coefficients et cette théorie de composition sont attribués aux auteurs. L&#x27;intérêt recherché ici est une extension des vitesses admissibles dans le couplage FE, dont la nouveauté et l&#x27;avantage de coût ne sont pas établis.</p>
+<p>Les tests emploient un ou deux tourbillons gaussiens périodiques, dont la fonction de courant possède de nombreux modes de Fourier mais peu de produits séparables. Un oracle matriciel GPU contrôle le commutateur, l&#x27;unitarité, les constantes, l&#x27;inverse et le défaut temporel. Une intégration indépendante de caractéristiques contrôle l&#x27;erreur physique. Une erreur nodale RMS est distinguée de l&#x27;erreur FE intégrée.</p>
+<figure><img src='night-products.svg' alt='La grille de 127 points peut imposer un plancher spatial. Les résultats nodaux exploratoires ne constituent pas un benchmark de performance FE ni une validation d&#x27;une vitesse FE arbitraire.'><figcaption>La grille de 127 points peut imposer un plancher spatial. Les résultats nodaux exploratoires ne constituent pas un benchmark de performance FE ni une validation d&#x27;une vitesse FE arbitraire.</figcaption></figure>
 <h2>Raffinement : identité validée, contrôleur insuffisant</h2>
 <div class='table'><table><thead><tr><th>Degré</th><th>Raffinement</th><th>Défaut Gram</th><th>Défaut observation</th></tr></thead><tbody>
 <tr><td>1</td><td>global</td><td>1.221e-15</td><td>6.661e-16</td></tr>
@@ -54,11 +114,30 @@
 <p>Le premier contrôleur raffine selon la partie du générateur FE non représentée par le support. Les sélections par énergie et par détail hiérarchique atteignent toutes deux la limite de 96 intervalles dès le deuxième contrôle. L&#x27;erreur finale reste proche de 0,148. La conservation de l&#x27;énergie lors du raffinement ne répare donc pas ce contrôleur : le budget est épuisé tôt, et aucun déraffinement ne libère les cellules derrière la structure. L&#x27;indicateur utilisé ne mesure qu&#x27;un terme du défaut de consistance.</p>
 <figure><img src='night-refinement.svg' alt='Résultat négatif conservé : changer le classement des cellules ne suffit pas à rendre le contrôleur efficace.'><figcaption>Résultat négatif conservé : changer le classement des cellules ne suffit pas à rendre le contrôleur efficace.</figcaption></figure>
 <h2>Contrôles et limites pour un article</h2>
+<p>La note établit également une borne d&#x27;erreur pour des supports variables : une transition contractante qui envoie l&#x27;état minimal J_n v sur J_(n+1) v n&#x27;ajoute pas de terme explicite dépendant du nombre de remaillages. Les défauts locaux de transport restent dans la borne, notamment le commutateur entre projection et générateur. Ce résultat conditionnel ne fournit ni un ordre de convergence pour les noyaux actuels ni une garantie d&#x27;efficacité du contrôleur.</p>
+<div class='table'><table><thead><tr><th>Campagne</th><th>Enregistrés</th><th>Prévus</th></tr></thead><tbody>
+<tr><td>matched</td><td>18</td><td>18</td></tr>
+<tr><td>adaptive-physics</td><td>24</td><td>24</td></tr>
+<tr><td>adaptive-chebyshev</td><td>12</td><td>12</td></tr>
+<tr><td>moving-separated</td><td>18</td><td>18</td></tr>
+<tr><td>adaptive-separated</td><td>12</td><td>12</td></tr>
+<tr><td>memory-stress</td><td>3</td><td>3</td></tr>
+<tr><td>separated-refinement</td><td>12</td><td>12</td></tr>
+<tr><td>roundtrip-smoke</td><td>6</td><td>6</td></tr>
+<tr><td>roundtrip-long</td><td>10</td><td>48</td></tr>
+<tr><td>source-full</td><td>0</td><td>16</td></tr>
+<tr><td>products</td><td>0</td><td>32</td></tr>
+</tbody></table></div>
 <p>nested-sanitizer : ========= ERROR SUMMARY: 0 errors</p>
 <p>memory-transfer-sanitizer : ========= ERROR SUMMARY: 0 errors</p>
 <p>ambient-sanitizer : ========= ERROR SUMMARY: 0 errors</p>
+<p>chebyshev-sanitizer : ========= ERROR SUMMARY: 0 errors</p>
+<p>energy-mesh-sanitizer : ========= ERROR SUMMARY: 0 errors</p>
 <p>Les validations indépendantes couvrent les degrés 1, 2 et 4, les projections, les adjoints en masse, les constantes, les changements de support et les identités de Gram. Toutes les opérations numériques — recouvrements, quadrature, réductions, matrices denses de contrôle — sont exécutées sur CUDA. Le processeur pilote les expériences et dessine les figures. Il s&#x27;agit de prototypes isolés dans experiments/slfe, pas d&#x27;une intégration de production au langage variationnel Rodin.</p>
 <p>La piste d&#x27;article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d&#x27;énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture.</p>
+<p><a href='https://doi.org/10.1007/s11128-025-04659-z'>Casas, Escorihuela-Tomàs et Moreno Casares (2025), formules de commutateurs</a></p>
+<p><a href='https://arxiv.org/abs/2501.13681'>Adams, Finn, Knepley et Pusztay, rééchantillonnage par projection FE</a></p>
+<p><a href='https://gdz.sub.uni-goettingen.de/download/pdf/PPN362160546_0003/PPN362160546_0003.pdf'>Golub et Varga (1961), semi-itérations de Chebyshev</a></p>
 <p><a href='https://www.oca.eu/images/LAGRANGE/pages_perso/nbesse/pub/NBesse_jcp17.pdf'>Besse, Deriaz et Madaule (2017), adaptation multirésolution SL-DG</a></p>
 <p><a href='https://arxiv.org/abs/2603.19959'>Adams (2026), recouvrements SL-DG sur grilles adaptatives</a></p>
 <p><a href='https://cseweb.ucsd.edu/~ravir/sinasiga.pdf'>Nabizadeh et al. (2024), CO-FLIP et remise à zéro des cartes de flot</a></p>

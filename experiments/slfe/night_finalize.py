@@ -12,6 +12,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -29,16 +30,56 @@ def main():
     args = parser.parse_args()
     if git("branch", "--show-current") != "SLFE":
         raise RuntimeError("Expected branch SLFE")
-    if args.publish and git("remote", "get-url", "--push", "fork") != ALLOWED:
+    if args.publish and git("remote", "get-url", "--push", "--all", "fork") != ALLOWED:
         raise RuntimeError("Refusing an unapproved remote")
     report = args.input / "report"
     report.mkdir(exist_ok=True)
+    # Publish a reproducible snapshot even if a numerical campaign is still
+    # appending results. Never copy a partly written trailing JSONL record.
+    snapshot = Path(tempfile.mkdtemp(prefix="report-input-", dir=args.input))
+    skipped = []
+    for path in args.input.iterdir():
+        if path.name == "delivery.json":
+            continue
+        if path.suffix == ".jsonl":
+            lines = path.read_text().splitlines()
+            complete = []
+            for index, line in enumerate(lines):
+                try:
+                    json.loads(line)
+                except json.JSONDecodeError:
+                    if index != len(lines) - 1:
+                        raise
+                    skipped.append(path.name + ": trailing partial record")
+                    break
+                complete.append(line)
+            (snapshot / path.name).write_text(
+                "\n".join(complete) + ("\n" if complete else "")
+            )
+        elif path.suffix == ".json":
+            contents = path.read_text()
+            try:
+                json.loads(contents)
+            except json.JSONDecodeError:
+                skipped.append(path.name + ": incomplete JSON")
+                continue
+            (snapshot / path.name).write_text(contents)
+        elif path.name.endswith("sanitizer.log"):
+            shutil.copy2(path, snapshot / path.name)
+    shutil.copytree(args.input / "figures", snapshot / "figures")
+    (snapshot / "report-snapshot.json").write_text(
+        json.dumps(
+            dict(created=datetime.now().astimezone().isoformat(), incomplete=skipped),
+            indent=2,
+        )
+        + "\n"
+    )
     subprocess.run(
         [
             sys.executable,
             str(HERE / "night_report.py"),
             "--input",
-            str(args.input),
+            str(snapshot),
             "--output",
             str(report),
         ],
@@ -69,7 +110,7 @@ def main():
             shutil.copy2(path, target / path.name)
     results = HERE / "results_night2"
     results.mkdir(exist_ok=True)
-    for path in args.input.iterdir():
+    for path in snapshot.iterdir():
         if path.suffix in (".json", ".jsonl") and path.name != "delivery.json":
             shutil.copy2(path, results / path.name)
         if path.name.endswith("sanitizer.log"):
@@ -123,6 +164,7 @@ def main():
         remote=ALLOWED if args.publish else None,
     )
     (args.input / "delivery.json").write_text(json.dumps(receipt, indent=2) + "\n")
+    shutil.rmtree(snapshot)
     print(json.dumps(receipt))
 
 

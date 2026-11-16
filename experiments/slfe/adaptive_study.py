@@ -7,7 +7,6 @@ Restarts preserve the FE value and discard a measured orthogonal memory part.
 
 import argparse
 import json
-import math
 from pathlib import Path
 import time
 
@@ -68,16 +67,18 @@ def evolve(
     restart_same=False,
     carry_memory=False,
     projection_iterations=0,
+    filter_scale=None,
     reaction=False,
+    fields=1,
+    spread=0.008,
+    mesh_policy="centroid",
     with_fields=False,
 ):
     space = Space(GradedMesh(nfe, 0.95), 4)
 
-    def profile(points, t):
-        delta = cp.sin(cp.pi * (points - cp.asarray([0.35, 0.45])))
-        return cp.exp(-cp.sum(delta * delta, axis=-1) / (2 * (cp.pi * width) ** 2)) / (
-            math.sqrt(math.pi) * width
-        )
+    from moving_study import profile_family
+
+    profile = profile_family(width, fields, spread)
 
     def exact(points, t):
         if reaction:
@@ -87,8 +88,8 @@ def evolve(
             flat = cp.ascontiguousarray(points.reshape(-1, 2))
             traced = cp.empty((len(flat), 3))
             launch(reference_kernel(), len(flat), (flat, traced, len(flat), end, 512))
-            return (profile(traced[:, :2], 0) * cp.exp(traced[:, 2])).reshape(
-                points.shape[:-1]
+            return (profile(traced[:, :2], 0) * cp.exp(traced[:, 2, None])).reshape(
+                *points.shape[:-1], fields
             )
         return profile(reference_feet(points, -end, 512), 0)
 
@@ -97,8 +98,19 @@ def evolve(
     start = time.perf_counter()
     center = fe_center(space, initial)
     original_center = center.copy()
-    carrier = Carrier(space, n=naux, edges=partitions(naux, grading, center))
-    flow = TensorCellular(carrier, end / steps, grading, center=center)
+    oriented = None
+    if mesh_policy == "energy":
+        from energy_mesh import from_fe, from_tensor
+
+        edges, oriented = from_fe(space, initial, naux)
+    elif mesh_policy == "centroid":
+        edges = partitions(naux, grading, center)
+    else:
+        raise ValueError("Expected centroid or energy mesh policy")
+    carrier = Carrier(space, n=naux, edges=edges)
+    flow = TensorCellular(
+        carrier, end / steps, grading, center=center, oriented_edges=oriented
+    )
     state = MemoryTransport(carrier, initial)
     physics = None
     if reaction:
@@ -132,6 +144,14 @@ def evolve(
         displacement = (detected - center + 0.5) % 1 - 0.5
         distance = float(cp.linalg.norm(displacement))
         change = adaptive and first + count < steps and distance > threshold
+        next_edges, next_oriented = None, None
+        if mesh_policy == "energy":
+            next_edges, next_oriented = from_tensor(carrier, state.auxiliary)
+            movement = max(
+                float(cp.max(cp.abs(next_edges - carrier.edges))),
+                float(cp.max(cp.abs(next_oriented - oriented))),
+            )
+            change = adaptive and first + count < steps and movement > threshold / 3
         loss = None
         if change:
             # The centroid may cease to describe a single feature when energy
@@ -140,7 +160,13 @@ def evolve(
             before = time.perf_counter()
             new_center = original_center if restart_same else detected
             new_carrier = Carrier(
-                space, n=naux, edges=partitions(naux, grading, new_center)
+                space,
+                n=naux,
+                edges=(
+                    next_edges
+                    if next_edges is not None
+                    else partitions(naux, grading, new_center)
+                ),
             )
             if carry_memory or projection_iterations:
                 from tensor_grid import TensorGrid
@@ -149,14 +175,21 @@ def evolve(
                 remap = lambda w: target.remap(carrier, w)
                 if projection_iterations:
                     loss = state.project_memory(
-                        new_carrier, remap, projection_iterations
+                        new_carrier, remap, projection_iterations, filter_scale
                     )
                 else:
                     loss = state.transfer_memory(new_carrier, remap)
             else:
                 loss = state.restart(new_carrier)
             carrier = new_carrier
-            flow = TensorCellular(carrier, end / steps, grading, center=new_center)
+            oriented = next_oriented
+            flow = TensorCellular(
+                carrier,
+                end / steps,
+                grading,
+                center=new_center,
+                oriented_edges=oriented,
+            )
             center = new_center.copy()
             cp.cuda.Stream.null.synchronize()
             rebuild += time.perf_counter() - before
@@ -200,7 +233,11 @@ def evolve(
         restart_same=restart_same,
         carry_memory=carry_memory,
         projection_iterations=projection_iterations,
+        filter_scale=filter_scale,
         reaction=reaction,
+        fields=fields,
+        spread=spread,
+        mesh_policy=mesh_policy,
         grading=grading,
         setup_seconds=setup,
         evolution_seconds=elapsed,
@@ -217,7 +254,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--suite",
-        choices=("smoke", "resolution", "threshold", "memory", "projected", "physics"),
+        choices=(
+            "smoke",
+            "resolution",
+            "threshold",
+            "memory",
+            "projected",
+            "physics",
+            "chebyshev",
+            "separated",
+        ),
         required=True,
     )
     parser.add_argument("--output", type=Path, required=True)
@@ -255,6 +301,37 @@ def main():
                 dict(projection_iterations=1),
                 dict(projection_iterations=8),
             )
+        ]
+    elif args.suite == "chebyshev":
+        cases = [
+            dict(
+                nfe=nfe,
+                naux=64,
+                end=0.25,
+                steps=128,
+                projection_iterations=k,
+                filter_scale=s,
+            )
+            for nfe in (64, 128)
+            for s in (0.01, 0.1)
+            for k in (2, 4, 8)
+        ]
+    elif args.suite == "separated":
+        cases = [
+            dict(
+                nfe=nfe,
+                naux=64,
+                end=0.25,
+                steps=128,
+                fields=4,
+                spread=0.15,
+                mesh_policy=policy,
+                reaction=react,
+                projection_iterations=k,
+            )
+            for nfe in (128, 256)
+            for react in (False, True)
+            for policy, k in (("centroid", 8), ("energy", 0), ("energy", 8))
         ]
     else:
         cases = [

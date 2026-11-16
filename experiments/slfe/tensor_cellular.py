@@ -14,7 +14,9 @@ from tensor_remap import TensorTransfer
 
 
 class TensorCellular:
-    def __init__(self, carrier, duration, grading=0.95, center=None):
+    def __init__(
+        self, carrier, duration, grading=0.95, center=None, oriented_edges=None
+    ):
         c = self.carrier = carrier
         coordinates = [
             (c.edges[a, :-1, None] + cp.diff(c.edges[a])[:, None] * c.nodes).ravel()
@@ -27,10 +29,12 @@ class TensorCellular:
         self.diagonal = []
         self.coordinate_maps = []
         location = cp.asarray([0.35, 0.45] if center is None else center)
-        for sign, fraction in ((1, 0.5), (-1, 1.0)):
+        for index, (sign, fraction) in enumerate(((1, 0.5), (-1, 1.0))):
             center = (location[0] + sign * location[1]) % 1
             t = cp.linspace(0.0, 1.0, c.n + 1)
             ex = t + grading / (2 * cp.pi) * cp.sin(2 * cp.pi * (t + 0.5 - center))
+            if oriented_edges is not None:
+                ex = oriented_edges[index]
             edges = cp.stack((ex, c.edges[1]))
             grid = SimpleNamespace(
                 n=c.n,

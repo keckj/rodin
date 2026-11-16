@@ -21,10 +21,12 @@ from day_study import reference_feet
 from campaign import provenance
 
 
-def profile_family(width, fields):
+def profile_family(width, fields, spread=0.008):
     random = cp.random.RandomState(752)
     centers = cp.asarray([0.35, 0.45])[None, :] + (
-        cp.zeros((1, 2)) if fields == 1 else random.uniform(-0.008, 0.008, (fields, 2))
+        cp.zeros((1, 2))
+        if fields == 1
+        else random.uniform(-spread, spread, (fields, 2))
     )
     widths = (
         cp.full(fields, width)
@@ -52,18 +54,31 @@ def evolve(
     grading=0.95,
     adaptive=True,
     fields=1,
+    spread=0.008,
+    mesh_policy="centroid",
     with_fields=False,
 ):
     space = Space(GradedMesh(nfe, 0.95), 4)
-    profile = profile_family(width, fields)
+    profile = profile_family(width, fields, spread)
     exact = lambda points, t: profile(reference_feet(points, -end, 512), 0)
     initial = space.project(profile, degree=20)
     cp.cuda.Stream.null.synchronize()
     start = time.perf_counter()
     center = fe_center(space, initial)
-    initial_carrier = Carrier(space, n=naux, edges=partitions(naux, grading, center))
+    oriented = None
+    if mesh_policy == "energy":
+        from energy_mesh import from_fe, from_tensor
+
+        edges, oriented = from_fe(space, initial, naux)
+    elif mesh_policy == "centroid":
+        edges = partitions(naux, grading, center)
+    else:
+        raise ValueError("Expected centroid or energy mesh policy")
+    initial_carrier = Carrier(space, n=naux, edges=edges)
     grid = TensorGrid(initial_carrier, initial_carrier.edges)
-    flow = TensorCellular(grid, end / steps, grading, center=center)
+    flow = TensorCellular(
+        grid, end / steps, grading, center=center, oriented_edges=oriented
+    )
     w = initial_carrier.project(initial)
     initial_energy = space.energy(initial)
     initial_defect = initial_energy - grid.energy(w)
@@ -80,16 +95,36 @@ def evolve(
         displacement = (detected - center + 0.5) % 1 - 0.5
         distance = float(cp.linalg.norm(displacement))
         change = adaptive and first + count < steps and distance > threshold
+        next_edges, next_oriented = None, None
+        if mesh_policy == "energy":
+            next_edges, next_oriented = from_tensor(grid, w)
+            movement = max(
+                float(cp.max(cp.abs(next_edges - grid.edges))),
+                float(cp.max(cp.abs(next_oriented - oriented))),
+            )
+            # Fixed endpoints make edge displacement meaningful. One third
+            # of the centroid threshold is an exploratory mesh-motion trigger.
+            change = adaptive and first + count < steps and movement > threshold / 3
         loss = None
         if change:
             cp.cuda.Stream.null.synchronize()
             before = time.perf_counter()
-            next_grid = TensorGrid(grid, partitions(naux, grading, detected))
+            next_grid = TensorGrid(
+                grid,
+                (
+                    next_edges
+                    if next_edges is not None
+                    else partitions(naux, grading, detected)
+                ),
+            )
             next_w = next_grid.remap(grid, w)
             loss = grid.energy(w) - next_grid.energy(next_w)
             assert float(cp.min(loss)) > -2e-10
             grid, w, center = next_grid, next_w, detected.copy()
-            flow = TensorCellular(grid, end / steps, grading, center=center)
+            oriented = next_oriented
+            flow = TensorCellular(
+                grid, end / steps, grading, center=center, oriented_edges=oriented
+            )
             cp.cuda.Stream.null.synchronize()
             rebuild += time.perf_counter() - before
         energy_ratio = float(cp.max(grid.energy(w) / initial_energy))
@@ -135,6 +170,8 @@ def evolve(
         end=end,
         steps=steps,
         fields=fields,
+        spread=spread,
+        mesh_policy=mesh_policy,
         threshold=threshold,
         check_every=check_every,
         adaptive=adaptive,
@@ -156,7 +193,7 @@ def evolve(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--suite", choices=("smoke", "resolution", "fields"), required=True
+        "--suite", choices=("smoke", "resolution", "fields", "separated"), required=True
     )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -169,6 +206,13 @@ def main():
             for end in (0.1, 0.25)
             for steps in (16, 64, 256)
             for a in (False, True)
+        ]
+    elif args.suite == "separated":
+        cases = [
+            dict(naux=n, fields=4, width=0.01, spread=s, steps=128, mesh_policy=m)
+            for s in (0.008, 0.05, 0.15)
+            for n in (32, 64, 128)
+            for m in ("centroid", "energy")
         ]
     else:
         cases = [

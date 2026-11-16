@@ -1,5 +1,5 @@
 {
-  "generated": "16/11/2026 \u00e0 23:59",
+  "generated": "17/11/2026 \u00e0 00:34",
   "matched": [
     {
       "fields": 1,
@@ -67,6 +67,17 @@
     "adaptive-memory": 4,
     "adaptive-projected": 10,
     "adaptive-physics": 24,
+    "adaptive-chebyshev": 12,
+    "moving-separated": 18,
+    "adaptive-separated": 12,
+    "memory-stress": 3,
+    "separated-refinement": 12,
+    "roundtrip-smoke": 6,
+    "roundtrip-long": 10,
+    "source-smoke": 0,
+    "source-full": 0,
+    "product-pilot": 6,
+    "products": 0,
     "moving-resolution": 36,
     "moving-fields": 18
   }

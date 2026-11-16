@@ -86,7 +86,9 @@ class MemoryTransport:
         self.coupling = coupling
         return before - self.energy()
 
-    def project_memory(self, coupling, cross_projection, iterations=1):
+    def project_memory(
+        self, coupling, cross_projection, iterations=1, filter_scale=None
+    ):
         """Project ambient hidden memory by a contractive polynomial filter.
 
         Both couplings must be exact L2 projections from the same FE space;
@@ -97,18 +99,50 @@ class MemoryTransport:
         is 1-(1-lambda)^iterations, hence energy cannot increase and the FE
         observation is unchanged. The limit is the orthogonal projection
         onto V+Wnew; convergence may be slow for small principal angles.
+        With 0 < filter_scale < 1, use a squared Chebyshev residual instead:
+        g(lambda)=1-[T_m((1+s-2lambda)/(1-s))/T_m((1+s)/(1-s))]^2.
+        This is contractive for EVERY lambda in [0,1], including below s;
+        s is a target scale, not an assumed spectral lower bound. Its degree
+        is 2*iterations and costs 2*iterations-1 applications of Rnew Rnew*.
         """
         if coupling.space is not self.coupling.space:
             raise ValueError("Memory projection requires the same FE space")
         if not isinstance(iterations, int) or iterations < 1:
             raise ValueError("A positive integer iteration count is required")
+        if filter_scale is not None and not 0 < filter_scale < 1:
+            raise ValueError("The Chebyshev target scale must belong to (0,1)")
         before = self.energy()
         h = cross_projection(
             self.auxiliary - self.coupling.project(self.anchor)
         ) + coupling.project(self.anchor - self.value)
-        x = h.copy()
-        for _ in range(iterations - 1):
-            x = h + coupling.project(coupling.adjoint(x))
+        if filter_scale is None:
+            x = h.copy()
+            for _ in range(iterations - 1):
+                x = h + coupling.project(coupling.adjoint(x))
+        else:
+            a = (1 + filter_scale) / (1 - filter_scale)
+            b = 2 / (1 - filter_scale)
+
+            def defect(z):
+                return z - coupling.project(coupling.adjoint(z))
+
+            def chebyshev(rhs):
+                # Stable three-term recurrence for (1-r_m(K))/K.
+                previous = 0 * rhs
+                current = (b / a) * rhs
+                ratio = 1 / a
+                for _ in range(1, iterations):
+                    next_ratio = 1 / (2 * a - ratio)
+                    following = (
+                        2 * a * next_ratio * current
+                        - ratio * next_ratio * previous
+                        + 2 * b * next_ratio * (rhs - defect(current))
+                    )
+                    previous, current, ratio = current, following, next_ratio
+                return current
+
+            first = chebyshev(h)
+            x = first + chebyshev(h - defect(first))
         self.anchor = self.value - coupling.adjoint(x)
         self.auxiliary = coupling.project(self.anchor) + x
         self.coupling = coupling

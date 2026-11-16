@@ -35,6 +35,25 @@ a reset; the FE projection floor is 0.002720. The nested-refinement identity
 passes its Gram tests, but its initial controllers exhaust their cell budget
 early and fail the transport accuracy target. These failures are retained.
 
+Subsequent experiments add a contractive squared-Chebyshev memory filter,
+2000-change invariant tests, and energy-based partitions in all four shear
+directions. For four separated structures, the latter reduce the maximum
+pure-advection error from 0.07135 to 0.005902 at auxiliary n=64, against an
+FE floor of 0.005891. Coupled reaction and finer-FE tests are recorded
+separately. Deform-and-return experiments expose sensitivity to regridding
+frequency; this controller is still experimental.
+
+`hamiltonian_commutator.py` explores prescribed streamfunctions expressed as
+sums of products a(y)b(x). It uses the published PCP16 commutator formula
+of Casas, Escorihuela-Tomas and Moreno Casares (2025), with full attribution.
+Dense GPU matrix oracles verify the local third-order defect in physical
+time, unitarity and inverse. A rank-one vortex reaches nodal RMS error
+3.262e-5 at 256 steps on 255² points, unchanged on 511² points. These nodal
+results are not substituted for FE quadrature errors or a cost comparison
+against a tuned spectral solver. A GPU-SVD input path and further FE tests
+are part of the ongoing campaign; general FE velocities remain outside the
+validated scope.
+
 ```sh
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/ambient_validation.py --output /tmp/slfe-ambient.json
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/adaptive_study.py --suite physics --output /tmp/slfe-physics.jsonl

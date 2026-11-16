@@ -195,6 +195,44 @@ par diagonalisation. Les degrés 1, 2 et 4 et les nombres d'itérations
 des énergies initiales de l'ordre de plusieurs centaines.
 
 \section{Choix du support et limites de coût}
+\subsection{Accélération polynomiale contractante}
+Pour limiter le coût des itérations précédentes, on peut remplacer
+$g_k$ par un filtre construit à partir des polynômes de Chebyshev :
+\[
+ r_m(\lambda)=\frac{T_m((1+s-2\lambda)/(1-s))}{T_m((1+s)/(1-s))},
+ \qquad g_m(\lambda)=1-r_m(\lambda)^2,\qquad 0<s<1.
+\]
+Pour $\lambda\in[s,1]$, le numérateur a une valeur absolue au plus 1.
+Pour $\lambda\in[0,s]$, son argument appartient à
+$[1,(1+s)/(1-s)]$, où $T_m$ est positif et croissant. Ainsi
+$|r_m(\lambda)|\leq1$ sur tout $[0,1]$ et $r_m(0)=1$.
+La contraction est donc conservée même lorsque des valeurs propres
+positives sont inférieures à $s$. Ce paramètre est une échelle de ciblage,
+pas une borne spectrale supposée.
+
+Le quotient $p_m=(1-r_m)/\lambda$ est un polynôme. Deux applications
+de la récurrence de Chebyshev donnent
+\[
+ x=p_m(K)h+p_m(K)(h-Kp_m(K)h),
+\]
+puis les mêmes mises à jour de $a,w$. Le filtre résultant est bien
+$1-r_m^2$; son degré est $2m$ et le calcul nécessite $2m-1$ produits
+$R_1R_1^*$. La mise au carré évite que le filtre dépasse 1, ce que
+pourrait faire le facteur $1-r_m$ non corrigé. La quantité de mémoire
+retenue n'est pas nécessairement monotone en $m$, contrairement à
+l'itération simple.
+
+La semi-itération de Chebyshev est classique, notamment dans
+Golub et Varga, \emph{Chebyshev semi-iterative methods}, 1961
+\href{https://gdz.sub.uni-goettingen.de/download/pdf/PPN362160546_0003/PPN362160546_0003.pdf}{(article)}.
+L'usage ci-dessus doit être évalué comme un filtre de transfert de mémoire,
+avec un coût et une précision mesurés, et non comme une nouvelle méthode
+générale de résolution linéaire. Sur le cas FE $64^2P_4$, $m=4,s=0{,}1$
+donne une erreur $0{,}0037331$, proche de $0{,}0037330$ avec 16 itérations
+simples, pour 7 produits au lieu de 15. Le choix $s=0{,}01,m=4$ donne
+$0{,}00466$, ce qui interdit de présenter le réglage comme universel.
+
+\subsection{Adaptation des partitions}
 Le premier contrôleur utilise le centre circulaire de l'énergie du champ,
 calculé aux points de Gauss. Il déplace le minimum de taille des cellules
 lorsque ce centre s'écarte d'une distance prescrite. Il s'agit d'une
@@ -210,6 +248,115 @@ deux directions préservent masse et contraction. Cette variante peut
 éviter les reconstructions FE intermédiaires pour l'advection pure, au
 prix de l'abandon du défaut FE initial. La comparaison distingue ce
 choix du couplage avec mémoire et physique FE.
+
+\section{Borne d'erreur avec changements de support}
+La stabilité du changement de support peut être séparée de la
+consistance de l'advection. Soient $J_n:V\to\mathcal H_n$ des isométries,
+$\Phi_n:\mathcal H_n\to\mathcal H_n$ des évolutions contractantes,
+et $B_n:\mathcal H_n\to\mathcal H_{n+1}$ des transitions vérifiant
+\[
+ \|B_n\|\leq1,\qquad B_nJ_n=J_{n+1}.
+\]
+Les transitions de cette note satisfont cette compatibilité : un état
+minimal $J_nv$ est envoyé sur $J_{n+1}v$. L'égalité d'observation
+$J_{n+1}^*B_n=J_n^*$ est une propriété supplémentaire, également
+vérifiée ici, mais la borne suivante requiert seulement la compatibilité
+sur les états minimaux.
+
+\begin{proposition}
+Pour $Z_{n+1}=B_n\Phi_n Z_n$ et une suite de référence FE $u_n\in V$,
+\[
+ \|Z_N-J_Nu_N\|\leq\|Z_0-J_0u_0\|
+ +\sum_{n=0}^{N-1}\|\Phi_nJ_nu_n-J_nu_{n+1}\|.
+\]
+La même borne contrôle $\|J_N^*Z_N-u_N\|$.
+\end{proposition}
+\begin{proof}
+On insère $B_n\Phi_nJ_nu_n$ et on utilise
+$B_nJ_nu_{n+1}=J_{n+1}u_{n+1}$. La contraction de $B_n$ puis celle
+de $\Phi_n$ donnent
+\[
+ \|Z_{n+1}-J_{n+1}u_{n+1}\|
+ \leq \|Z_n-J_nu_n\|
+ +\|\Phi_nJ_nu_n-J_nu_{n+1}\|.
+\]
+La récurrence donne la première inégalité; $\|J_N^*\|=1$ donne la seconde.
+\end{proof}
+
+Il n'apparaît donc aucun terme additionnel proportionnel au nombre de
+changements de support. Cela ne signifie pas que ces changements sont
+sans erreur physique : chaque support modifie les défauts locaux
+figurant dans la somme, et la norme augmentée peut donner une borne
+peu précise de l'erreur FE observée.
+
+Par exemple, si la référence vérifie $\dot u=Au$ et si l'évolution
+augmentée continue est engendrée par $\operatorname{diag}(L_n,0)$,
+le défaut de générateur sur $J_nu$ a la norme
+\[
+ \eta_n(u)^2=\|L_nR_nu-R_nAu\|^2
+ +\|Au\|^2-\|R_nAu\|^2.
+\]
+Sous contraction des semi-groupes, Duhamel borne le défaut d'un pas
+exact par l'intégrale de $\eta_n(u(t))$. Une approximation temporelle
+de ces semi-groupes ajoute son propre défaut; aucun ordre temporel
+n'est déduit du seul entrelacement symétrique des projections.
+Le contrôleur de raffinement exploré dans les expériences n'utilise
+que le second terme. La borne met explicitement en évidence le
+commutateur manquant, sans prétendre que son ajout suffirait à construire
+un contrôleur optimal.
+
+\section{Extension exploratoire des vitesses par produits hamiltoniens}
+Sur le tore, une fonction de courant
+$\psi(x,y)=\sum_{r=1}^k a_r(y)b_r(x)$ définit la vitesse incompressible
+$u=(\partial_y\psi,-\partial_x\psi)$. Avec
+\[
+ A_r=-a_r(y)\partial_x,\qquad B_r=-b_r(x)\partial_y,
+\]
+le générateur d'advection vérifie
+$-u\cdot\nabla=\sum_r[A_r,B_r]$. Chaque exponentielle de $A_r$ ou de $B_r$
+est un cisaillement calculable par FFT. Sur une grille impaire, les
+opérateurs discrets sont antisymétriques et leurs exponentielles unitaires.
+Une composition conserve donc exactement la norme discrète et la masse,
+à l'arrondi près, y compris avec des sous-pas négatifs.
+
+Le prototype utilise la formule PCP16 de Casas, Escorihuela-Tomàs et
+Moreno Casares, \emph{Approximating exponentials of commutators by
+optimized product formulas}, Quantum Information Processing 24, 47 (2025),
+table 4 et équation (22)
+\href{https://doi.org/10.1007/s11128-025-04659-z}{(article)}.
+Cette formule publiée approche $\exp(h^2[A,B])$ avec un défaut
+$O(h^6)$. Avec $h=\sqrt{\Delta t}$, cela donne un défaut local
+$O(\Delta t^3)$ à discrétisation spatiale fixée. Une composition de Strang
+combine plusieurs produits. La formule de commutateurs et l'idée générale
+de découplage hamiltonien ne sont pas des revendications de nouveauté.
+
+Les tests matriciels GPU, indépendants de la référence de trajectoires,
+retrouvent un défaut local divisé par environ huit quand le pas est divisé
+par deux. Le premier tourbillon à produit unique donne une erreur RMS
+nodale de $5{,}82\,10^{-4}$ à 64 pas et $3{,}26\,10^{-5}$ à 256 pas,
+sur une grille de 255 points par direction. Le passage à 511 points change
+ce dernier résultat de moins de $3\,10^{-14}$. La grille de 127 points
+présente au contraire un plancher d'erreur spatial dans ce test.
+Ces erreurs nodales ne sont pas substituées aux erreurs FE intégrées;
+les essais de couplage FE sont enregistrés séparément.
+
+Un constructeur expérimental accepte aussi une fonction de courant
+échantillonnée. Une SVD GPU donne $\psi=\sum_j\sigma_j U_j(y)V_j(x)$.
+Pour des vecteurs singuliers de norme euclidienne unité, l'orthogonalité
+donne l'erreur quadratique exacte de vitesse spectrale après troncature :
+\[
+ \|u-u_k\|_{\ell^2_h}^2
+ =\frac{1}{n^2}\sum_{j>k}\sigma_j^2
+ (\|D_yU_j\|_2^2+\|D_xV_j\|_2^2).
+\]
+Ce critère choisit un préfixe de SVD; il ne résout pas le problème de
+meilleur rang en norme $H^1$, et ne borne pas l'erreur ponctuelle de vitesse.
+L'entrée périodique, le courant moyen harmonique absent et l'approximation
+d'une vitesse FE générale restent à traiter explicitement.
+Le couplage Fourier actuel utilise une composition de projections
+FE--DG--Fourier. Sa contraction suffit au couplage à support fixé, mais
+ne justifie pas son insertion dans la projection ambiante à support
+variable sans vérifier les hypothèses plus fortes de cette dernière.
 
 \section{Antécédents et revendications}
 L'itération de projection et son interprétation par les angles entre

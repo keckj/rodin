@@ -72,15 +72,31 @@ def validate(p):
     before = original.energy()
     previous = space.energy(original.value)
     rows = []
-    for count in (1, 2, 4, 8, 16, 32):
+    cases = [(count, None) for count in (1, 2, 4, 8, 16, 32)] + [
+        (count, scale) for scale in (0.01, 0.1, 0.5) for count in (1, 2, 4, 8, 16)
+    ]
+    for count, scale in cases:
         state = MemoryTransport(c0, original.value)
         state.anchor = original.anchor.copy()
         state.auxiliary = original.auxiliary.copy()
-        loss = state.project_memory(c1, remap, count)
+        loss = state.project_memory(c1, remap, count, scale)
         qnew = w1 @ vector_w(c1, state.auxiliary) + (v - w1 @ r1) @ vector_v(
             state.anchor
         )
-        polynomial = sum((1 - eigen_k) ** j for j in range(count))
+        if scale is None:
+            polynomial = sum((1 - eigen_k) ** j for j in range(count))
+        else:
+            a, b = (1 + scale) / (1 - scale), 2 / (1 - scale)
+            argument = a - b * eigen_k
+            previous_t, current_t = cp.ones_like(eigen_k), argument.copy()
+            for _ in range(1, count):
+                previous_t, current_t = current_t, 2 * argument * current_t - previous_t
+            denominator = cp.cosh(count * cp.arccosh(a))
+            residual = current_t / denominator
+            limit = 2 * b * count * cp.tanh(count * cp.arccosh(a)) / cp.sqrt(a * a - 1)
+            polynomial = cp.where(
+                eigen_k > 1e-10, (1 - residual**2) / cp.maximum(eigen_k, 1e-10), limit
+            )
         filtered = (vectors_k * polynomial) @ vectors_k.T
         oracle = v @ observed + h @ filtered @ h.T @ (q - v @ observed)
         state_error = float(cp.max(cp.abs(qnew - oracle)))
@@ -91,7 +107,9 @@ def validate(p):
         minimum_gain = float(cp.min(state.energy() - previous))
         assert bool(cp.array_equal(state.value, original.value))
         assert max(state_error, observation_error, energy_error) < 2e-9
-        assert float(cp.min(loss)) > -2e-9 and minimum_gain > -2e-9
+        assert float(cp.min(loss)) > -2e-9
+        if scale is None:
+            assert minimum_gain > -2e-9
         # Eigenvalues of the ambient hidden filter are analytically
         # 1-(1-lambda)^k, checked numerically without a random-vector proxy.
         filter_values = eigen_k * polynomial
@@ -99,6 +117,7 @@ def validate(p):
         rows.append(
             dict(
                 iterations=count,
+                filter_scale=scale,
                 state_error=state_error,
                 observation_error=observation_error,
                 energy_error=energy_error,
@@ -109,7 +128,8 @@ def validate(p):
                 minimum_gain=minimum_gain,
             )
         )
-        previous = state.energy()
+        if scale is None:
+            previous = state.energy()
     return dict(
         p=p,
         minimum_joint_gram=minimum_gram,
