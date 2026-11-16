@@ -4,9 +4,9 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : flot non séparable\\et couplage FE avec mémoire}
-\author{Point d'étape de recherche GPU}\date{16/11/2026 à 10:58}
+\author{Point d'étape de recherche GPU}\date{16/11/2026 à 11:34}
 \begin{document}\maketitle
-Point d'étape de recherche du 16/11/2026 à 10:58. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
+Point d'étape de recherche du 16/11/2026 à 11:34. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
 
 \section{Résultat algorithmique}
 Le transport par projection statique est étendu à un flot cellulaire non séparable. Trois réalisations sont comparées : des supports DG orientés, un support DG unique avec changements de coordonnées incrémentaux, puis un support de Fourier unitaire. Le dernier est couplé aux triangles par deux projections adjointes FE–DG–Fourier.
@@ -22,7 +22,7 @@ Le domaine est le tore unité. Le champ initial est une bosse gaussienne périod
 Les résultats principaux sont évalués à t = 0,5. Le retour à t = 1 du flot réversible est un contrôle de réversibilité ; il ne suffit pas à mesurer la précision du transport. Toutes les simulations, projections, décompositions spectrales et réductions numériques s'exécutent sur RTX 5090 en double précision. Symox prépare les polynômes exacts.
 
 \section{Contrôles}
-417 cas principaux sont enregistrés dans les JSONL, avec 0 échec d'exécution. S'y ajoutent quatre validations du couplage augmenté, six comparaisons des graphes CUDA avec les opérateurs ordinaires et huit validations FE–Fourier sous Compute Sanitizer.
+631 cas principaux sont enregistrés dans les JSONL, avec 0 échec d'exécution. S'y ajoutent quatre validations du couplage augmenté, six comparaisons des graphes CUDA avec les opérateurs ordinaires et huit validations FE–Fourier sous Compute Sanitizer.
 
 Compute Sanitizer : ========= ERROR SUMMARY: 0 errors
 
@@ -43,7 +43,29 @@ Ces cas utilisent 95² modes auxiliaires et 32 pas d'ordre quatre avec mémoire.
 
 \section{Comparaison à un solveur spectral Eulerien GPU}
 \begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{spectral-cost.pdf}\caption{Les deux méthodes utilisent les graphes CUDA. Le solveur spectral exploite directement la géométrie périodique ; il ne fournit pas les mêmes inconnues FE.}\end{figure}
-La référence Fourier/RK4 est compétitive et atteint de très petites erreurs avec peu d'inconnues sur ce problème lisse. Les essais ne démontrent pas une supériorité générale du couplage FE. Une comparaison avec un solveur DG direct de même degré, sur le même maillage et à erreur fixée, reste nécessaire.
+La référence Fourier/RK4 est compétitive et atteint de très petites erreurs avec peu d'inconnues sur ce problème lisse. Les essais ne démontrent pas une supériorité générale du couplage FE. La comparaison suivante utilise un DG direct de même degré sur les mêmes triangles.
+
+\section{DG direct et maillages gradués}
+Le comparateur DG utilise des flux centrés ou amont et RK4, avec assemblage et évolution CUDA. Les dérivées des bases sont générées exactement avec Symox. Les petits opérateurs sont contrôlés par diagonalisation et SVD dans la norme de masse : conservation, constantes, antisymétrie du flux centré et dissipation du flux amont. La quadrature est raffinée indépendamment. Compute Sanitizer ne détecte aucune erreur sur les noyaux DG et le couplage avec réaction.
+
+Le pas global DG est augmenté par une campagne de 96 réglages, avec quatre champs aléatoires et un champ lisse. Un contrôle fini sur ces champs ne constitue pas un certificat spectral de stabilité. RK4 n'est pas contractant pour tout générateur dissipatif non normal : les SVD mesurent ici un excès allant jusqu'à 1,61 × \(10^{-6}\) pour un pas conservateur. Le premier critère de validation, trop fort, a été corrigé et son diagnostic est conservé. Ce phénomène est connu (Sun et Shu, arXiv:1811.10680).
+
+La graduation applique x \(\mapsto\) x + \(\alpha\) sin(2\(\pi\)(x+0,15))/(2\(\pi\)), et une transformation analogue en y, aux sommets perturbés. Pour \(\alpha\) = 0,95 et n = 64, le rapport des aires extrêmes vaut 2697. Les deux méthodes utilisent 8192 triangles P4, soit 122880 inconnues FE par champ. Le support auxiliaire a 95² valeurs. Le temps de transport intégré vaut 1/\(\pi\) à t = 0,5 et est partagé uniformément entre les pas.
+
+\begin{center}\small\begin{tabular}{lllllll}\toprule
+\(\alpha\) & Champs & L2 DG & L2 auxiliaire & DG (s) & Aux. (s) & Rapport\\\midrule
+0 & 1 & 1.676e-07 & 2.124e-07 & 0.0399 & 0.01539 & 2.593\\
+0 & 4 & 1.676e-07 & 2.124e-07 & 0.06206 & 0.01566 & 3.962\\
+0 & 16 & 1.676e-07 & 2.124e-07 & 0.2152 & 0.02052 & 10.49\\
+0.95 & 1 & 7.937e-07 & 4.557e-07 & 0.4818 & 0.01545 & 31.19\\
+0.95 & 4 & 7.937e-07 & 4.557e-07 & 0.7597 & 0.01592 & 47.73\\
+0.95 & 16 & 7.937e-07 & 4.557e-07 & 2.672 & 0.02019 & 132.4\\
+\bottomrule\end{tabular}\end{center}
+Temps médians de cinq évolutions, graphes CUDA pour les deux méthodes. Tous ces cas satisfont une tolérance L2 commune de \(10^{-6}\). Les champs multiples sont des copies du même profil : ce test mesure le débit, pas une diversité de solutions. Le transport auxiliaire utilise 16 pas. Le dernier réglage DG testé stable utilise 300 pas sur le maillage non gradué et 3679 sur le maillage gradué ; le réglage immédiatement supérieur échoue au contrôle aléatoire. Le gain d'évolution sur le maillage gradué est de 31 à 132 selon le nombre de champs.
+
+La préparation est exclue du tableau. Pour le cas gradué à un champ, elle coûte environ 0,320 s pour l'auxiliaire et 0,014 s pour DG : la première résolution complète prend donc environ 0,335 s contre 0,496 s, un rapport de 1,48 seulement. Le gain d'évolution bénéficie surtout à la réutilisation des opérateurs statiques. Un DG à pas locaux n'a pas été comparé.
+
+À 32 pas auxiliaires sur ce maillage gradué, l'erreur vaut 4,130 × \(10^{-7}\), contre 4,126 × \(10^{-7}\) pour la meilleure projection FE évaluée par quadrature. Ce résultat concerne une solution lisse résolue par le support de Fourier. Il ne garantit pas le transport des petites échelles que seuls les éléments les plus fins pourraient représenter.
 
 \section{Validation de la mémoire et de la physique FE}
 \begin{center}\small\begin{tabular}{lllll}\toprule
@@ -59,10 +81,25 @@ Le rapport proche de quatre correspond au dernier doublement du nombre de pas d'
 Le test physique utilise une vitesse stationnaire et une réaction spatialement variable. La masse décroît physiquement ; la propriété contrôlée est la borne d'énergie, et l'erreur est évaluée contre la solution caractéristique. Les plafonds d'erreur aux petits pas diminuent avec le raffinement du maillage.
 
 \section{Portée scientifique}
+\begin{center}\small\begin{tabular}{lllll}\toprule
+\(\alpha\) & Méthode & Pas & Erreur L2 & Évolution (s)\\\midrule
+0 & auxiliary & 32 & 1.671e-06 & 0.04411\\
+0 & auxiliary & 64 & 4.654e-07 & 0.08703\\
+0 & auxiliary & 128 & 2.464e-07 & 0.1746\\
+0 & dg & 471 & 3.489e-07 & 0.06407\\
+0.95 & auxiliary & 32 & 2.1e-06 & 0.04382\\
+0.95 & auxiliary & 64 & 1.353e-06 & 0.08567\\
+0.95 & auxiliary & 128 & 1.295e-06 & 0.1692\\
+0.95 & dg & 7704 & 3.343e-06 & 1.016\\
+\bottomrule\end{tabular}\end{center}
+Avec réaction FE, la comparaison emploie la vitesse stationnaire jusqu'à t = 0,5 et les mêmes matrices locales de réaction. Sur le maillage gradué, 32 pas auxiliaires atteignent 2,10 × \(10^{-6}\) en 0,044 s, contre 3,34 × \(10^{-6}\) en 1,016 s pour DG. Sur le maillage non gradué, DG est meilleur à précision voisine de 4 × \(10^{-7}\). Ces temps sont des mesures uniques, préparation exclue ; le contrôle aléatoire du pas DG a porté sur l'advection seule. Les échecs initiaux de capture cuBLAS sont archivés ; un noyau CUDA local, comparé directement au produit matriciel, permet maintenant la capture du couplage.
+
 Les ingrédients ont des antécédents : transfert d'incréments FLIP, projections adjointes, dilatations d'opérateurs, transformations DG–Fourier et compositions de Yoshida. Aucune priorité scientifique n'est revendiquée à ce stade. La piste à approfondir est le couplage FE avec mémoire, son analyse de consistance et sa réalisation rapide, notamment lorsque plusieurs champs partagent le transport.
+
+LEoPart applique déjà des incréments de champs FE aux propriétés particulaires (Maljaars et al., arXiv:1912.13375 ; méthode particles.increment de la documentation). Le retour de la physique FE vers un état auxiliaire n'est donc pas, à lui seul, une nouveauté. La question scientifique porte sur les garanties du couplage contractant, sa consistance et le bénéfice mesuré sur les maillages gradués.
 
 Les expériences actuelles couvrent un domaine périodique et une vitesse prescrite à quatre modes. Les frontières, les vitesses FE arbitraires, la compression, les flux locaux, le calcul distribué et une preuve générale de convergence restent ouverts. Les graphes CUDA accélèrent l'exécution sans changer les opérateurs numériques ; leurs résultats ont été comparés directement à ceux des exécutions ordinaires.
 
 \section{Reproduction}
-Les scripts day\_study.py, fourier\_study.py, spectral\_reference.py, memory\_study.py et reaction\_study.py acceptent un répertoire de sortie explicite. Les JSONL contiennent les paramètres et les empreintes des sources. Les preuves sont dans incremental\_theory.tex et memory\_theory.tex. Aucun code de production Rodin ni fichier de la bibliothèque HySoP n'est modifié.
+Les scripts day\_study.py, fourier\_study.py, spectral\_reference.py, memory\_study.py reaction\_study.py, dg\_study.py, graded\_study.py et coupled\_benchmark.py acceptent un répertoire de sortie explicite. Les JSONL contiennent les paramètres et les empreintes des sources. Les preuves sont dans incremental\_theory.tex et memory\_theory.tex. Aucun code de production Rodin ni fichier de la bibliothèque HySoP n'est modifié.
 \end{document}

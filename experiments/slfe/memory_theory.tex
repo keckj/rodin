@@ -240,6 +240,11 @@ des outils établis. Les transformations DG--Fourier sur GPU ont également
 des antécédents explicites \cite{crews}. La décomposition en sous-champs
 à divergence nulle appartient à la littérature des intégrateurs
 préservant le volume \cite{xue}.
+LEoPart réinjecte déjà des incréments de champs FE dans les propriétés
+particulaires suivant une approche FLIP \cite{leopart}. Le retour d'un
+incrément de physique FE vers un état auxiliaire n'est donc pas en soi
+une nouveauté. La stabilité de cette réalisation précise et les estimations
+ci-dessus doivent être distinguées de cette idée générale.
 La nouveauté éventuelle doit être évaluée sur la réalisation FE avec
 mémoire, sa consistance, ses couplages et ses coûts, et non sur ces outils
 pris isolément.
@@ -251,6 +256,12 @@ du support, les couplages non linéaires et le calcul distribué ne sont pas
 validés par ces résultats.
 
 \begin{thebibliography}{9}
+\bibitem{leopart} J. M. Maljaars, C. N. Richardson et N. Sime,
+\emph{LEoPart: a particle library for FEniCS},
+Computers \& Mathematics with Applications 81 (2021), 289--315,
+\url{https://arxiv.org/abs/1912.13375}. Voir aussi la méthode
+\texttt{particles.increment},
+\url{https://leopart.readthedocs.io/en/stable/tree/reference.html}.
 \bibitem{yoshida} H. Yoshida, \emph{Construction of higher order symplectic
 integrators}, Physics Letters A 150 (1990), 262--268,
 \url{https://doi.org/10.1016/0375-9601(90)90092-3}.

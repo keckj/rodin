@@ -1,0 +1,249 @@
+{
+  "status": "ok",
+  "provenance": {
+    "utc": "2026-11-16T10:28:20Z",
+    "git": "b71d81c5353240d6f0e3dc200ecc9707d7b678c5",
+    "source_sha256": {
+      "validate_day.py": "b738c0efaaf9b2bf970d5b0de6918c9b31431c4e7aa96cf5d62f75ff20a2cfa4",
+      "campaign.py": "e6a291611f732588ba743f379a1eb458dc4e0a242f52f02fecff270e5f817900",
+      "report.py": "95ec606f2dcf21a1f911fbc1d42bd4b0e7aaa5855515d7b1f0090a4ccd0f0328",
+      "local_operator.cu": "85e3a46780114fdcc3930178ee6fb05874200ef66059134656a302c7ff1a0ec6",
+      "spectral_reference.py": "20b6e1afe7881b47a368fd33356516caecec78a0238ef9ce9f4d738194f1304e",
+      "symbolic.py": "1aeea1bb6bfa89c3a1cbcaf18d712b4551d3abc0656d5cd2b0fdfddd60791354",
+      "transfer.cu": "816b5c16ccf51e8476bd362188a2b76cca17c4baac84de3c83aff9016beb1fe8",
+      "day_report.py": "0ae1aec2e12257ffbf9945a2094b0a503f3128b9abf06c32932d55078667e972",
+      "eulerian_dg.cu": "26babd6b8fc0f53952da3b3efda271de348e816b7f5323e0709147487d49b20c",
+      "carrier.cu": "6a501eb75bf1edf71888756e3d86f1da3809133155d3946c567faf35f242db43",
+      "coupled_benchmark.py": "0fee0f17a07a5bd2e681c5f48acf927be8217533243b594bd7fff7415f13b37a",
+      "carrier_study.py": "2c5c214a15cf5ca1ea4e12ee1df02441c606a2a53f9f3a2987c7c5e0fc752736",
+      "memory_study.py": "72e805affdf81cab5dc9fe64b231de3ebd877f990c986bbfae6289e8f4a8c196",
+      "fourier_carrier.py": "2d616646f9e94a53c18c7155bf9b2db450a582fb11208a604ceaf101a29fca6e",
+      "carrier.py": "dd217320ec18e93664c4834c2b98d22ca3fbed8fc29654d617db344ba513f49f",
+      "moments.py": "ff0e0ad6508686b627cee867a11b490494c3389b285c1b0d1b873d4fc4e5510f",
+      "reaction_study.py": "09e5a789d15582b54a24e5eb99649da3b0adf07f7b525069849918a4cbf8d71c",
+      "geometry_control.py": "2fea76b0032bcb6a22f98d4651d844c3c309eb90102250dcc5ac5675eb5f1f1a",
+      "memory_transport.py": "88bfeb7ecd05fa591c1ffac59aab79c1c520c0f4f161c71114a007a30f883cc3",
+      "basis.cuh": "067d7dde2ffed83d1159eefcfb434a94fbbb562bea7d30768f5db1ac1f77dbd2",
+      "cellular_reference.cu": "5b92154658c8dd49d916074c45d759d12477cfc34774230f4ac6e593a4c81710",
+      "validate.py": "3d6296852c6d19234614a1d9775e71031042a7686617367f97b421ceaffd271d",
+      "overnight.py": "d7a5a85e3485e188657adf2381349db9f06b2b47c0c39311b8a05ddb612622ee",
+      "gpu.py": "63659f9a5fbfbd3d806b588e16e3eb70aeb03a68b3062f8663a3e5e442504800",
+      "day_artifacts.json": "c80d5381b9a1d1cd3da6638524d929d211e4f30f640d15c16a5c4a373a648bbd",
+      "symbolic.json": "3fe2f294f613777861bf03ba2a26ece3cae8cda67e5a7b3f486285ec85907f64",
+      "normalized.py": "1c7eabc8c7fbdfa7055ac902f22795d54346bb59a026c53b7a2dc8958e687c94",
+      "finalize.py": "bb13fa4a9a44840f8662677370093e9bf0f59ae88ced60683e0a41733dbab8a4",
+      "incremental_report.py": "080475751509b8ff8e80eb2d6ce3304359c83e1d9b086a39ea7f580d2e8ee281",
+      "fourier_carrier.cu": "c1483ef0083d5f889a7ae99aa0cdee44ef78b56344389741baeb8e179c0e274f",
+      "basis_gradient.cuh": "7f5e42893e7ef3c096127981f2c8a9914e4a838edb01a7b2c91dc9a4f904663b",
+      "cfl_study.py": "869eb81f610b52d5fc20df90227cefd0a28519f64c6b6ee0ca32af19725c4f66",
+      "fourier_study.py": "ce8f3324d279478ebb0b71ae692412ab018737be252d0f2255d625229cc9065c",
+      "flows.py": "5ee21e0f2a569630e345b202f497e1a48458a9770192021b957fb444deaf88e3",
+      "research.py": "90fc9ad028fdb311156d020fb9bcee86c47959167d2f658fc84aedab546e5067",
+      "dg_study.py": "05a051126d81fdbfdd259286f7f82e787a3114f3610b6af23914dc363dc3a474",
+      "flux.py": "2a62349b1a0402c04a86bc360dbf48a2527fd29c0130b045ca066291696c0a2d",
+      "eulerian_dg.py": "4c894a131006176a9e7b3403e98c1aa6b3a2260dc70237944c77a6c3d87b78c4",
+      "symbolic_gradient.py": "5cc885cf9fc7c682db3f13c079ec68eaa5ca154a6247d0fa88c54e70c0bcd4e8",
+      "gpu_graph.py": "e244ac713cba0b2939a58b4e82b07d14c736ec382dd6279af872fdb42d7875cb",
+      "carrier_polynomials.json": "9130f39e95d5bcca65d02b452972d851f835caaebb855a918217d1c8aa1de50e",
+      "references.json": "3e41af93b0ed3f789e8625c9863470ecbf8e86c4167dc2961025563d249b3123",
+      "day_study.py": "d7e2475c2af15b35d3685bf33db0332d3399ce6508a9e8f5bbcaa151df72f0f1",
+      "reaction_reference.cu": "8149303457db5d7b98a8912cd3efb8932acbd36aadb1ec7652caa162e8b34141",
+      "graded_study.py": "a76b74def408d41221c52f2d3b90611148eb75fe0c70bb0adc5e9cccba6e0cec",
+      "validate_comparisons.py": "3ae2d56feccd59e2de28c2e92cffa4528f4b63fa6a9964595022b38af97854e7",
+      "cartesian.py": "a27d6a2b8996333ab260b0553c75c3e6eccbffc95f5fd1d3c38bbffd53e95cc2",
+      "validate_moments.py": "1c255dbec9db3cfbbcd9c5897bbf325c73dc92719d467437f9ed29610a75a709",
+      "fourier_flow.py": "0ce1f24ede2c44497b5c688e595a2f893f6edb04a5b0e469b866582cd31bebfb",
+      "symbolic_carrier.py": "f872956e57ae551640bdacab505f991b708b80b062ea2b5ea1b876563bd41b0b",
+      "ray_flux.cu": "909d47a1c0fb0d940f9b0877f84c8cdb82c388f56a6511ee451f88480221226c"
+    },
+    "python": "3.10.12",
+    "cupy": "13.6.0",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "cuda_driver": 13020,
+    "cuda_runtime": 12090
+  },
+  "dg": [
+    {
+      "p": 1,
+      "flux": "central",
+      "skew_error": 3.552713678800501e-15,
+      "dissipation_max": 2.8036107494416735e-15,
+      "constant_error": 2.3092638912203256e-14,
+      "mass_error": 4.996003610813204e-16,
+      "generator_norm": 22.64370106889088,
+      "norm_bound": 51.52268241077963,
+      "rk4_norm": 1.0000000000000002,
+      "rk4_contractive": true,
+      "quadrature_difference": 1.4210854715202004e-14,
+      "skew_correction": 2.0057210743334894e-15,
+      "derivative_error": 6.661338147750939e-16
+    },
+    {
+      "p": 1,
+      "flux": "upwind",
+      "skew_error": 44.15964954373491,
+      "dissipation_max": 3.4788277404838247e-15,
+      "constant_error": 2.220446049250313e-14,
+      "mass_error": 5.551115123125783e-16,
+      "generator_norm": 40.36847976376392,
+      "norm_bound": 75.02753926736793,
+      "rk4_norm": 0.9999999999999998,
+      "rk4_contractive": true,
+      "quadrature_difference": 0.04574724560043997,
+      "skew_correction": 2.0057210743334894e-15,
+      "derivative_error": 6.661338147750939e-16
+    },
+    {
+      "p": 2,
+      "flux": "central",
+      "skew_error": 5.329070518200751e-15,
+      "dissipation_max": 4.872480796996454e-15,
+      "constant_error": 2.3092638912203256e-14,
+      "mass_error": 4.996003610813204e-16,
+      "generator_norm": 44.75695784477807,
+      "norm_bound": 118.8418789939334,
+      "rk4_norm": 1.0000000000000004,
+      "rk4_contractive": true,
+      "quadrature_difference": 1.9539925233402755e-14,
+      "skew_correction": 2.0750415834739695e-15,
+      "derivative_error": 5.773159728050814e-15
+    },
+    {
+      "p": 2,
+      "flux": "upwind",
+      "skew_error": 67.35750057940676,
+      "dissipation_max": 1.1515026284709883e-14,
+      "constant_error": 2.3869795029440866e-14,
+      "mass_error": 5.551115123125783e-16,
+      "generator_norm": 80.19087230455779,
+      "norm_bound": 173.6586040251693,
+      "rk4_norm": 1.000000008309829,
+      "rk4_contractive": false,
+      "quadrature_difference": 0.07324105318479468,
+      "skew_correction": 2.0750415834739695e-15,
+      "derivative_error": 5.773159728050814e-15
+    },
+    {
+      "p": 3,
+      "flux": "central",
+      "skew_error": 1.0658141036401503e-14,
+      "dissipation_max": 8.733769377865422e-15,
+      "constant_error": 4.39648317751562e-14,
+      "mass_error": 1.0269562977782698e-15,
+      "generator_norm": 72.90541659604683,
+      "norm_bound": 226.38158443387888,
+      "rk4_norm": 1.0000000000000002,
+      "rk4_contractive": true,
+      "quadrature_difference": 2.3074875343809254e-12,
+      "skew_correction": 7.419209198634979e-14,
+      "derivative_error": 1.0658141036401503e-14
+    },
+    {
+      "p": 3,
+      "flux": "upwind",
+      "skew_error": 90.86551264330555,
+      "dissipation_max": 1.968120848701576e-14,
+      "constant_error": 4.5075054799781356e-14,
+      "mass_error": 9.992007221626409e-16,
+      "generator_norm": 134.18556123037666,
+      "norm_bound": 315.32765355038845,
+      "rk4_norm": 1.0000005300216654,
+      "rk4_contractive": false,
+      "quadrature_difference": 0.13811791154327935,
+      "skew_correction": 7.419209198634979e-14,
+      "derivative_error": 1.0658141036401503e-14
+    },
+    {
+      "p": 4,
+      "flux": "central",
+      "skew_error": 1.0658141036401503e-14,
+      "dissipation_max": 1.1343030544708666e-14,
+      "constant_error": 6.483702463810914e-14,
+      "mass_error": 2.1094237467877974e-15,
+      "generator_norm": 107.5206981903261,
+      "norm_bound": 355.2795169869055,
+      "rk4_norm": 1.0000000000000013,
+      "rk4_contractive": true,
+      "quadrature_difference": 8.11084199803247e-10,
+      "skew_correction": 1.99765610662009e-11,
+      "derivative_error": 4.984811847066846e-13
+    },
+    {
+      "p": 4,
+      "flux": "upwind",
+      "skew_error": 113.89514749500776,
+      "dissipation_max": 2.4794072053692363e-14,
+      "constant_error": 6.483702463810914e-14,
+      "mass_error": 2.0747292772682613e-15,
+      "generator_norm": 202.16934919169987,
+      "norm_bound": 519.7313126835717,
+      "rk4_norm": 1.0000016094520643,
+      "rk4_contractive": false,
+      "quadrature_difference": 0.1971415490399231,
+      "skew_correction": 1.99765610662009e-11,
+      "derivative_error": 4.984811847066846e-13
+    }
+  ],
+  "coupled": {
+    "n": 8,
+    "p": 4,
+    "grading": 0.95,
+    "method": "auxiliary",
+    "steps": 2,
+    "modes": 95,
+    "cfl_scale": 6.0,
+    "static_setup_seconds": 0.29704177303938195,
+    "evolution_seconds": 0.0021846210001967847,
+    "energy_ratio": 0.36295120701502087,
+    "graph_difference": 1.3322676295501878e-15,
+    "l1": [
+      0.0019441153851678403
+    ],
+    "l2": [
+      0.006938422973383765
+    ],
+    "linf_sampled": [
+      0.1821917889814203
+    ],
+    "min_sampled": [
+      -0.15629499351829454
+    ],
+    "max_sampled": [
+      0.7725135180397987
+    ]
+  },
+  "direct": {
+    "n": 8,
+    "p": 4,
+    "grading": 0.95,
+    "method": "dg",
+    "steps": 796,
+    "modes": 95,
+    "cfl_scale": 4.0,
+    "static_setup_seconds": 0.014569471008144319,
+    "evolution_seconds": 0.022907619015313685,
+    "energy_ratio": 0.36159918483875614,
+    "graph_difference": null,
+    "l1": [
+      0.001891258125607652
+    ],
+    "l2": [
+      0.00620522333837838
+    ],
+    "linf_sampled": [
+      0.10729890166284617
+    ],
+    "min_sampled": [
+      -0.08288977901369798
+    ],
+    "max_sampled": [
+      0.6972894005424253
+    ]
+  },
+  "graded_projection": {
+    "norm": 1.0000000000000007,
+    "forward_constant_error": 9.992007221626409e-15,
+    "reverse_constant_error": 1.2921399479262807e-14,
+    "area_ratio": 742.8764215608542
+  }
+}

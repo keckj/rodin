@@ -26,6 +26,20 @@ competitive on this smooth periodic problem; general superiority is not
 established. The known ingredients and outstanding novelty assessment are
 identified in the mathematical note.
 
+The direct CUDA DG comparator uses the same triangular space, central or
+upwind fluxes, and global RK4 stepping. On a strongly graded P4 mesh, the
+auxiliary evolution meets an L2 tolerance of 1e-6 in a median 15.4 ms versus
+482 ms for tuned upwind DG (five repeats, one field). Static setup costs
+320 ms versus 14 ms, so the first complete solve is only about 1.48 times
+faster. Sixteen duplicated fields measure throughput, not solution diversity.
+Local-time DG has not been compared, and unresolved auxiliary scales remain
+a limitation. The reaction comparison includes a uniform-mesh case where DG
+is better. Raw data and failed exploratory criteria are retained separately.
+
+LEoPart already feeds FE increments back to particle properties; that general
+pattern is not claimed as new. The research question concerns the specific
+contractive coupling, consistency bounds and measured costs.
+
 ```sh
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/day_study.py --suite validation --output /tmp/slfe-day
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/fourier_study.py --suite validation --output /tmp/slfe-day
@@ -34,6 +48,10 @@ CUDA_PATH=/usr/local/cuda python3 experiments/slfe/spectral_reference.py --graph
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/memory_study.py --output /tmp/slfe-day/memory-validation.json
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/reaction_study.py --output /tmp/slfe-day
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/validate_day.py --output /tmp/slfe-day/smoke.json
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/validate_comparisons.py --output /tmp/slfe-day/comparison-validation.json
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/dg_study.py --suite upwind --output /tmp/slfe-day
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/graded_study.py --output /tmp/slfe-day
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/coupled_benchmark.py --output /tmp/slfe-day
 ```
 
 Recorded data are in `results_day/`; all simulation kernels run on CUDA.

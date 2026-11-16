@@ -1,5 +1,5 @@
 {
-  "generated": "16/11/2026 \u00e0 10:58",
+  "generated": "16/11/2026 \u00e0 11:34",
   "counts": {
     "day-validation": 7,
     "day-cellular": 48,
@@ -15,7 +15,15 @@
     "fourier-time-order": 24,
     "fourier-autonomous": 12,
     "fourier-compressed": 54,
-    "reaction": 38
+    "reaction": 38,
+    "dg-validation": 4,
+    "dg-upwind-operator": 4,
+    "dg-accuracy": 32,
+    "dg-upwind": 32,
+    "dg-cfl": 96,
+    "graded": 18,
+    "graded-repeated": 12,
+    "coupled-benchmark": 16
   },
   "execution_failures": 0
 }

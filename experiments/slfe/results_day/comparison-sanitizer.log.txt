@@ -1,0 +1,3 @@
+========= COMPUTE-SANITIZER
+{"status": "ok", "dg_checks": 2}
+========= ERROR SUMMARY: 0 errors

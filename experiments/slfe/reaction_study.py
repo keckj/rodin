@@ -20,6 +20,9 @@ from campaign import provenance
 
 class Reaction:
     def __init__(self, space, degree=18):
+        code = f"#define NB {space.nb}\n" + (HERE / "local_operator.cu").read_text()
+        self.kernel = cp.RawKernel(code, "apply_local_matrix")
+        self.kernel.compile()
         q = quadrature(degree)
         basis = space.basis(q[:, :2])
         points = space.mesh.points(q)
@@ -34,6 +37,15 @@ class Reaction:
         return cp.ascontiguousarray(
             (self.vectors * decay[:, None, :]) @ self.vectors.transpose(0, 2, 1)
         )
+
+    def apply(self, matrix, value):
+        result = cp.empty_like(value)
+        launch(
+            self.kernel,
+            value.size,
+            (matrix, value, result, value.shape[0], value.shape[1]),
+        )
+        return result
 
 
 @lru_cache(None)
@@ -111,7 +123,7 @@ def evolve(n=16, p=4, steps=16, modes=95, end=0.5, memory=True):
         final_mass=float(space.mass(state.value)[0]),
         static_setup_seconds=setup,
         evolution_seconds=elapsed,
-        **errors
+        **errors,
     )
 
 

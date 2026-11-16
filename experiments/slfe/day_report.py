@@ -35,6 +35,14 @@ def main():
         "fourier-autonomous",
         "fourier-compressed",
         "reaction",
+        "dg-validation",
+        "dg-upwind-operator",
+        "dg-accuracy",
+        "dg-upwind",
+        "dg-cfl",
+        "graded",
+        "graded-repeated",
+        "coupled-benchmark",
     )
     raw = {
         name: [
@@ -221,8 +229,81 @@ def main():
     r.paragraph(
         "La référence Fourier/RK4 est compétitive et atteint de très petites erreurs avec "
         "peu d'inconnues sur ce problème lisse. Les essais ne démontrent pas une supériorité "
-        "générale du couplage FE. Une comparaison avec un solveur DG direct de même degré, "
-        "sur le même maillage et à erreur fixée, reste nécessaire."
+        "générale du couplage FE. La comparaison suivante utilise un DG direct de même "
+        "degré sur les mêmes triangles."
+    )
+    r.section("DG direct et maillages gradués")
+    r.paragraph(
+        "Le comparateur DG utilise des flux centrés ou amont et RK4, avec assemblage et "
+        "évolution CUDA. Les dérivées des bases sont générées exactement avec Symox. "
+        "Les petits opérateurs sont contrôlés par diagonalisation et SVD dans la norme "
+        "de masse : conservation, constantes, antisymétrie du flux centré et dissipation "
+        "du flux amont. La quadrature est raffinée indépendamment. Compute Sanitizer "
+        "ne détecte aucune erreur sur les noyaux DG et le couplage avec réaction."
+    )
+    r.paragraph(
+        "Le pas global DG est augmenté par une campagne de 96 réglages, avec quatre "
+        "champs aléatoires et un champ lisse. Un contrôle fini sur ces champs ne constitue "
+        "pas un certificat spectral de stabilité. RK4 n'est pas contractant pour tout "
+        "générateur dissipatif non normal : les SVD mesurent ici un excès allant jusqu'à "
+        "1,61 × 10⁻⁶ pour un pas conservateur. Le premier critère de validation, trop "
+        "fort, a été corrigé et son diagnostic est conservé. Ce phénomène est connu "
+        "(Sun et Shu, arXiv:1811.10680)."
+    )
+    r.paragraph(
+        "La graduation applique x ↦ x + α sin(2π(x+0,15))/(2π), et une transformation "
+        "analogue en y, aux sommets perturbés. Pour α = 0,95 et n = 64, le rapport des "
+        "aires extrêmes vaut 2697. Les deux méthodes utilisent 8192 triangles P4, soit "
+        "122880 inconnues FE par champ. Le support auxiliaire a 95² valeurs. Le temps "
+        "de transport intégré vaut 1/π à t = 0,5 et est partagé uniformément entre les pas."
+    )
+    repeated = data["graded-repeated"]
+    table = []
+    for grading in (0.0, 0.95):
+        for fields in (1, 4, 16):
+            pair = {
+                x["method"]: x
+                for x in repeated
+                if x["grading"] == grading and x["fields"] == fields
+            }
+            a, d = pair["auxiliary"], pair["dg"]
+            table.append(
+                [
+                    grading,
+                    fields,
+                    d["l2"][0],
+                    a["l2"][0],
+                    d["evolution_seconds"],
+                    a["evolution_seconds"],
+                    d["evolution_seconds"] / a["evolution_seconds"],
+                ]
+            )
+    r.table(
+        ["α", "Champs", "L2 DG", "L2 auxiliaire", "DG (s)", "Aux. (s)", "Rapport"],
+        table,
+    )
+    r.paragraph(
+        "Temps médians de cinq évolutions, graphes CUDA pour les deux méthodes. "
+        "Tous ces cas satisfont une tolérance L2 commune de 10⁻⁶. Les champs multiples "
+        "sont des copies du même profil : ce test mesure le débit, pas une diversité "
+        "de solutions. Le transport auxiliaire utilise 16 pas. Le dernier réglage DG "
+        "testé stable utilise 300 pas sur le maillage non gradué et 3679 sur le maillage "
+        "gradué ; le réglage immédiatement supérieur échoue au contrôle aléatoire. "
+        "Le gain d'évolution sur le maillage gradué est de 31 à 132 selon le nombre de champs."
+    )
+    r.paragraph(
+        "La préparation est exclue du tableau. Pour le cas gradué à un champ, elle "
+        "coûte environ 0,320 s pour l'auxiliaire et 0,014 s pour DG : la première "
+        "résolution complète prend donc environ 0,335 s contre 0,496 s, un rapport "
+        "de 1,48 seulement. Le gain d'évolution bénéficie surtout à la réutilisation "
+        "des opérateurs statiques. Un DG à pas locaux n'a pas été comparé."
+    )
+    r.paragraph(
+        "À 32 pas auxiliaires sur ce maillage gradué, l'erreur vaut 4,130 × 10⁻⁷, "
+        "contre 4,126 × 10⁻⁷ pour la meilleure projection FE évaluée par quadrature. "
+        "Ce résultat concerne une solution lisse résolue par le support de Fourier. "
+        "Il ne garantit pas le transport des petites échelles que seuls les éléments "
+        "les plus fins pourraient représenter."
     )
     r.section("Validation de la mémoire et de la physique FE")
     r.table(
@@ -282,12 +363,37 @@ def main():
         "aux petits pas diminuent avec le raffinement du maillage."
     )
     r.section("Portée scientifique")
+    r.table(
+        ["α", "Méthode", "Pas", "Erreur L2", "Évolution (s)"],
+        [
+            [x["grading"], x["method"], x["steps"], x["l2"][0], x["evolution_seconds"]]
+            for x in data["coupled-benchmark"]
+            if x["n"] == 64
+        ],
+    )
+    r.paragraph(
+        "Avec réaction FE, la comparaison emploie la vitesse stationnaire jusqu'à "
+        "t = 0,5 et les mêmes matrices locales de réaction. Sur le maillage gradué, "
+        "32 pas auxiliaires atteignent 2,10 × 10⁻⁶ en 0,044 s, contre 3,34 × 10⁻⁶ "
+        "en 1,016 s pour DG. Sur le maillage non gradué, DG est meilleur à précision "
+        "voisine de 4 × 10⁻⁷. Ces temps sont des mesures uniques, préparation exclue ; "
+        "le contrôle aléatoire du pas DG a porté sur l'advection seule. Les échecs "
+        "initiaux de capture cuBLAS sont archivés ; un noyau CUDA local, comparé "
+        "directement au produit matriciel, permet maintenant la capture du couplage."
+    )
     r.paragraph(
         "Les ingrédients ont des antécédents : transfert d'incréments FLIP, projections "
         "adjointes, dilatations d'opérateurs, transformations DG–Fourier et compositions "
         "de Yoshida. Aucune priorité scientifique n'est revendiquée à ce stade. La piste "
         "à approfondir est le couplage FE avec mémoire, son analyse de consistance et "
         "sa réalisation rapide, notamment lorsque plusieurs champs partagent le transport."
+    )
+    r.paragraph(
+        "LEoPart applique déjà des incréments de champs FE aux propriétés particulaires "
+        "(Maljaars et al., arXiv:1912.13375 ; méthode particles.increment de la documentation). "
+        "Le retour de la physique FE vers un état auxiliaire n'est donc pas, à lui seul, "
+        "une nouveauté. La question scientifique porte sur les garanties du couplage "
+        "contractant, sa consistance et le bénéfice mesuré sur les maillages gradués."
     )
     r.paragraph(
         "Les expériences actuelles couvrent un domaine périodique et une vitesse prescrite "
@@ -299,7 +405,8 @@ def main():
     r.section("Reproduction")
     r.paragraph(
         "Les scripts day_study.py, fourier_study.py, spectral_reference.py, memory_study.py "
-        "et reaction_study.py acceptent un répertoire de sortie explicite. Les JSONL "
+        "reaction_study.py, dg_study.py, graded_study.py et coupled_benchmark.py "
+        "acceptent un répertoire de sortie explicite. Les JSONL "
         "contiennent les paramètres et les empreintes des sources. Les preuves sont dans "
         "incremental_theory.tex et memory_theory.tex. Aucun code de production Rodin "
         "ni fichier de la bibliothèque HySoP n'est modifié."
@@ -328,7 +435,15 @@ def main():
         "DATE", tex_escape(stamp)
     )
     tex = preamble + "\n".join(r.tex) + r"\end{document}"
-    tex = tex.replace("π", r"\(\pi\)").replace("λ", r"\(\lambda\)")
+    for character, replacement in {
+        "π": r"\(\pi\)",
+        "λ": r"\(\lambda\)",
+        "α": r"\(\alpha\)",
+        "↦": r"\(\mapsto\)",
+        "10⁻⁶": r"\(10^{-6}\)",
+        "10⁻⁷": r"\(10^{-7}\)",
+    }.items():
+        tex = tex.replace(character, replacement)
     (args.output / "rapport_journee.tex").write_text(tex)
     with (args.output / "pdf-build.log").open("w") as log:
         for _ in range(2):
