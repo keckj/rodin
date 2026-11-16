@@ -1,0 +1,85 @@
+{
+  "p": 1,
+  "factor": 1,
+  "exact_auxiliary": false,
+  "isometry_error": 2.4424906541753444e-15,
+  "skew_error": 5.075305255429287e-16,
+  "results": [
+    {
+      "damping": 1.0,
+      "errors": [
+        {
+          "steps": 16,
+          "error": 5.3124669663806736e-05,
+          "observation_error": 6.106226635438361e-15,
+          "mass_error": 1.9761969838327786e-14,
+          "maximum_energy_growth": 0.0
+        },
+        {
+          "steps": 32,
+          "error": 1.3467784808706813e-05,
+          "observation_error": 6.439293542825908e-15,
+          "mass_error": 3.930189507173054e-14,
+          "maximum_energy_growth": 0.0
+        },
+        {
+          "steps": 64,
+          "error": 3.37909348829262e-06,
+          "observation_error": 5.995204332975845e-15,
+          "mass_error": 8.903988657493755e-14,
+          "maximum_energy_growth": 0.0
+        },
+        {
+          "steps": 128,
+          "error": 8.455400743963503e-07,
+          "observation_error": 7.105427357601002e-15,
+          "mass_error": 1.858513343222512e-13,
+          "maximum_energy_growth": 0.0
+        }
+      ],
+      "refinement_ratios": [
+        3.944573693326468,
+        3.985620656950744,
+        3.9963729580824765
+      ]
+    },
+    {
+      "damping": 10.0,
+      "errors": [
+        {
+          "steps": 16,
+          "error": 0.0009646712564098385,
+          "observation_error": 1.8041124150158794e-15,
+          "mass_error": 2.2870594307278225e-14,
+          "maximum_energy_growth": 0.0
+        },
+        {
+          "steps": 32,
+          "error": 0.00024168343663967133,
+          "observation_error": 2.1094237467877974e-15,
+          "mass_error": 4.618527782440651e-14,
+          "maximum_energy_growth": 0.0
+        },
+        {
+          "steps": 64,
+          "error": 6.045333943362846e-05,
+          "observation_error": 2.0539125955565396e-15,
+          "mass_error": 8.992806499463768e-14,
+          "maximum_energy_growth": 0.0
+        },
+        {
+          "steps": 128,
+          "error": 1.5115368888649418e-05,
+          "observation_error": 2.55351295663786e-15,
+          "mass_error": 1.8096635301390052e-13,
+          "maximum_energy_growth": 0.0
+        }
+      ],
+      "refinement_ratios": [
+        3.991466150194141,
+        3.9978508863851077,
+        3.9994617318949244
+      ]
+    }
+  ]
+}

@@ -1,0 +1,264 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath,amssymb,amsthm,geometry,hyperref}
+\geometry{margin=2.4cm}
+\setlength{\emergencystretch}{3em}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollaire}
+\newcommand{\id}{I}
+\title{Transport FE par espace auxiliaire avec mémoire\\
+Stabilité, couplage et ordre temporel}
+\author{Étude GPU SLFE, fork keckj/rodin}
+\date{16 novembre 2026}
+\begin{document}
+\maketitle
+
+\section{Le défaut introduit par les retours répétés}
+Soient $V$ et $W$ deux espaces de Hilbert discrets contenant une constante
+de même norme. Le transfert $R:V\to W$ est une contraction et vérifie
+$R1_V=1_W$, $R^*1_W=1_V$. Les adjoints sont définis par les matrices de masse.
+Pour un opérateur auxiliaire $S:W\to W$ conservatif et contractant,
+le transport incrémental est
+\[
+ T(S)=\id+R^*(S-\id)R .
+\]
+La conservation et la contraction de cet opérateur ont été établies dans
+la note sur le transfert incrémental.
+L'identité $T(\id)=\id$ élimine une erreur fixe à pas nul. Elle ne donne
+pas une propriété de semi-groupe. En effet,
+\[
+ T(S_2S_1)-T(S_2)T(S_1)
+ =R^*(S_2-\id)(\id-RR^*)(S_1-\id)R .
+\]
+Le terme de droite mesure l'information auxiliaire supprimée entre les pas.
+
+Si $S(t)=\exp(tL)$ avec $L^*=-L$, alors, à espaces fixés,
+\[
+ T(S(t))=\exp(tA)-\frac{t^2}{2}D+O(t^3),\quad
+ A=R^*LR,\quad
+ D=R^*L^*(\id-RR^*)LR\geq0 .
+\]
+Le terme quadratique dissipatif n'est généralement pas nul. Une composition
+symétrique de sous-transports incrémentaux ne suffit donc pas à établir
+un ordre temporel deux à maillage fixé.
+
+\section{Une réalisation avec état auxiliaire persistant}
+L'état initial est $v_0\in V$, $w_0=Rv_0\in W$. Un sous-pas d'advection
+est réalisé par
+\[
+ w^+=Sw,\qquad v^+=v+R^*(w^+-w).
+\]
+Après une suite de sous-pas, le champ observé est
+\[
+ v_n=v_0+R^*(S_{n-1}\cdots S_0-\id)Rv_0 .
+\]
+Il est contractant comme application de $v_0$ vers $v_n$. Cette propriété
+ne demande aucune nouvelle projection FE à chaque pas. L'énergie du champ
+observé peut augmenter entre deux observations, tout en restant inférieure
+à l'énergie initiale. Un aller-retour exactement inversé rend l'état initial;
+son erreur finale ne mesure alors que la projection du champ initial.
+Les essais d'advection doivent inclure des temps intermédiaires.
+
+Cette forme persistante conserve un degré de liberté supplémentaire.
+Pour $r=w-Rv$, le sous-pas donne
+\[
+ r^+=r+(\id-RR^*)(S-\id)w .
+\]
+Imposer $r=0$ après chaque pas restitue les transferts incrémentaux répétés
+et leur défaut de composition.
+
+\section{Coupler une opération FE sans perdre la mémoire}
+Soit $G:V\to V$ une opération physique FE, linéaire et contractante.
+Le sous-pas suivant applique exactement $G$ au champ FE,
+\[
+ v^+=Gv,\qquad w^+=w+R(v^+-v).
+\]
+Ce sous-pas laisse $r=w-Rv$ inchangé.
+Sa stabilité avec les sous-pas d'advection ne résulte pas d'une monotonie
+de $\|v\|$ à chaque advection. Elle résulte d'une énergie dans un espace
+augmenté, dont le calcul n'est pas requis par l'algorithme.
+
+\begin{proposition}
+Posons $D_0=(\id-R^*R)^{1/2}$ et
+$Jv=(Rv,D_0v)\in W\oplus V$.
+Alors $J^*J=\id$. Le schéma à deux variables ci-dessus est l'observation
+$v=J^*Z$ de la composition
+\[
+ Z\longmapsto
+ \begin{pmatrix} S&0\\0&\id\end{pmatrix}Z,
+ \qquad
+ Z\longmapsto \bigl[\id+J(G-\id)J^*\bigr]Z,
+ \qquad Z_0=Jv_0 .
+\]
+Ces deux opérateurs sont contractants. Si $S$ et $G$ préservent la masse et
+la constante, alors le schéma les préserve également et
+$\|v_n\|_V\leq\|Z_n\|\leq\|v_0\|_V$.
+\end{proposition}
+\begin{proof}
+L'identité d'isométrie découle de
+$R^*R+D_0^2=\id$. Écrivons $Z=(w,z)$.
+L'advection donne directement
+$J^*Z^+=v+R^*(S-\id)w$.
+Pour $\delta=Gv-v$, le second opérateur donne
+$w^+=w+R\delta$, $z^+=z+D_0\delta$ et
+$J^*Z^+=v+\delta$.
+La décomposition orthogonale
+$Z=Jv+Z_\perp$ donne
+$Z^+=JGv+Z_\perp$; sa norme ne croît pas.
+La première application est contractante par hypothèse sur $S$.
+Enfin $D_01_V=0$. La masse augmentée, associée au vecteur
+$J1_V=(1_W,0)$, coïncide avec la masse observée et est préservée.
+La même relation assure la préservation de la constante à partir
+de l'état compatible $J1_V$.
+\end{proof}
+
+La racine $D_0$ sert uniquement à la preuve. Le code
+\texttt{memory\_transport.py} utilise $R$, $R^*$, $v$ et $w$.
+Les racines et exponentielles de matrices denses dans
+\texttt{memory\_study.py} sont des oracles de validation GPU.
+Le cas d'une application non linéaire $G$ vérifiant
+$\|Gv\|\leq\|v\|$ conserve la borne de norme par la même décomposition.
+Une contraction des différences demande l'hypothèse correspondante sur $G$.
+
+\section{Conséquence pour l'ordre temporel}
+Si $G(t)=\exp(tL_V)$, l'isométrie de $J$ donne exactement
+\[
+ \id+J(G(t)-\id)J^*=\exp(tJL_VJ^*).
+\]
+L'advection persistante et la physique relevée possèdent donc de vrais
+générateurs dans l'espace augmenté. Une composition de Strang y est
+d'ordre deux lorsque les sous-flots sont exacts ou suffisamment précis.
+Cette affirmation porte sur le problème augmenté à espaces fixés.
+Sa consistance avec l'EDP physique reste une question spatiale distincte.
+Pour une physique dissipative, des pas négatifs ne sont généralement pas
+contractants. Les compositions d'ordre quatre à coefficients négatifs ne
+sont utilisées ici que pour les sous-transports unitaires.
+
+\section{Borne conditionnelle sans accumulation des échanges}
+Soient $v(t)\in V$, $y(t)\in W$ des approximations spatiales d'une solution
+physique, $v_0=v(0)$ et $\mathcal S_n=S_{n-1}\cdots S_0$ contractant.
+Posons $e(t)=v(t)-R^*y(t)$ et $\delta_0=Rv_0-y(0)$.
+Un calcul exact donne
+\[
+ v_n-v(t_n)=e(0)-e(t_n)
+ +R^*(\mathcal S_n-\id)\delta_0
+ +R^*(\mathcal S_n y(0)-y(t_n)).
+\]
+Par conséquent,
+\[
+ \|v_n-v(t_n)\|
+ \leq\|e(0)\|+\|e(t_n)\|+2\|\delta_0\|
+       +\|\mathcal S_n y(0)-y(t_n)\| .
+\]
+La borne sépare les défauts spatiaux d'échange et l'erreur du solveur
+auxiliaire. Aucun facteur égal au nombre de pas ne multiplie les trois
+premiers défauts. Une estimation de convergence complète demande encore
+des bornes pour ces défauts, adaptées à la géométrie et à la régularité
+du problème. Cette proposition concerne l'advection persistante pure;
+elle ne constitue pas à elle seule une estimation du problème couplé.
+
+\section{Consistance conditionnelle du système couplé}
+Considérons un problème spatial de référence
+$\dot v=(A+L_V)v$ dans $V$, et un générateur auxiliaire $L_W$.
+Supposons $L_W$ et $L_V$ dissipatifs dans leurs normes respectives.
+Le générateur augmenté est
+$\mathcal L=\operatorname{diag}(L_W,0)+JL_VJ^*$, donc dissipatif.
+Pour la solution exacte augmentée $Z(t)$ issue de $Jv(0)$,
+la différence $E(t)=Z(t)-Jv(t)$ est forcée par
+\[
+ f(t)=
+ \begin{pmatrix}
+  (L_WR-RA)v(t)\\-D_0Av(t)
+ \end{pmatrix}.
+\]
+L'estimation d'énergie donne
+\[
+ \|J^*Z(t)-v(t)\|
+ \leq \int_0^t
+ \left(\|(L_WR-RA)v(s)\|^2+\|D_0Av(s)\|^2\right)^{1/2}\,ds.
+\]
+La physique FE n'introduit aucun défaut de transfert dans ce résidu.
+La consistance est réduite à un défaut de commutation du transport et à
+la résolution des dérivées transportées par le support auxiliaire.
+Dans la factorisation $R=P_WP_Q|_V$, l'identité de Pythagore donne
+\[
+ \|D_0a\|^2
+ =\|a-P_Qa\|^2+\|P_Qa-P_WP_Qa\|^2,\qquad a\in V.
+\]
+Ainsi ce second défaut a l'ordre des erreurs de projection, sans perte
+supplémentaire d'un demi-ordre due à la racine carrée.
+Une preuve de convergence vers l'EDP demande encore un choix de $A$,
+ses estimations FE et une borne uniforme du commutateur.
+Les résidus évalués sur un champ analytique initial sont des diagnostics
+de cette condition, et non une preuve uniforme sur une trajectoire.
+
+\section{Réalisation FE--DG--Fourier}
+Dans les expériences, $V$ est DG $P_p$ sur triangles, $Q$ est DG $Q_q$
+sur carrés fixes et $W$ est un espace trigonométrique sur le tore.
+Le couplage est
+\[
+ R=P_WP_Q|_V,\qquad R^*=P_VP_Q|_W .
+\]
+Les trois projections sont orthogonales dans $L^2$. La factorisation est
+donc contractante et préserve les constantes. Les intégrales FE--DG sont
+statiques. Les moments DG--Fourier se factorisent en FFT des indices de
+cellules et intégrales 1D de polynômes contre des exponentielles.
+Ces dernières sont calculées par quadrature de Gauss d'ordre 32,
+comparée à l'ordre 48 dans les validations. Les garanties exactes portent
+sur les projections exactes; leur réalisation numérique est contrôlée
+par l'adjonction, les constantes et les valeurs singulières.
+
+Le transport test utilise
+$\psi(x,y)=\sin^2(\pi x)\sin^2(\pi y)/\pi$ et
+$u=(\partial_y\psi,-\partial_x\psi)$.
+Ses quatre termes élémentaires sont des cisaillements dans les directions
+cartésiennes et diagonales. Sur une grille uniforme impaire,
+les changements $(x,y)\mapsto(x\pm y,y)$ sont des permutations.
+Les translations par ligne sont des multiplications par des phases de
+module un dans l'espace de Fourier. Chaque sous-transport est donc unitaire,
+préserve la constante et la moyenne discrète. La norme de grille est la
+norme $L^2$ exacte du polynôme trigonométrique représenté.
+Les permutations diagonales peuvent replier les hautes fréquences;
+l'unitarité ne prouve pas l'absence d'erreur d'aliasing.
+
+Une composition symétrique des quatre modes est d'ordre deux pour le
+générateur discret. La composition classique de Yoshida
+$S_2(a t)S_2((1-2a)t)S_2(a t)$, $a=(2-2^{1/3})^{-1}$,
+donne l'ordre quatre \cite{yoshida}. Chaque facteur demeure unitaire.
+Les bornes de stabilité sont donc indépendantes du déplacement par pas;
+la précision impose néanmoins une résolution temporelle des commutateurs.
+Le facteur temporel commun $\cos(\pi t)$ est intégré analytiquement
+avant cette composition. Une dépendance temporelle arbitraire de chaque
+mode demande un traitement distinct.
+
+\section{Portée et antécédents}
+Le transfert d'incréments, les dilatations d'opérateurs contractants,
+les projections orthogonales et les compositions d'ordre élevé sont
+des outils établis. Les transformations DG--Fourier sur GPU ont également
+des antécédents explicites \cite{crews}. La décomposition en sous-champs
+à divergence nulle appartient à la littérature des intégrateurs
+préservant le volume \cite{xue}.
+La nouveauté éventuelle doit être évaluée sur la réalisation FE avec
+mémoire, sa consistance, ses couplages et ses coûts, et non sur ces outils
+pris isolément.
+
+Les expériences couvrent des triangles affines périodiques et une vitesse
+prescrite à quatre modes. Les frontières non périodiques, les vitesses FE
+quelconques, la compression, les garanties locales de flux, l'adaptation
+du support, les couplages non linéaires et le calcul distribué ne sont pas
+validés par ces résultats.
+
+\begin{thebibliography}{9}
+\bibitem{yoshida} H. Yoshida, \emph{Construction of higher order symplectic
+integrators}, Physics Letters A 150 (1990), 262--268,
+\url{https://doi.org/10.1016/0375-9601(90)90092-3}.
+\bibitem{crews} D. W. Crews, \emph{Analysis of tensor-product discontinuous
+Galerkin operators for Vlasov--Poisson simulations and GPU implementation
+on Python}, 2022, \url{https://arxiv.org/abs/2202.13532}.
+\bibitem{xue} H. Xue et A. Zanna, \emph{Explicit volume-preserving splitting
+methods for polynomial divergence-free vector fields}, 2012,
+\url{https://arxiv.org/abs/1205.1935}.
+\end{thebibliography}
+\end{document}

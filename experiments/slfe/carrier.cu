@@ -13,6 +13,34 @@ __device__ void nodal_values(double x, const double* nodes, double* values)
   }
 }
 
+extern "C" __global__ void build_shear_blocks(const double* velocity,
+  const double* duration, int n, int rows, int degree, const double* polynomials,
+  int* shifts, double* blocks)
+{
+  int item = blockIdx.x * blockDim.x + threadIdx.x;
+  const int entries = 2 * NP * NP;
+  if (item >= rows * entries)
+    return;
+  int row = item / entries, entry = item % entries;
+  double displacement = n * duration[0] * velocity[row];
+  double integer = floor(displacement), fraction = displacement - integer;
+  if (entry == 0)
+    shifts[row] = (int)integer;
+  bool reverse = fraction > .5;
+  double z = reverse ? 1. - fraction : fraction;
+  double value = 0., bernstein = 1.;
+  for (int k = 0; k < degree; ++k)
+    bernstein *= 1. - z;
+  double ratio = z / (1. - z);
+  for (int k = 0; k <= degree; ++k)
+  {
+    int coefficient = reverse ? degree - k : k;
+    value += polynomials[entry * (degree + 1) + coefficient] * bernstein;
+    bernstein *= double(degree - k) / (k + 1) * ratio;
+  }
+  blocks[item] = value;
+}
+
 extern "C" __global__ void carrier_blocks(const double* triangles, int n, int first,
   int cells, int slots, const double* quadrature, int nq, const double* nodes,
   const double* weights, int* destinations, double* blocks, int* errors)

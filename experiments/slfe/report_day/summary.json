@@ -1,0 +1,21 @@
+{
+  "generated": "16/11/2026 \u00e0 10:58",
+  "counts": {
+    "day-validation": 7,
+    "day-cellular": 48,
+    "day-temporal": 42,
+    "day-enrichment": 16,
+    "day-nested-validation": 6,
+    "day-nested": 32,
+    "day-persistent": 32,
+    "day-spectral": 30,
+    "day-spectral-graph": 30,
+    "fourier-validation": 6,
+    "fourier-accuracy": 40,
+    "fourier-time-order": 24,
+    "fourier-autonomous": 12,
+    "fourier-compressed": 54,
+    "reaction": 38
+  },
+  "execution_failures": 0
+}

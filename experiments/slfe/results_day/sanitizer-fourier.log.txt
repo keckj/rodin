@@ -1,0 +1,18 @@
+========= COMPUTE-SANITIZER
+{"start": "3d650e95232c1ae6", "kind": "validate", "p": 1, "factor": 1}
+{"done": "3d650e95232c1ae6", "status": "ok", "seconds": 6.467155124992132}
+{"start": "e7ef820b7c521021", "kind": "validate", "p": 1, "factor": 2}
+{"done": "e7ef820b7c521021", "status": "ok", "seconds": 7.114394570991863}
+{"start": "62ab77ced93d5815", "kind": "validate", "p": 2, "factor": 1}
+{"done": "62ab77ced93d5815", "status": "ok", "seconds": 16.562999739020597}
+{"start": "5e57fc2e071124fe", "kind": "validate", "p": 2, "factor": 2}
+{"done": "5e57fc2e071124fe", "status": "ok", "seconds": 21.215575159993023}
+{"start": "f04897b5b25c0681", "kind": "validate", "p": 3, "factor": 1}
+{"done": "f04897b5b25c0681", "status": "ok", "seconds": 41.98833655600902}
+{"start": "b353d8373da55564", "kind": "validate", "p": 3, "factor": 2}
+{"done": "b353d8373da55564", "status": "ok", "seconds": 50.82051962299738}
+{"start": "9e7bdec5c03a435c", "kind": "validate", "p": 4, "factor": 1}
+{"done": "9e7bdec5c03a435c", "status": "ok", "seconds": 90.89940471900627}
+{"start": "030d4878a77c0198", "kind": "validate", "p": 4, "factor": 2}
+{"done": "030d4878a77c0198", "status": "ok", "seconds": 104.3785002969671}
+========= ERROR SUMMARY: 0 errors

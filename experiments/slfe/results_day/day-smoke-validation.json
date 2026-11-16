@@ -1,0 +1,199 @@
+{
+  "status": "ok",
+  "provenance": {
+    "utc": "2026-11-16T09:57:36Z",
+    "git": "381b3113ecd89e91f68606dca7a5983cd062800c",
+    "source_sha256": {
+      "validate_day.py": "b738c0efaaf9b2bf970d5b0de6918c9b31431c4e7aa96cf5d62f75ff20a2cfa4",
+      "campaign.py": "e6a291611f732588ba743f379a1eb458dc4e0a242f52f02fecff270e5f817900",
+      "report.py": "95ec606f2dcf21a1f911fbc1d42bd4b0e7aaa5855515d7b1f0090a4ccd0f0328",
+      "spectral_reference.py": "20b6e1afe7881b47a368fd33356516caecec78a0238ef9ce9f4d738194f1304e",
+      "symbolic.py": "1aeea1bb6bfa89c3a1cbcaf18d712b4551d3abc0656d5cd2b0fdfddd60791354",
+      "transfer.cu": "816b5c16ccf51e8476bd362188a2b76cca17c4baac84de3c83aff9016beb1fe8",
+      "day_report.py": "0ae1aec2e12257ffbf9945a2094b0a503f3128b9abf06c32932d55078667e972",
+      "carrier.cu": "6a501eb75bf1edf71888756e3d86f1da3809133155d3946c567faf35f242db43",
+      "carrier_study.py": "2c5c214a15cf5ca1ea4e12ee1df02441c606a2a53f9f3a2987c7c5e0fc752736",
+      "memory_study.py": "72e805affdf81cab5dc9fe64b231de3ebd877f990c986bbfae6289e8f4a8c196",
+      "fourier_carrier.py": "2d616646f9e94a53c18c7155bf9b2db450a582fb11208a604ceaf101a29fca6e",
+      "carrier.py": "dd217320ec18e93664c4834c2b98d22ca3fbed8fc29654d617db344ba513f49f",
+      "moments.py": "ff0e0ad6508686b627cee867a11b490494c3389b285c1b0d1b873d4fc4e5510f",
+      "reaction_study.py": "9e10bda18213af83fa76714d89593f347556890620fe6bbfb6e3f77e6c87b37f",
+      "geometry_control.py": "2fea76b0032bcb6a22f98d4651d844c3c309eb90102250dcc5ac5675eb5f1f1a",
+      "memory_transport.py": "88bfeb7ecd05fa591c1ffac59aab79c1c520c0f4f161c71114a007a30f883cc3",
+      "basis.cuh": "067d7dde2ffed83d1159eefcfb434a94fbbb562bea7d30768f5db1ac1f77dbd2",
+      "cellular_reference.cu": "5b92154658c8dd49d916074c45d759d12477cfc34774230f4ac6e593a4c81710",
+      "validate.py": "3d6296852c6d19234614a1d9775e71031042a7686617367f97b421ceaffd271d",
+      "overnight.py": "d7a5a85e3485e188657adf2381349db9f06b2b47c0c39311b8a05ddb612622ee",
+      "gpu.py": "63659f9a5fbfbd3d806b588e16e3eb70aeb03a68b3062f8663a3e5e442504800",
+      "symbolic.json": "3fe2f294f613777861bf03ba2a26ece3cae8cda67e5a7b3f486285ec85907f64",
+      "normalized.py": "1c7eabc8c7fbdfa7055ac902f22795d54346bb59a026c53b7a2dc8958e687c94",
+      "finalize.py": "bb13fa4a9a44840f8662677370093e9bf0f59ae88ced60683e0a41733dbab8a4",
+      "incremental_report.py": "080475751509b8ff8e80eb2d6ce3304359c83e1d9b086a39ea7f580d2e8ee281",
+      "fourier_carrier.cu": "c1483ef0083d5f889a7ae99aa0cdee44ef78b56344389741baeb8e179c0e274f",
+      "fourier_study.py": "ce8f3324d279478ebb0b71ae692412ab018737be252d0f2255d625229cc9065c",
+      "flows.py": "5ee21e0f2a569630e345b202f497e1a48458a9770192021b957fb444deaf88e3",
+      "research.py": "90fc9ad028fdb311156d020fb9bcee86c47959167d2f658fc84aedab546e5067",
+      "flux.py": "2a62349b1a0402c04a86bc360dbf48a2527fd29c0130b045ca066291696c0a2d",
+      "gpu_graph.py": "e244ac713cba0b2939a58b4e82b07d14c736ec382dd6279af872fdb42d7875cb",
+      "carrier_polynomials.json": "9130f39e95d5bcca65d02b452972d851f835caaebb855a918217d1c8aa1de50e",
+      "references.json": "3e41af93b0ed3f789e8625c9863470ecbf8e86c4167dc2961025563d249b3123",
+      "day_study.py": "d7e2475c2af15b35d3685bf33db0332d3399ce6508a9e8f5bbcaa151df72f0f1",
+      "reaction_reference.cu": "8149303457db5d7b98a8912cd3efb8932acbd36aadb1ec7652caa162e8b34141",
+      "cartesian.py": "a27d6a2b8996333ab260b0553c75c3e6eccbffc95f5fd1d3c38bbffd53e95cc2",
+      "validate_moments.py": "1c255dbec9db3cfbbcd9c5897bbf325c73dc92719d467437f9ed29610a75a709",
+      "fourier_flow.py": "0ce1f24ede2c44497b5c688e595a2f893f6edb04a5b0e469b866582cd31bebfb",
+      "symbolic_carrier.py": "f872956e57ae551640bdacab505f991b708b80b062ea2b5ea1b876563bd41b0b",
+      "ray_flux.cu": "909d47a1c0fb0d940f9b0877f84c8cdb82c388f56a6511ee451f88480221226c"
+    },
+    "python": "3.10.12",
+    "cupy": "13.6.0",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "cuda_driver": 13020,
+    "cuda_runtime": 12090
+  },
+  "kernels": {
+    "passed": true,
+    "kernel_checks": [
+      {
+        "degree": 0,
+        "max_entry_error": 0.0
+      },
+      {
+        "degree": 1,
+        "max_entry_error": 3.3306690738754696e-16
+      },
+      {
+        "degree": 2,
+        "max_entry_error": 1.9984014443252818e-15
+      },
+      {
+        "degree": 3,
+        "max_entry_error": 2.9976021664879227e-15
+      },
+      {
+        "degree": 4,
+        "max_entry_error": 2.4424906541753444e-15
+      },
+      {
+        "degree": 5,
+        "max_entry_error": 3.774758283725532e-15
+      }
+    ],
+    "reference_checks": [
+      {
+        "duration": 0.1,
+        "refinement_difference": 3.885780586188048e-14
+      },
+      {
+        "duration": 0.5,
+        "refinement_difference": 2.097877427331696e-12
+      },
+      {
+        "duration": 1.0,
+        "refinement_difference": 6.59889920484602e-11
+      }
+    ],
+    "velocity_decomposition_error": 4.440892098500626e-16
+  },
+  "graphs": [
+    {
+      "n": 31,
+      "method": "unitary",
+      "error": 0.0,
+      "pressure_bytes": 8388608
+    },
+    {
+      "n": 31,
+      "method": "rk4",
+      "error": 0.0,
+      "pressure_bytes": 8388608
+    },
+    {
+      "n": 63,
+      "method": "unitary",
+      "error": 0.0,
+      "pressure_bytes": 8388608
+    },
+    {
+      "n": 63,
+      "method": "rk4",
+      "error": 0.0,
+      "pressure_bytes": 8388608
+    },
+    {
+      "n": 127,
+      "method": "unitary",
+      "error": 0.0,
+      "pressure_bytes": 8388608
+    },
+    {
+      "n": 127,
+      "method": "rk4",
+      "error": 0.0,
+      "pressure_bytes": 8388608
+    }
+  ],
+  "reaction": {
+    "reference_error": 1.0711154185827354e-11,
+    "quadrature_error": 9.769962616701378e-15
+  },
+  "coupled_case": {
+    "n": 8,
+    "p": 2,
+    "steps": 2,
+    "modes": 31,
+    "end": 0.5,
+    "memory": true,
+    "energy_ratio": 0.3588224512814037,
+    "final_mass": 0.01659449135848148,
+    "static_setup_seconds": 0.4252086449996568,
+    "evolution_seconds": 0.4298790809698403,
+    "l1": [
+      0.0035468787237206453
+    ],
+    "l2": [
+      0.010015990765048959
+    ],
+    "linf_sampled": [
+      0.15789622274954296
+    ],
+    "min_sampled": [
+      -0.13284579812071304
+    ],
+    "max_sampled": [
+      0.6353769267708016
+    ]
+  },
+  "fourier_case": {
+    "n": 8,
+    "p": 2,
+    "factor": 1,
+    "modes": 31,
+    "steps": 2,
+    "end": 0.5,
+    "reversing": true,
+    "order": 4,
+    "persistent": true,
+    "graph": true,
+    "static_setup_seconds": 0.5935952009749599,
+    "evolution_seconds": 0.4381522689945996,
+    "mass_error": 5.551115123125783e-17,
+    "energy_ratio": 0.9862340318153602,
+    "coupling_bytes": 212976,
+    "l1": [
+      0.004103877155433472
+    ],
+    "l2": [
+      0.014099571927700472
+    ],
+    "linf_sampled": [
+      0.3492873145295015
+    ],
+    "min_sampled": [
+      -0.3381356009225265
+    ],
+    "max_sampled": [
+      1.0203986740896287
+    ]
+  }
+}

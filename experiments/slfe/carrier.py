@@ -5,6 +5,7 @@ T = I + R* (S-I) R, with an exact L2 projection R and its mass adjoint.
 All numerical construction and applications execute on CUDA.
 """
 import time
+import json
 
 from gpu import cp, HERE, quadrature, launch
 from flux import gauss_interval
@@ -15,6 +16,8 @@ class Carrier:
         self.space = space
         self.n = n or space.mesh.n
         self.np = (space.degree if degree is None else degree)+1
+        if not 1 <= self.np <= 6:
+            raise ValueError("Carrier polynomial degrees 0 through 5 are available")
         self.nc = self.np**2
         self.nodes, self.weights = gauss_interval(self.np)
         self.mass = cp.ascontiguousarray((self.weights[:, None]*self.weights[None, :]).ravel()/self.n**2)
@@ -25,6 +28,22 @@ class Carrier:
         self.projector = self.module.get_function("project_carrier")
         self.returner = self.module.get_function("adjoint_carrier")
         self.shifter = self.module.get_function("shift_carrier")
+        self.shear_builder = self.module.get_function("build_shear_blocks")
+        table = json.loads((HERE/"carrier_polynomials.json").read_text())["tables"][str(self.np-1)]
+        self.bernstein_degree = table["bernstein_degree"]
+        modal = cp.asarray(table["modal_coefficients"], dtype=cp.float64)
+        legendre = [cp.ones_like(self.nodes)]
+        z = 2*self.nodes-1
+        for k in range(1, self.np):
+            legendre.append(z if k == 1 else ((2*k-1)*z*legendre[k-1]-(k-1)*legendre[k-2])/k)
+        modal_values = cp.stack(legendre, axis=1)*cp.sqrt(2*cp.arange(self.np)+1)[None, :]
+        self.polynomials = cp.ascontiguousarray(cp.einsum("ik,skld,jl,j->sijd",
+                                               modal_values, modal, modal_values, self.weights))
+        # Exact endpoint matrices avoid adding projection roundoff at zero motion.
+        self.polynomials[0, :, :, 0] = 0
+        self.polynomials[1, :, :, 0] = cp.eye(self.np)
+        self.polynomials[0, :, :, -1] = cp.eye(self.np)
+        self.polynomials[1, :, :, -1] = 0
         q = quadrature(qdegree or max(1, space.degree+2*(self.np-1)))
         bounds = cp.floor(space.mesh.triangles*self.n)
         widths = cp.max(bounds, axis=1)-cp.min(bounds, axis=1)+3
@@ -67,14 +86,6 @@ class Carrier:
                 self.pairs, coefficients, output, fields))
         return output
 
-    def lagrange(self, x):
-        values = cp.ones((*x.shape, self.np), dtype=cp.float64)
-        for i in range(self.np):
-            for j in range(self.np):
-                if i != j:
-                    values[..., i] *= (x-self.nodes[j])/(self.nodes[i]-self.nodes[j])
-        return values
-
     def transport(self, dt, flow="translation"):
         y = (cp.arange(self.n)[:, None]+self.nodes[None, :]).ravel()/self.n
         if flow == "translation":
@@ -83,21 +94,25 @@ class Carrier:
             velocities = [.2*cp.sin(2*cp.pi*y)]
         else:
             raise ValueError("Carrier prototype supports translation and horizontal shear")
+        return self.shears([(axis, dt, velocity) for axis, velocity in enumerate(velocities)])
+
+    def shears(self, stages):
+        """Compose volume-preserving Cartesian shears before returning an increment.
+
+        Each stage is (axis, duration, velocity_at_transverse_Gauss_nodes).
+        Axis 0 advects x with a velocity depending only on y; axis 1 is the
+        corresponding y shear. The input velocity array has n*(q+1) entries.
+        """
         operators = []
-        for velocity in velocities:
-            displacement = self.n*dt*velocity
-            shift = cp.floor(displacement).astype(cp.int32)
-            fraction = displacement-shift
-            left = fraction[:, None]*self.nodes[None, :]
-            right = fraction[:, None]+(1-fraction[:, None])*self.nodes[None, :]
-            points = cp.stack((left, right), axis=1)
-            origins = points-fraction[:, None, None]+cp.asarray([1., 0.])[None, :, None]
-            lengths = cp.stack((fraction, 1-fraction), axis=1)
-            test = self.lagrange(points)
-            trial = self.lagrange(origins)
-            blocks = cp.einsum("rsqi,rsqj,q,rs->rsij", test, trial, self.weights, lengths)
-            blocks /= self.weights[None, None, :, None]
-            operators.append((shift, cp.ascontiguousarray(blocks)))
+        for axis, dt, velocity in stages:
+            if axis not in (0, 1) or velocity.shape != (self.n*self.np,):
+                raise ValueError("Expected an axis and one velocity per transverse Gauss node")
+            shift = cp.empty(velocity.size, dtype=cp.int32)
+            blocks = cp.empty((velocity.size, 2, self.np, self.np), dtype=cp.float64)
+            duration = cp.asarray(dt, dtype=cp.float64)
+            launch(self.shear_builder, blocks.size, (velocity, duration, self.n, velocity.size,
+                   self.bernstein_degree, self.polynomials, shift, blocks))
+            operators.append((axis, shift, blocks))
         return IncrementalTransfer(self, operators)
 
 
@@ -106,15 +121,20 @@ class IncrementalTransfer:
         self.carrier = carrier
         self.operators = operators
 
-    def apply(self, coefficients, incremental=True):
+    def apply_carrier(self, coefficients):
         c = self.carrier
-        old = c.project(coefficients)
-        new = old
+        new = coefficients
         fields = coefficients.shape[1]
-        for axis, (shifts, blocks) in enumerate(self.operators):
+        for axis, shifts, blocks in self.operators:
             output = cp.empty_like(new)
             launch(c.shifter, new.size, (new, output, c.n, fields, shifts, blocks, axis))
             new = output
+        return new
+
+    def apply(self, coefficients, incremental=True):
+        c = self.carrier
+        old = c.project(coefficients)
+        new = self.apply_carrier(old)
         if incremental:
             return coefficients+c.adjoint(new-old)
         return c.adjoint(new)

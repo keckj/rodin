@@ -1,0 +1,666 @@
+[
+  {
+    "status": "ok",
+    "result": {
+      "p": 1,
+      "factor": 1,
+      "isometry_error": 2.4424906541753444e-15,
+      "skew_error": 5.075305255429287e-16,
+      "results": [
+        {
+          "damping": 1.0,
+          "errors": [
+            {
+              "steps": 1,
+              "error": 0.015586600227960743,
+              "observation_error": 5.773159728050814e-15,
+              "mass_error": 1.5543122344752192e-15,
+              "maximum_energy_growth": 2.842170943040401e-14
+            },
+            {
+              "steps": 2,
+              "error": 0.003551310492078608,
+              "observation_error": 6.217248937900877e-15,
+              "mass_error": 2.4424906541753444e-15,
+              "maximum_energy_growth": 2.842170943040401e-14
+            },
+            {
+              "steps": 4,
+              "error": 0.0008713212101782148,
+              "observation_error": 6.217248937900877e-15,
+              "mass_error": 1.9845236565174673e-15,
+              "maximum_energy_growth": 2.842170943040401e-14
+            },
+            {
+              "steps": 8,
+              "error": 0.00021684746380057788,
+              "observation_error": 5.773159728050814e-15,
+              "mass_error": 3.552713678800501e-15,
+              "maximum_energy_growth": 1.4210854715202004e-14
+            },
+            {
+              "steps": 16,
+              "error": 5.4151143857436106e-05,
+              "observation_error": 6.217248937900877e-15,
+              "mass_error": 5.995204332975845e-15,
+              "maximum_energy_growth": 2.842170943040401e-14
+            },
+            {
+              "steps": 32,
+              "error": 1.353400165444958e-05,
+              "observation_error": 6.661338147750939e-15,
+              "mass_error": 1.4238610290817633e-14,
+              "maximum_energy_growth": 1.4210854715202004e-14
+            }
+          ],
+          "refinement_ratios": [
+            4.388971412870687,
+            4.07577647668217,
+            4.018129587070102,
+            4.004485378397046,
+            4.001118460010887
+          ]
+        },
+        {
+          "damping": 10.0,
+          "errors": [
+            {
+              "steps": 1,
+              "error": 0.21212805196914852,
+              "observation_error": 1.887379141862766e-15,
+              "mass_error": 1.5543122344752192e-15,
+              "maximum_energy_growth": 8.881784197001252e-15
+            },
+            {
+              "steps": 2,
+              "error": 0.058836941293579983,
+              "observation_error": 1.6653345369377348e-15,
+              "mass_error": 1.9984014443252818e-15,
+              "maximum_energy_growth": 1.4210854715202004e-14
+            },
+            {
+              "steps": 4,
+              "error": 0.015273613886594609,
+              "observation_error": 1.8318679906315083e-15,
+              "mass_error": 1.1934897514720433e-15,
+              "maximum_energy_growth": 1.4210854715202004e-14
+            },
+            {
+              "steps": 8,
+              "error": 0.003856676928283751,
+              "observation_error": 1.609823385706477e-15,
+              "mass_error": 9.43689570931383e-16,
+              "maximum_energy_growth": 3.552713678800501e-15
+            },
+            {
+              "steps": 16,
+              "error": 0.0009666093481675269,
+              "observation_error": 1.609823385706477e-15,
+              "mass_error": 2.9976021664879227e-15,
+              "maximum_energy_growth": 1.4210854715202004e-14
+            },
+            {
+              "steps": 32,
+              "error": 0.0002418056003226224,
+              "observation_error": 1.3322676295501878e-15,
+              "mass_error": 6.966649479522857e-15,
+              "maximum_energy_growth": 1.4210854715202004e-14
+            }
+          ],
+          "refinement_ratios": [
+            3.60535485539074,
+            3.852195147162923,
+            3.960304212826942,
+            3.9899023691371696,
+            3.997464686003365
+          ]
+        }
+      ]
+    },
+    "provenance": {
+      "utc": "2026-11-16T09:48:39Z",
+      "git": "381b3113ecd89e91f68606dca7a5983cd062800c",
+      "source_sha256": {
+        "campaign.py": "e6a291611f732588ba743f379a1eb458dc4e0a242f52f02fecff270e5f817900",
+        "report.py": "95ec606f2dcf21a1f911fbc1d42bd4b0e7aaa5855515d7b1f0090a4ccd0f0328",
+        "spectral_reference.py": "20b6e1afe7881b47a368fd33356516caecec78a0238ef9ce9f4d738194f1304e",
+        "symbolic.py": "1aeea1bb6bfa89c3a1cbcaf18d712b4551d3abc0656d5cd2b0fdfddd60791354",
+        "transfer.cu": "816b5c16ccf51e8476bd362188a2b76cca17c4baac84de3c83aff9016beb1fe8",
+        "carrier.cu": "6a501eb75bf1edf71888756e3d86f1da3809133155d3946c567faf35f242db43",
+        "carrier_study.py": "2c5c214a15cf5ca1ea4e12ee1df02441c606a2a53f9f3a2987c7c5e0fc752736",
+        "memory_study.py": "e6005d1b06148947ebfd0b18e0a301a36eba46b0f4f188d76ca72afe72dbf03f",
+        "fourier_carrier.py": "a0766120610f52f0fd2d26308b99d55efaa9f2283d94e47fd738f5e4411748dc",
+        "carrier.py": "dd217320ec18e93664c4834c2b98d22ca3fbed8fc29654d617db344ba513f49f",
+        "moments.py": "ff0e0ad6508686b627cee867a11b490494c3389b285c1b0d1b873d4fc4e5510f",
+        "geometry_control.py": "2fea76b0032bcb6a22f98d4651d844c3c309eb90102250dcc5ac5675eb5f1f1a",
+        "memory_transport.py": "941252b5d4bdbd2ecfd9f7c6ce45804b05421c015433b89ce9e0042f064e9ef4",
+        "basis.cuh": "067d7dde2ffed83d1159eefcfb434a94fbbb562bea7d30768f5db1ac1f77dbd2",
+        "cellular_reference.cu": "5b92154658c8dd49d916074c45d759d12477cfc34774230f4ac6e593a4c81710",
+        "validate.py": "3d6296852c6d19234614a1d9775e71031042a7686617367f97b421ceaffd271d",
+        "overnight.py": "d7a5a85e3485e188657adf2381349db9f06b2b47c0c39311b8a05ddb612622ee",
+        "gpu.py": "63659f9a5fbfbd3d806b588e16e3eb70aeb03a68b3062f8663a3e5e442504800",
+        "symbolic.json": "3fe2f294f613777861bf03ba2a26ece3cae8cda67e5a7b3f486285ec85907f64",
+        "normalized.py": "1c7eabc8c7fbdfa7055ac902f22795d54346bb59a026c53b7a2dc8958e687c94",
+        "finalize.py": "bb13fa4a9a44840f8662677370093e9bf0f59ae88ced60683e0a41733dbab8a4",
+        "incremental_report.py": "080475751509b8ff8e80eb2d6ce3304359c83e1d9b086a39ea7f580d2e8ee281",
+        "fourier_carrier.cu": "c1483ef0083d5f889a7ae99aa0cdee44ef78b56344389741baeb8e179c0e274f",
+        "fourier_study.py": "ce8f3324d279478ebb0b71ae692412ab018737be252d0f2255d625229cc9065c",
+        "flows.py": "5ee21e0f2a569630e345b202f497e1a48458a9770192021b957fb444deaf88e3",
+        "research.py": "90fc9ad028fdb311156d020fb9bcee86c47959167d2f658fc84aedab546e5067",
+        "flux.py": "2a62349b1a0402c04a86bc360dbf48a2527fd29c0130b045ca066291696c0a2d",
+        "gpu_graph.py": "e244ac713cba0b2939a58b4e82b07d14c736ec382dd6279af872fdb42d7875cb",
+        "carrier_polynomials.json": "9130f39e95d5bcca65d02b452972d851f835caaebb855a918217d1c8aa1de50e",
+        "references.json": "3e41af93b0ed3f789e8625c9863470ecbf8e86c4167dc2961025563d249b3123",
+        "day_study.py": "46819d12bf162bc4e5d209b34d0fb6cbab12b38224427f895827fcb588708710",
+        "cartesian.py": "a27d6a2b8996333ab260b0553c75c3e6eccbffc95f5fd1d3c38bbffd53e95cc2",
+        "validate_moments.py": "1c255dbec9db3cfbbcd9c5897bbf325c73dc92719d467437f9ed29610a75a709",
+        "fourier_flow.py": "0ce1f24ede2c44497b5c688e595a2f893f6edb04a5b0e469b866582cd31bebfb",
+        "symbolic_carrier.py": "f872956e57ae551640bdacab505f991b708b80b062ea2b5ea1b876563bd41b0b",
+        "ray_flux.cu": "909d47a1c0fb0d940f9b0877f84c8cdb82c388f56a6511ee451f88480221226c"
+      },
+      "python": "3.10.12",
+      "cupy": "13.6.0",
+      "gpu": "NVIDIA GeForce RTX 5090",
+      "cuda_driver": 13020,
+      "cuda_runtime": 12090
+    }
+  },
+  {
+    "status": "ok",
+    "result": {
+      "p": 2,
+      "factor": 1,
+      "isometry_error": 1.7763568394002505e-15,
+      "skew_error": 1.7763568394002505e-15,
+      "results": [
+        {
+          "damping": 1.0,
+          "errors": [
+            {
+              "steps": 1,
+              "error": 0.029652175216049927,
+              "observation_error": 9.919148835635383e-15,
+              "mass_error": 2.1094237467877974e-15,
+              "maximum_energy_growth": 0.0
+            },
+            {
+              "steps": 2,
+              "error": 0.0060610778174568485,
+              "observation_error": 9.749145934989656e-15,
+              "mass_error": 2.220446049250313e-15,
+              "maximum_energy_growth": 0.0
+            },
+            {
+              "steps": 4,
+              "error": 0.0014351543829206849,
+              "observation_error": 9.579143034343929e-15,
+              "mass_error": 1.7763568394002505e-15,
+              "maximum_energy_growth": 2.842170943040401e-14
+            },
+            {
+              "steps": 8,
+              "error": 0.0003547392445571314,
+              "observation_error": 9.898332153923661e-15,
+              "mass_error": 3.885780586188048e-15,
+              "maximum_energy_growth": 2.842170943040401e-14
+            },
+            {
+              "steps": 16,
+              "error": 8.844154950766335e-05,
+              "observation_error": 9.894862706971708e-15,
+              "mass_error": 1.554312234475219e-14,
+              "maximum_energy_growth": 5.684341886080802e-14
+            },
+            {
+              "steps": 32,
+              "error": 2.209532541941319e-05,
+              "observation_error": 9.645062526431047e-15,
+              "mass_error": 2.5757174171303632e-14,
+              "maximum_energy_growth": 8.526512829121202e-14
+            }
+          ],
+          "refinement_ratios": [
+            4.8922281001981265,
+            4.223293249554058,
+            4.045660030404532,
+            4.011002142453346,
+            4.002726722909347
+          ]
+        },
+        {
+          "damping": 10.0,
+          "errors": [
+            {
+              "steps": 1,
+              "error": 0.3504730524268808,
+              "observation_error": 2.398255205537936e-15,
+              "mass_error": 8.881784197001252e-16,
+              "maximum_energy_growth": 0.0
+            },
+            {
+              "steps": 2,
+              "error": 0.09429463807547235,
+              "observation_error": 2.6922908347160046e-15,
+              "mass_error": 8.881784197001252e-16,
+              "maximum_energy_growth": 1.7763568394002505e-15
+            },
+            {
+              "steps": 4,
+              "error": 0.024142354055824534,
+              "observation_error": 2.525757381022231e-15,
+              "mass_error": 9.43689570931383e-16,
+              "maximum_energy_growth": 1.4210854715202004e-14
+            },
+            {
+              "steps": 8,
+              "error": 0.0060839891043803235,
+              "observation_error": 2.8011447328335493e-15,
+              "mass_error": 3.1086244689504383e-15,
+              "maximum_energy_growth": 0.0
+            },
+            {
+              "steps": 16,
+              "error": 0.0015241700801500943,
+              "observation_error": 3.0808688933348094e-15,
+              "mass_error": 8.493206138382448e-15,
+              "maximum_energy_growth": 1.4210854715202004e-14
+            },
+            {
+              "steps": 32,
+              "error": 0.0003812430211469574,
+              "observation_error": 2.5248900192842427e-15,
+              "mass_error": 1.7541523789077473e-14,
+              "maximum_energy_growth": 5.684341886080802e-14
+            }
+          ],
+          "refinement_ratios": [
+            3.716786654892998,
+            3.9057764564894626,
+            3.968178384547505,
+            3.9916733595644365,
+            3.9978963432948293
+          ]
+        }
+      ]
+    },
+    "provenance": {
+      "utc": "2026-11-16T09:48:39Z",
+      "git": "381b3113ecd89e91f68606dca7a5983cd062800c",
+      "source_sha256": {
+        "campaign.py": "e6a291611f732588ba743f379a1eb458dc4e0a242f52f02fecff270e5f817900",
+        "report.py": "95ec606f2dcf21a1f911fbc1d42bd4b0e7aaa5855515d7b1f0090a4ccd0f0328",
+        "spectral_reference.py": "20b6e1afe7881b47a368fd33356516caecec78a0238ef9ce9f4d738194f1304e",
+        "symbolic.py": "1aeea1bb6bfa89c3a1cbcaf18d712b4551d3abc0656d5cd2b0fdfddd60791354",
+        "transfer.cu": "816b5c16ccf51e8476bd362188a2b76cca17c4baac84de3c83aff9016beb1fe8",
+        "carrier.cu": "6a501eb75bf1edf71888756e3d86f1da3809133155d3946c567faf35f242db43",
+        "carrier_study.py": "2c5c214a15cf5ca1ea4e12ee1df02441c606a2a53f9f3a2987c7c5e0fc752736",
+        "memory_study.py": "e6005d1b06148947ebfd0b18e0a301a36eba46b0f4f188d76ca72afe72dbf03f",
+        "fourier_carrier.py": "a0766120610f52f0fd2d26308b99d55efaa9f2283d94e47fd738f5e4411748dc",
+        "carrier.py": "dd217320ec18e93664c4834c2b98d22ca3fbed8fc29654d617db344ba513f49f",
+        "moments.py": "ff0e0ad6508686b627cee867a11b490494c3389b285c1b0d1b873d4fc4e5510f",
+        "geometry_control.py": "2fea76b0032bcb6a22f98d4651d844c3c309eb90102250dcc5ac5675eb5f1f1a",
+        "memory_transport.py": "941252b5d4bdbd2ecfd9f7c6ce45804b05421c015433b89ce9e0042f064e9ef4",
+        "basis.cuh": "067d7dde2ffed83d1159eefcfb434a94fbbb562bea7d30768f5db1ac1f77dbd2",
+        "cellular_reference.cu": "5b92154658c8dd49d916074c45d759d12477cfc34774230f4ac6e593a4c81710",
+        "validate.py": "3d6296852c6d19234614a1d9775e71031042a7686617367f97b421ceaffd271d",
+        "overnight.py": "d7a5a85e3485e188657adf2381349db9f06b2b47c0c39311b8a05ddb612622ee",
+        "gpu.py": "63659f9a5fbfbd3d806b588e16e3eb70aeb03a68b3062f8663a3e5e442504800",
+        "symbolic.json": "3fe2f294f613777861bf03ba2a26ece3cae8cda67e5a7b3f486285ec85907f64",
+        "normalized.py": "1c7eabc8c7fbdfa7055ac902f22795d54346bb59a026c53b7a2dc8958e687c94",
+        "finalize.py": "bb13fa4a9a44840f8662677370093e9bf0f59ae88ced60683e0a41733dbab8a4",
+        "incremental_report.py": "080475751509b8ff8e80eb2d6ce3304359c83e1d9b086a39ea7f580d2e8ee281",
+        "fourier_carrier.cu": "c1483ef0083d5f889a7ae99aa0cdee44ef78b56344389741baeb8e179c0e274f",
+        "fourier_study.py": "ce8f3324d279478ebb0b71ae692412ab018737be252d0f2255d625229cc9065c",
+        "flows.py": "5ee21e0f2a569630e345b202f497e1a48458a9770192021b957fb444deaf88e3",
+        "research.py": "90fc9ad028fdb311156d020fb9bcee86c47959167d2f658fc84aedab546e5067",
+        "flux.py": "2a62349b1a0402c04a86bc360dbf48a2527fd29c0130b045ca066291696c0a2d",
+        "gpu_graph.py": "e244ac713cba0b2939a58b4e82b07d14c736ec382dd6279af872fdb42d7875cb",
+        "carrier_polynomials.json": "9130f39e95d5bcca65d02b452972d851f835caaebb855a918217d1c8aa1de50e",
+        "references.json": "3e41af93b0ed3f789e8625c9863470ecbf8e86c4167dc2961025563d249b3123",
+        "day_study.py": "46819d12bf162bc4e5d209b34d0fb6cbab12b38224427f895827fcb588708710",
+        "cartesian.py": "a27d6a2b8996333ab260b0553c75c3e6eccbffc95f5fd1d3c38bbffd53e95cc2",
+        "validate_moments.py": "1c255dbec9db3cfbbcd9c5897bbf325c73dc92719d467437f9ed29610a75a709",
+        "fourier_flow.py": "0ce1f24ede2c44497b5c688e595a2f893f6edb04a5b0e469b866582cd31bebfb",
+        "symbolic_carrier.py": "f872956e57ae551640bdacab505f991b708b80b062ea2b5ea1b876563bd41b0b",
+        "ray_flux.cu": "909d47a1c0fb0d940f9b0877f84c8cdb82c388f56a6511ee451f88480221226c"
+      },
+      "python": "3.10.12",
+      "cupy": "13.6.0",
+      "gpu": "NVIDIA GeForce RTX 5090",
+      "cuda_driver": 13020,
+      "cuda_runtime": 12090
+    }
+  },
+  {
+    "status": "ok",
+    "result": {
+      "p": 2,
+      "factor": 2,
+      "isometry_error": 1.6653345369377348e-15,
+      "skew_error": 3.552713678800501e-15,
+      "results": [
+        {
+          "damping": 1.0,
+          "errors": [
+            {
+              "steps": 1,
+              "error": 0.044850740970787374,
+              "observation_error": 9.2148511043888e-15,
+              "mass_error": 4.884981308350689e-15,
+              "maximum_energy_growth": 2.8421709430404007e-13
+            },
+            {
+              "steps": 2,
+              "error": 0.013732985525708454,
+              "observation_error": 9.992007221626409e-15,
+              "mass_error": 4.773959005888173e-15,
+              "maximum_energy_growth": 1.7053025658242404e-13
+            },
+            {
+              "steps": 4,
+              "error": 0.002459571896028771,
+              "observation_error": 9.880984919163893e-15,
+              "mass_error": 3.774758283725532e-15,
+              "maximum_energy_growth": 1.4210854715202004e-13
+            },
+            {
+              "steps": 8,
+              "error": 0.0005810959652733423,
+              "observation_error": 9.658940314238862e-15,
+              "mass_error": 3.9968028886505635e-15,
+              "maximum_energy_growth": 5.684341886080802e-14
+            },
+            {
+              "steps": 16,
+              "error": 0.0001436118828975995,
+              "observation_error": 9.325873406851315e-15,
+              "mass_error": 1.2212453270876722e-15,
+              "maximum_energy_growth": 2.842170943040401e-14
+            },
+            {
+              "steps": 32,
+              "error": 3.580380716845106e-05,
+              "observation_error": 9.769962616701378e-15,
+              "mass_error": 6.8833827526759706e-15,
+              "maximum_energy_growth": 5.684341886080802e-14
+            }
+          ],
+          "refinement_ratios": [
+            3.2659133650746073,
+            5.583486113124709,
+            4.232643217324372,
+            4.046294453834888,
+            4.011078548767986
+          ]
+        },
+        {
+          "damping": 10.0,
+          "errors": [
+            {
+              "steps": 1,
+              "error": 0.46727224956532776,
+              "observation_error": 3.2335245592207684e-15,
+              "mass_error": 2.220446049250313e-15,
+              "maximum_energy_growth": 4.618527782440651e-14
+            },
+            {
+              "steps": 2,
+              "error": 0.18695734759292135,
+              "observation_error": 3.747002708109903e-15,
+              "mass_error": 2.6645352591003757e-15,
+              "maximum_energy_growth": 7.105427357601002e-14
+            },
+            {
+              "steps": 4,
+              "error": 0.03837333245225372,
+              "observation_error": 3.479855292809475e-15,
+              "mass_error": 2.4424906541753444e-15,
+              "maximum_energy_growth": 7.105427357601002e-14
+            },
+            {
+              "steps": 8,
+              "error": 0.009201012035926935,
+              "observation_error": 3.806416987162109e-15,
+              "mass_error": 2.220446049250313e-15,
+              "maximum_energy_growth": 2.842170943040401e-14
+            },
+            {
+              "steps": 16,
+              "error": 0.0022827738711586843,
+              "observation_error": 4.086357988097866e-15,
+              "mass_error": 1.5543122344752192e-15,
+              "maximum_energy_growth": 1.4210854715202004e-14
+            },
+            {
+              "steps": 32,
+              "error": 0.0005696723196895679,
+              "observation_error": 3.753074240275822e-15,
+              "mass_error": 4.3298697960381105e-15,
+              "maximum_energy_growth": 5.684341886080802e-14
+            }
+          ],
+          "refinement_ratios": [
+            2.4993521548174757,
+            4.872064416754639,
+            4.170555619579503,
+            4.030627891871178,
+            4.007170073495301
+          ]
+        }
+      ]
+    },
+    "provenance": {
+      "utc": "2026-11-16T09:48:40Z",
+      "git": "381b3113ecd89e91f68606dca7a5983cd062800c",
+      "source_sha256": {
+        "campaign.py": "e6a291611f732588ba743f379a1eb458dc4e0a242f52f02fecff270e5f817900",
+        "report.py": "95ec606f2dcf21a1f911fbc1d42bd4b0e7aaa5855515d7b1f0090a4ccd0f0328",
+        "spectral_reference.py": "20b6e1afe7881b47a368fd33356516caecec78a0238ef9ce9f4d738194f1304e",
+        "symbolic.py": "1aeea1bb6bfa89c3a1cbcaf18d712b4551d3abc0656d5cd2b0fdfddd60791354",
+        "transfer.cu": "816b5c16ccf51e8476bd362188a2b76cca17c4baac84de3c83aff9016beb1fe8",
+        "carrier.cu": "6a501eb75bf1edf71888756e3d86f1da3809133155d3946c567faf35f242db43",
+        "carrier_study.py": "2c5c214a15cf5ca1ea4e12ee1df02441c606a2a53f9f3a2987c7c5e0fc752736",
+        "memory_study.py": "e6005d1b06148947ebfd0b18e0a301a36eba46b0f4f188d76ca72afe72dbf03f",
+        "fourier_carrier.py": "a0766120610f52f0fd2d26308b99d55efaa9f2283d94e47fd738f5e4411748dc",
+        "carrier.py": "dd217320ec18e93664c4834c2b98d22ca3fbed8fc29654d617db344ba513f49f",
+        "moments.py": "ff0e0ad6508686b627cee867a11b490494c3389b285c1b0d1b873d4fc4e5510f",
+        "geometry_control.py": "2fea76b0032bcb6a22f98d4651d844c3c309eb90102250dcc5ac5675eb5f1f1a",
+        "memory_transport.py": "941252b5d4bdbd2ecfd9f7c6ce45804b05421c015433b89ce9e0042f064e9ef4",
+        "basis.cuh": "067d7dde2ffed83d1159eefcfb434a94fbbb562bea7d30768f5db1ac1f77dbd2",
+        "cellular_reference.cu": "5b92154658c8dd49d916074c45d759d12477cfc34774230f4ac6e593a4c81710",
+        "validate.py": "3d6296852c6d19234614a1d9775e71031042a7686617367f97b421ceaffd271d",
+        "overnight.py": "d7a5a85e3485e188657adf2381349db9f06b2b47c0c39311b8a05ddb612622ee",
+        "gpu.py": "63659f9a5fbfbd3d806b588e16e3eb70aeb03a68b3062f8663a3e5e442504800",
+        "symbolic.json": "3fe2f294f613777861bf03ba2a26ece3cae8cda67e5a7b3f486285ec85907f64",
+        "normalized.py": "1c7eabc8c7fbdfa7055ac902f22795d54346bb59a026c53b7a2dc8958e687c94",
+        "finalize.py": "bb13fa4a9a44840f8662677370093e9bf0f59ae88ced60683e0a41733dbab8a4",
+        "incremental_report.py": "080475751509b8ff8e80eb2d6ce3304359c83e1d9b086a39ea7f580d2e8ee281",
+        "fourier_carrier.cu": "c1483ef0083d5f889a7ae99aa0cdee44ef78b56344389741baeb8e179c0e274f",
+        "fourier_study.py": "ce8f3324d279478ebb0b71ae692412ab018737be252d0f2255d625229cc9065c",
+        "flows.py": "5ee21e0f2a569630e345b202f497e1a48458a9770192021b957fb444deaf88e3",
+        "research.py": "90fc9ad028fdb311156d020fb9bcee86c47959167d2f658fc84aedab546e5067",
+        "flux.py": "2a62349b1a0402c04a86bc360dbf48a2527fd29c0130b045ca066291696c0a2d",
+        "gpu_graph.py": "e244ac713cba0b2939a58b4e82b07d14c736ec382dd6279af872fdb42d7875cb",
+        "carrier_polynomials.json": "9130f39e95d5bcca65d02b452972d851f835caaebb855a918217d1c8aa1de50e",
+        "references.json": "3e41af93b0ed3f789e8625c9863470ecbf8e86c4167dc2961025563d249b3123",
+        "day_study.py": "46819d12bf162bc4e5d209b34d0fb6cbab12b38224427f895827fcb588708710",
+        "cartesian.py": "a27d6a2b8996333ab260b0553c75c3e6eccbffc95f5fd1d3c38bbffd53e95cc2",
+        "validate_moments.py": "1c255dbec9db3cfbbcd9c5897bbf325c73dc92719d467437f9ed29610a75a709",
+        "fourier_flow.py": "0ce1f24ede2c44497b5c688e595a2f893f6edb04a5b0e469b866582cd31bebfb",
+        "symbolic_carrier.py": "f872956e57ae551640bdacab505f991b708b80b062ea2b5ea1b876563bd41b0b",
+        "ray_flux.cu": "909d47a1c0fb0d940f9b0877f84c8cdb82c388f56a6511ee451f88480221226c"
+      },
+      "python": "3.10.12",
+      "cupy": "13.6.0",
+      "gpu": "NVIDIA GeForce RTX 5090",
+      "cuda_driver": 13020,
+      "cuda_runtime": 12090
+    }
+  },
+  {
+    "status": "ok",
+    "result": {
+      "p": 3,
+      "factor": 1,
+      "isometry_error": 2.55351295663786e-15,
+      "skew_error": 2.6645352591003757e-15,
+      "results": [
+        {
+          "damping": 1.0,
+          "errors": [
+            {
+              "steps": 1,
+              "error": 0.03663444147243878,
+              "observation_error": 9.686695889854491e-15,
+              "mass_error": 5.773159728050814e-15,
+              "maximum_energy_growth": 0.0
+            },
+            {
+              "steps": 2,
+              "error": 0.007396127867911945,
+              "observation_error": 9.769962616701378e-15,
+              "mass_error": 6.217248937900877e-15,
+              "maximum_energy_growth": 5.684341886080802e-14
+            },
+            {
+              "steps": 4,
+              "error": 0.0015152056114499347,
+              "observation_error": 9.936496070395151e-15,
+              "mass_error": 6.661338147750939e-15,
+              "maximum_energy_growth": 5.684341886080802e-14
+            },
+            {
+              "steps": 8,
+              "error": 0.0003702348358984987,
+              "observation_error": 9.707512571566213e-15,
+              "mass_error": 8.326672684688674e-15,
+              "maximum_energy_growth": 1.1368683772161603e-13
+            },
+            {
+              "steps": 16,
+              "error": 9.207471152766845e-05,
+              "observation_error": 9.71445146547012e-15,
+              "mass_error": 1.199040866595169e-14,
+              "maximum_energy_growth": 1.1368683772161603e-13
+            },
+            {
+              "steps": 32,
+              "error": 2.2989110296416775e-05,
+              "observation_error": 9.880984919163893e-15,
+              "mass_error": 2.842170943040401e-14,
+              "maximum_energy_growth": 5.684341886080802e-14
+            }
+          ],
+          "refinement_ratios": [
+            4.953192011643968,
+            4.881270114116343,
+            4.092552792264351,
+            4.021026292189285,
+            4.005144624584266
+          ]
+        },
+        {
+          "damping": 10.0,
+          "errors": [
+            {
+              "steps": 1,
+              "error": 0.4271085882397172,
+              "observation_error": 3.7192471324942744e-15,
+              "mass_error": 3.1086244689504383e-15,
+              "maximum_energy_growth": 0.0
+            },
+            {
+              "steps": 2,
+              "error": 0.12219131792599294,
+              "observation_error": 3.885780586188048e-15,
+              "mass_error": 3.1086244689504383e-15,
+              "maximum_energy_growth": 0.0
+            },
+            {
+              "steps": 4,
+              "error": 0.027878242477398903,
+              "observation_error": 3.6637359812630166e-15,
+              "mass_error": 3.3306690738754696e-15,
+              "maximum_energy_growth": 0.0
+            },
+            {
+              "steps": 8,
+              "error": 0.006957446406149791,
+              "observation_error": 4.107825191113079e-15,
+              "mass_error": 4.551914400963142e-15,
+              "maximum_energy_growth": 2.842170943040401e-14
+            },
+            {
+              "steps": 16,
+              "error": 0.001739368962109769,
+              "observation_error": 3.774758283725532e-15,
+              "mass_error": 5.773159728050814e-15,
+              "maximum_energy_growth": 5.684341886080802e-14
+            },
+            {
+              "steps": 32,
+              "error": 0.00043485299067484403,
+              "observation_error": 3.7192471324942744e-15,
+              "mass_error": 1.2989609388114332e-14,
+              "maximum_energy_growth": 5.684341886080802e-14
+            }
+          ],
+          "refinement_ratios": [
+            3.4954086385941276,
+            4.3830351940246715,
+            4.006964746829657,
+            3.999983073005253,
+            3.999901114651321
+          ]
+        }
+      ]
+    },
+    "provenance": {
+      "utc": "2026-11-16T09:48:40Z",
+      "git": "381b3113ecd89e91f68606dca7a5983cd062800c",
+      "source_sha256": {
+        "campaign.py": "e6a291611f732588ba743f379a1eb458dc4e0a242f52f02fecff270e5f817900",
+        "report.py": "95ec606f2dcf21a1f911fbc1d42bd4b0e7aaa5855515d7b1f0090a4ccd0f0328",
+        "spectral_reference.py": "20b6e1afe7881b47a368fd33356516caecec78a0238ef9ce9f4d738194f1304e",
+        "symbolic.py": "1aeea1bb6bfa89c3a1cbcaf18d712b4551d3abc0656d5cd2b0fdfddd60791354",
+        "transfer.cu": "816b5c16ccf51e8476bd362188a2b76cca17c4baac84de3c83aff9016beb1fe8",
+        "carrier.cu": "6a501eb75bf1edf71888756e3d86f1da3809133155d3946c567faf35f242db43",
+        "carrier_study.py": "2c5c214a15cf5ca1ea4e12ee1df02441c606a2a53f9f3a2987c7c5e0fc752736",
+        "memory_study.py": "e6005d1b06148947ebfd0b18e0a301a36eba46b0f4f188d76ca72afe72dbf03f",
+        "fourier_carrier.py": "a0766120610f52f0fd2d26308b99d55efaa9f2283d94e47fd738f5e4411748dc",
+        "carrier.py": "dd217320ec18e93664c4834c2b98d22ca3fbed8fc29654d617db344ba513f49f",
+        "moments.py": "ff0e0ad6508686b627cee867a11b490494c3389b285c1b0d1b873d4fc4e5510f",
+        "geometry_control.py": "2fea76b0032bcb6a22f98d4651d844c3c309eb90102250dcc5ac5675eb5f1f1a",
+        "memory_transport.py": "941252b5d4bdbd2ecfd9f7c6ce45804b05421c015433b89ce9e0042f064e9ef4",
+        "basis.cuh": "067d7dde2ffed83d1159eefcfb434a94fbbb562bea7d30768f5db1ac1f77dbd2",
+        "cellular_reference.cu": "5b92154658c8dd49d916074c45d759d12477cfc34774230f4ac6e593a4c81710",
+        "validate.py": "3d6296852c6d19234614a1d9775e71031042a7686617367f97b421ceaffd271d",
+        "overnight.py": "d7a5a85e3485e188657adf2381349db9f06b2b47c0c39311b8a05ddb612622ee",
+        "gpu.py": "63659f9a5fbfbd3d806b588e16e3eb70aeb03a68b3062f8663a3e5e442504800",
+        "symbolic.json": "3fe2f294f613777861bf03ba2a26ece3cae8cda67e5a7b3f486285ec85907f64",
+        "normalized.py": "1c7eabc8c7fbdfa7055ac902f22795d54346bb59a026c53b7a2dc8958e687c94",
+        "finalize.py": "bb13fa4a9a44840f8662677370093e9bf0f59ae88ced60683e0a41733dbab8a4",
+        "incremental_report.py": "080475751509b8ff8e80eb2d6ce3304359c83e1d9b086a39ea7f580d2e8ee281",
+        "fourier_carrier.cu": "c1483ef0083d5f889a7ae99aa0cdee44ef78b56344389741baeb8e179c0e274f",
+        "fourier_study.py": "ce8f3324d279478ebb0b71ae692412ab018737be252d0f2255d625229cc9065c",
+        "flows.py": "5ee21e0f2a569630e345b202f497e1a48458a9770192021b957fb444deaf88e3",
+        "research.py": "90fc9ad028fdb311156d020fb9bcee86c47959167d2f658fc84aedab546e5067",
+        "flux.py": "2a62349b1a0402c04a86bc360dbf48a2527fd29c0130b045ca066291696c0a2d",
+        "gpu_graph.py": "e244ac713cba0b2939a58b4e82b07d14c736ec382dd6279af872fdb42d7875cb",
+        "carrier_polynomials.json": "9130f39e95d5bcca65d02b452972d851f835caaebb855a918217d1c8aa1de50e",
+        "references.json": "3e41af93b0ed3f789e8625c9863470ecbf8e86c4167dc2961025563d249b3123",
+        "day_study.py": "46819d12bf162bc4e5d209b34d0fb6cbab12b38224427f895827fcb588708710",
+        "cartesian.py": "a27d6a2b8996333ab260b0553c75c3e6eccbffc95f5fd1d3c38bbffd53e95cc2",
+        "validate_moments.py": "1c255dbec9db3cfbbcd9c5897bbf325c73dc92719d467437f9ed29610a75a709",
+        "fourier_flow.py": "0ce1f24ede2c44497b5c688e595a2f893f6edb04a5b0e469b866582cd31bebfb",
+        "symbolic_carrier.py": "f872956e57ae551640bdacab505f991b708b80b062ea2b5ea1b876563bd41b0b",
+        "ray_flux.cu": "909d47a1c0fb0d940f9b0877f84c8cdb82c388f56a6511ee451f88480221226c"
+      },
+      "python": "3.10.12",
+      "cupy": "13.6.0",
+      "gpu": "NVIDIA GeForce RTX 5090",
+      "cuda_driver": 13020,
+      "cuda_runtime": 12090
+    }
+  }
+]

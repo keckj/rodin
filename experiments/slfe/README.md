@@ -1,5 +1,47 @@
 # SLFE GPU research experiment
 
+## Daytime checkpoint: nonseparable flow and FE coupling with memory
+
+The daytime study extends the auxiliary-space transport to a prescribed
+nonseparable cellular velocity. It compares oriented DG carriers, nested DG
+coordinate remaps, and a unitary Fourier carrier connected to the FE space
+through static FE–DG–Fourier projections. Exact polynomial shear blocks are
+generated with Symox and evaluated by CUDA kernels.
+
+The principal new construction retains the auxiliary state between steps.
+For FE coefficients `v` and auxiliary values `w`, an advection step is
+`w_new = S(w); v_new = v + R*(w_new - w)`. A physical FE update is applied as
+`v_new = G(v); w_new = w + R(v_new - v)`. This preserves the unresolved
+auxiliary memory. An isometric lifting proves an energy bound for the
+composition when both sub-operators are contractive. The implementation in
+`memory_transport.py` requires no projection-defect square root or inverse.
+
+The [daytime report](report_day/rapport_journee.pdf) and
+[mathematical note](report_day/memory_theory.pdf) explain the construction,
+conditional consistency estimates, numerical evidence and open questions.
+The study includes a spatially varying FE reaction, independent GPU matrix
+exponentials for the coupling validation, and a Fourier/RK4 GPU comparator.
+Both timing comparisons use CUDA graph replay. The Fourier comparator is
+competitive on this smooth periodic problem; general superiority is not
+established. The known ingredients and outstanding novelty assessment are
+identified in the mathematical note.
+
+```sh
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/day_study.py --suite validation --output /tmp/slfe-day
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/fourier_study.py --suite validation --output /tmp/slfe-day
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/fourier_study.py --suite compressed --output /tmp/slfe-day
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/spectral_reference.py --graph --output /tmp/slfe-day
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/memory_study.py --output /tmp/slfe-day/memory-validation.json
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/reaction_study.py --output /tmp/slfe-day
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/validate_day.py --output /tmp/slfe-day/smoke.json
+```
+
+Recorded data are in `results_day/`; all simulation kernels run on CUDA.
+The geometry is periodic and affine, and the prescribed flow has four
+Hamiltonian modes. Arbitrary FE velocities, boundaries, local physical flux
+conservation and distributed execution remain unvalidated. This is a research
+checkpoint; the production Rodin variational API is unchanged.
+
 ## Follow-up: incremental auxiliary-space transport
 
 The 16 November follow-up introduces a different linear construction:
@@ -32,7 +74,7 @@ coefficients = space.project(smooth)
 coefficients = transport.apply(coefficients)
 ```
 
-The current carrier supports translation and horizontal incompressible shear.
+The initial carrier supports translation and horizontal incompressible shear.
 It is not a general velocity FE solver. At equal grid resolution and degree,
 the carrier has fewer degrees of freedom than the triangular space and leaves
 some modes stationary; the finer carrier in this example removes the nullspace

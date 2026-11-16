@@ -1,0 +1,257 @@
+[
+  {
+    "p": 2,
+    "factor": 1,
+    "exact_auxiliary": false,
+    "isometry_error": 1.7763568394002505e-15,
+    "skew_error": 1.7763568394002505e-15,
+    "results": [
+      {
+        "damping": 1.0,
+        "errors": [
+          {
+            "steps": 16,
+            "error": 8.044320213627582e-05,
+            "observation_error": 9.776901510605285e-15,
+            "mass_error": 1.9317880628477724e-14,
+            "maximum_energy_growth": 5.684341886080802e-14
+          },
+          {
+            "steps": 32,
+            "error": 2.1504937224806033e-05,
+            "observation_error": 9.811595980124821e-15,
+            "mass_error": 4.1744385725905886e-14,
+            "maximum_energy_growth": 5.684341886080802e-14
+          },
+          {
+            "steps": 64,
+            "error": 5.48465515904958e-06,
+            "observation_error": 1.0106498971040878e-14,
+            "mass_error": 7.882583474838611e-14,
+            "maximum_energy_growth": 5.684341886080802e-14
+          },
+          {
+            "steps": 128,
+            "error": 1.3782539780812664e-06,
+            "observation_error": 9.3119956190435e-15,
+            "mass_error": 1.6275869541004795e-13,
+            "maximum_energy_growth": 8.526512829121202e-14
+          }
+        ],
+        "refinement_ratios": [
+          3.740685280563584,
+          3.920927861676642,
+          3.979422694418798
+        ]
+      },
+      {
+        "damping": 10.0,
+        "errors": [
+          {
+            "steps": 16,
+            "error": 0.0015099196782868752,
+            "observation_error": 2.6645352591003757e-15,
+            "mass_error": 2.1538326677728037e-14,
+            "maximum_energy_growth": 2.842170943040401e-14
+          },
+          {
+            "steps": 32,
+            "error": 0.0003803207966433551,
+            "observation_error": 2.858824288409778e-15,
+            "mass_error": 3.774758283725532e-14,
+            "maximum_energy_growth": 5.684341886080802e-14
+          },
+          {
+            "steps": 64,
+            "error": 9.52651786106043e-05,
+            "observation_error": 3.941291737419306e-15,
+            "mass_error": 7.283063041541027e-14,
+            "maximum_energy_growth": 5.684341886080802e-14
+          },
+          {
+            "steps": 128,
+            "error": 2.3827974243740454e-05,
+            "observation_error": 3.219646771412954e-15,
+            "mass_error": 1.5498713423767185e-13,
+            "maximum_energy_growth": 5.684341886080802e-14
+          }
+        ],
+        "refinement_ratios": [
+          3.970121254512408,
+          3.9922330718332404,
+          3.998039348041943
+        ]
+      }
+    ]
+  },
+  {
+    "p": 2,
+    "factor": 2,
+    "exact_auxiliary": false,
+    "isometry_error": 1.6653345369377348e-15,
+    "skew_error": 3.552713678800501e-15,
+    "results": [
+      {
+        "damping": 1.0,
+        "errors": [
+          {
+            "steps": 16,
+            "error": 0.00024621808874339624,
+            "observation_error": 9.658940314238862e-15,
+            "mass_error": 2.2648549702353193e-14,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 32,
+            "error": 3.37926753745606e-05,
+            "observation_error": 9.381384558082573e-15,
+            "mass_error": 3.419486915845482e-14,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 64,
+            "error": 8.623086686576264e-06,
+            "observation_error": 9.769962616701378e-15,
+            "mass_error": 8.01581023779363e-14,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 128,
+            "error": 2.2128142106106467e-06,
+            "observation_error": 9.658940314238862e-15,
+            "mass_error": 1.5187850976872141e-13,
+            "maximum_energy_growth": 0.0
+          }
+        ],
+        "refinement_ratios": [
+          7.286137780282149,
+          3.9188606821228356,
+          3.896886889657421
+        ]
+      },
+      {
+        "damping": 10.0,
+        "errors": [
+          {
+            "steps": 16,
+            "error": 0.002115971359014375,
+            "observation_error": 3.9191740131006014e-15,
+            "mass_error": 1.9317880628477724e-14,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 32,
+            "error": 0.0005559201865540956,
+            "observation_error": 4.000706016471511e-15,
+            "mass_error": 3.774758283725532e-14,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 64,
+            "error": 0.00014143973275324598,
+            "observation_error": 3.982925100842749e-15,
+            "mass_error": 7.904787935331115e-14,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 128,
+            "error": 3.552679992079616e-05,
+            "observation_error": 3.824197902790871e-15,
+            "mass_error": 1.4588330543574557e-13,
+            "maximum_energy_growth": 0.0
+          }
+        ],
+        "refinement_ratios": [
+          3.806250267921281,
+          3.9304386096652713,
+          3.981212297999631
+        ]
+      }
+    ]
+  },
+  {
+    "p": 3,
+    "factor": 1,
+    "exact_auxiliary": false,
+    "isometry_error": 2.55351295663786e-15,
+    "skew_error": 2.6645352591003757e-15,
+    "results": [
+      {
+        "damping": 1.0,
+        "errors": [
+          {
+            "steps": 16,
+            "error": 9.352559976357661e-05,
+            "observation_error": 9.797718192317006e-15,
+            "mass_error": 7.549516567451064e-15,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 32,
+            "error": 2.2029522613438374e-05,
+            "observation_error": 1.049160758270773e-14,
+            "mass_error": 1.7319479184152442e-14,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 64,
+            "error": 5.668938943289684e-06,
+            "observation_error": 1.1213252548714081e-14,
+            "mass_error": 3.241851231905457e-14,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 128,
+            "error": 1.4312124322859305e-06,
+            "observation_error": 1.1102230246251565e-14,
+            "mass_error": 6.661338147750939e-14,
+            "maximum_energy_growth": 0.0
+          }
+        ],
+        "refinement_ratios": [
+          4.245466477177515,
+          3.886004565195519,
+          3.960934670079174
+        ]
+      },
+      {
+        "damping": 10.0,
+        "errors": [
+          {
+            "steps": 16,
+            "error": 0.0017068252946128412,
+            "observation_error": 3.885780586188048e-15,
+            "mass_error": 7.549516567451064e-15,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 32,
+            "error": 0.00043253617252740184,
+            "observation_error": 3.774758283725532e-15,
+            "mass_error": 1.687538997430238e-14,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 64,
+            "error": 0.00010856463174321789,
+            "observation_error": 3.802513859341161e-15,
+            "mass_error": 3.1530333899354446e-14,
+            "maximum_energy_growth": 0.0
+          },
+          {
+            "steps": 128,
+            "error": 2.7169159296612814e-05,
+            "observation_error": 3.941291737419306e-15,
+            "mass_error": 7.505107646466058e-14,
+            "maximum_energy_growth": 0.0
+          }
+        ],
+        "refinement_ratios": [
+          3.9460868316272695,
+          3.9841352158818766,
+          3.9958774785038225
+        ]
+      }
+    ]
+  }
+]

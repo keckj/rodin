@@ -1,0 +1,10 @@
+{"p": 1, "factor": 1, "status": "ok"}
+{"p": 2, "factor": 1, "status": "ok"}
+Traceback (most recent call last):
+  File "/home/keckj/Documents/rodin-SLFE/experiments/slfe/memory_study.py", line 101, in <module>
+    main()
+  File "/home/keckj/Documents/rodin-SLFE/experiments/slfe/memory_study.py", line 94, in main
+    record=dict(status="ok",result=validate(p,factor),provenance=provenance())
+  File "/home/keckj/Documents/rodin-SLFE/experiments/slfe/memory_study.py", line 83, in validate
+    assert 3.7 < ratios[-1] < 4.3,ratios
+AssertionError: [2.1975107782797276, 7.811788174519746, 8.204724377352797, 12.675401269932895, 7.286137780279095]

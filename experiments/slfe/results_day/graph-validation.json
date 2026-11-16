@@ -1,0 +1,32 @@
+[
+  {
+    "n": 31,
+    "method": "unitary",
+    "error": 0.0
+  },
+  {
+    "n": 31,
+    "method": "rk4",
+    "error": 0.0
+  },
+  {
+    "n": 63,
+    "method": "unitary",
+    "error": 0.0
+  },
+  {
+    "n": 63,
+    "method": "rk4",
+    "error": 0.0
+  },
+  {
+    "n": 127,
+    "method": "unitary",
+    "error": 0.0
+  },
+  {
+    "n": 127,
+    "method": "rk4",
+    "error": 0.0
+  }
+]
