@@ -4,9 +4,9 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : flot non séparable\\et couplage FE avec mémoire}
-\author{Point d'étape de recherche GPU}\date{16/11/2026 à 17:54}
+\author{Point d'étape de recherche GPU}\date{16/11/2026 à 18:00}
 \begin{document}\maketitle
-Point d'étape de recherche du 16/11/2026 à 17:54. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
+Point d'étape de recherche du 16/11/2026 à 18:00. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
 
 \section{Voir le calcul : ce qui est transporté et comparé}
 Le problème est le transport d'une concentration scalaire par une vitesse prescrite sur le carré périodique. La concentration est représentée par des polynômes P4 sur les triangles. Deux calculs sont comparés : le DG amont à pas global et le transport avec un état auxiliaire conservé entre les pas. La référence suit les caractéristiques avec un intégrateur RK4 indépendant.
