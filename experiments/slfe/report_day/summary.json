@@ -1,5 +1,5 @@
 {
-  "generated": "16/11/2026 \u00e0 12:08",
+  "generated": "16/11/2026 \u00e0 12:39",
   "counts": {
     "day-validation": 7,
     "day-cellular": 48,
@@ -33,7 +33,8 @@
     "scale-fourier-enrichment": 2,
     "rotation-validation": 6,
     "rotation-accuracy": 24,
-    "rotation-refinement": 8
+    "rotation-refinement": 8,
+    "ensemble": 60
   },
   "execution_failures": 0
 }

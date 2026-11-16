@@ -4,9 +4,9 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : flot non séparable\\et couplage FE avec mémoire}
-\author{Point d'étape de recherche GPU}\date{16/11/2026 à 12:08}
+\author{Point d'étape de recherche GPU}\date{16/11/2026 à 12:39}
 \begin{document}\maketitle
-Point d'étape de recherche du 16/11/2026 à 12:08. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
+Point d'étape de recherche du 16/11/2026 à 12:39. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
 
 \section{Résultat algorithmique}
 Le transport par projection statique est étendu à un flot cellulaire non séparable. Trois réalisations sont comparées : des supports DG orientés, un support DG unique avec changements de coordonnées incrémentaux, puis un support de Fourier unitaire. Le dernier est couplé aux triangles par deux projections adjointes FE–DG–Fourier.
@@ -22,7 +22,7 @@ Le domaine est le tore unité. Le champ initial est une bosse gaussienne périod
 Les résultats principaux sont évalués à t = 0,5. Le retour à t = 1 du flot réversible est un contrôle de réversibilité ; il ne suffit pas à mesurer la précision du transport. Toutes les simulations, projections, décompositions spectrales et réductions numériques s'exécutent sur RTX 5090 en double précision. Symox prépare les polynômes exacts.
 
 \section{Contrôles}
-778 cas principaux sont enregistrés dans les JSONL, avec 0 échec d'exécution. S'y ajoutent quatre validations du couplage augmenté, six comparaisons des graphes CUDA avec les opérateurs ordinaires et huit validations FE–Fourier sous Compute Sanitizer.
+838 cas principaux sont enregistrés dans les JSONL, avec 0 échec d'exécution. S'y ajoutent quatre validations du couplage augmenté, six comparaisons des graphes CUDA avec les opérateurs ordinaires et huit validations FE–Fourier sous Compute Sanitizer.
 
 Compute Sanitizer : ========= ERROR SUMMARY: 0 errors
 
@@ -103,6 +103,20 @@ L'avantage mesuré sur les maillages gradués concerne donc les situations où l
 Un second prototype évite le support auxiliaire. Il découpe l'opérateur DG centré en matrices locales antisymétriques, exponentiées sur GPU. Une rotation de rang deux corrige chaque sous-opérateur pour préserver la constante. La composition est orthogonale, conserve la masse et atteint l'ordre quatre. La note rotation\_theory.pdf donne la construction, la preuve et la condition de regroupement qui évite tout dénominateur singulier, quelle que soit la durée.
 
 Six validations denses, vingt-quatre essais d'advection et huit raffinements confirment les invariants et l'ordre à espace fixé. Cependant, sur n = 32 gradué, l'erreur reste proche de 0,16 entre 16 et 128 pas. La résolution temporelle des commutateurs locaux demeure coûteuse. Cette construction stable n'est donc pas retenue comme solution rapide au problème des petits éléments. Le résultat négatif est conservé avec son implémentation.
+
+\section{Robustesse : maillages et champs indépendants}
+60 ensembles de champs sont enregistrés ; 25 atteignent la tolérance commune de 1e-5 dans tous les champs avec les deux méthodes. Les autres cas restent dans les données. Les centres des bosses périodiques sont tirés sur GPU dans [0,15 ; 0,85]² ; les champs sont distincts et les graines de maillage varient. 30 tentatives de réglage ont échoué à un contrôle ou à l'exécution et sont conservées.
+
+\begin{center}\small\begin{tabular}{lllllll}\toprule
+n & Champs & Acceptés & Gain médian & Min. & Max. & Total médian\\\midrule
+64 & 1 & 9/16 & 34.31 & 28.13 & 38.3 & 1.754\\
+64 & 4 & 4/16 & 50.95 & 43.29 & 57.48 & 2.64\\
+64 & 16 & 0/16 & — & — & — & —\\
+128 & 1 & 4/4 & 513.5 & 446.3 & 541.6 & 12.62\\
+128 & 4 & 4/4 & 796.1 & 694 & 845.3 & 20.81\\
+128 & 16 & 4/4 & 1234 & 1127 & 1356 & 47.81\\
+\bottomrule\end{tabular}\end{center}
+Les temps d'évolution sont les médianes de trois répétitions. DG essaie successivement les facteurs de pas 8, 6 et 4, avec contrôle aléatoire ; l'auxiliaire essaie les couples (points, pas) (95,16), (95,32), (127,32), (191,32), (191,64). Le premier réglage satisfaisant tous les champs est retenu. Si la meilleure projection FE dépasse la tolérance, le cas est déclaré non comparable sur ce maillage. Les coûts de recherche du réglage sont exclus des rapports. Le total ajoute la préparation mesurée une fois ; l'ordre fixe DG puis auxiliaire peut influencer les caches et ce coût. Chaque ensemble utilise un processus GPU neuf.
 
 \section{Portée scientifique}
 \begin{center}\small\begin{tabular}{lllll}\toprule
