@@ -41,9 +41,10 @@ extern "C" __global__ void build_shear_blocks(const double* velocity,
   blocks[item] = value;
 }
 
-extern "C" __global__ void carrier_blocks(const double* triangles, int n, int first,
-  int cells, int slots, const double* quadrature, int nq, const double* nodes,
-  const double* weights, int* destinations, double* blocks, int* errors)
+extern "C" __global__ void carrier_blocks(const double* triangles, int n,
+  const double* edges, int first, int cells, int slots, const double* quadrature, int nq,
+  const double* nodes, const double* weights, int* destinations, double* blocks,
+  int* errors)
 {
   int pair = blockIdx.x * blockDim.x + threadIdx.x;
   if (pair >= cells * slots)
@@ -55,6 +56,13 @@ extern "C" __global__ void carrier_blocks(const double* triangles, int n, int fi
   int xmax = (int)floor(fmax(t[0], fmax(t[2], t[4])) * n) + 1;
   int ymin = (int)floor(fmin(t[1], fmin(t[3], t[5])) * n) - 1;
   int ymax = (int)floor(fmax(t[1], fmax(t[3], t[5])) * n) + 1;
+  if constexpr (NONUNIFORM)
+  {
+    xmin = tensor_interval(fmin(t[0], fmin(t[2], t[4])), edges, n) - 1;
+    xmax = tensor_interval(fmax(t[0], fmax(t[2], t[4])), edges, n) + 1;
+    ymin = tensor_interval(fmin(t[1], fmin(t[3], t[5])), edges + n + 1, n) - 1;
+    ymax = tensor_interval(fmax(t[1], fmax(t[3], t[5])), edges + n + 1, n) + 1;
+  }
   int width = xmax - xmin + 1, height = ymax - ymin + 1;
   if (width * height > slots)
   {
@@ -65,20 +73,27 @@ extern "C" __global__ void carrier_blocks(const double* triangles, int n, int fi
   if (candidate >= width * height)
     return;
   int ix = xmin + candidate % width, iy = ymin + candidate / width;
-  double x = double(ix) / n, y = double(iy) / n, h = 1. / n;
+  double x = double(ix) / n, y = double(iy) / n, hx = 1. / n, hy = hx;
+  if constexpr (NONUNIFORM)
+  {
+    x = tensor_edge(ix, edges, n);
+    y = tensor_edge(iy, edges + n + 1, n);
+    hx = tensor_edge(ix + 1, edges, n) - x;
+    hy = tensor_edge(iy + 1, edges + n + 1, n) - y;
+  }
   double matrix[NC * NB];
   for (int k = 0; k < NC * NB; ++k)
     matrix[k] = 0.;
   double covered = 0.;
   for (int half = 0; half < 2; ++half)
   {
-    double rectangle_half[6] = {x, y, x + h, y, x + h, y + h};
+    double rectangle_half[6] = {x, y, x + hx, y, x + hx, y + hy};
     if (half == 1)
     {
-      rectangle_half[2] = x + h;
-      rectangle_half[3] = y + h;
+      rectangle_half[2] = x + hx;
+      rectangle_half[3] = y + hy;
       rectangle_half[4] = x;
-      rectangle_half[5] = y + h;
+      rectangle_half[5] = y + hy;
     }
     Point poly[12];
     int count = intersection(t, rectangle_half, poly);
@@ -96,9 +111,10 @@ extern "C" __global__ void carrier_blocks(const double* triangles, int n, int fi
         Point position = map(t, a.x, a.y);
         double sb[NB], bx[NP], by[NP];
         basis(a.x, a.y, sb);
-        nodal_values(n * position.x - ix, nodes, bx);
-        nodal_values(n * position.y - iy, nodes, by);
-        double w = determinant(t) * det * quadrature[3 * q + 2] * n * n;
+        nodal_values(NONUNIFORM ? (position.x - x) / hx : n * position.x - ix, nodes, bx);
+        nodal_values(NONUNIFORM ? (position.y - y) / hy : n * position.y - iy, nodes, by);
+        double w = determinant(t) * det * quadrature[3 * q + 2] *
+          (NONUNIFORM ? 1. / (hx * hy) : double(n * n));
         for (int j = 0; j < NP; ++j)
         {
           for (int i = 0; i < NP; ++i)
@@ -120,9 +136,10 @@ extern "C" __global__ void carrier_blocks(const double* triangles, int n, int fi
     blocks[pair * NC * NB + k] = matrix[k];
 }
 
-extern "C" __global__ void carrier_blocks_warp(const double* triangles, int n, int first,
-  int cells, int slots, const double* quadrature, int nq, const double* nodes,
-  const double* weights, int* destinations, double* blocks, int* errors)
+extern "C" __global__ void carrier_blocks_warp(const double* triangles, int n,
+  const double* edges, int first, int cells, int slots, const double* quadrature, int nq,
+  const double* nodes, const double* weights, int* destinations, double* blocks,
+  int* errors)
 {
   // Four warps cooperate independently; each lane owns disjoint matrix entries.
   constexpr int lanes = 32, entries = (NC * NB + lanes - 1) / lanes;
@@ -142,6 +159,13 @@ extern "C" __global__ void carrier_blocks_warp(const double* triangles, int n, i
   int xmax = (int)floor(fmax(t[0], fmax(t[2], t[4])) * n) + 1;
   int ymin = (int)floor(fmin(t[1], fmin(t[3], t[5])) * n) - 1;
   int ymax = (int)floor(fmax(t[1], fmax(t[3], t[5])) * n) + 1;
+  if constexpr (NONUNIFORM)
+  {
+    xmin = tensor_interval(fmin(t[0], fmin(t[2], t[4])), edges, n) - 1;
+    xmax = tensor_interval(fmax(t[0], fmax(t[2], t[4])), edges, n) + 1;
+    ymin = tensor_interval(fmin(t[1], fmin(t[3], t[5])), edges + n + 1, n) - 1;
+    ymax = tensor_interval(fmax(t[1], fmax(t[3], t[5])), edges + n + 1, n) + 1;
+  }
   int width = xmax - xmin + 1, height = ymax - ymin + 1;
   if (width * height > slots)
   {
@@ -152,20 +176,27 @@ extern "C" __global__ void carrier_blocks_warp(const double* triangles, int n, i
   if (candidate >= width * height)
     return;
   int ix = xmin + candidate % width, iy = ymin + candidate / width;
-  double x = double(ix) / n, y = double(iy) / n, h = 1. / n;
+  double x = double(ix) / n, y = double(iy) / n, hx = 1. / n, hy = hx;
+  if constexpr (NONUNIFORM)
+  {
+    x = tensor_edge(ix, edges, n);
+    y = tensor_edge(iy, edges + n + 1, n);
+    hx = tensor_edge(ix + 1, edges, n) - x;
+    hy = tensor_edge(iy + 1, edges + n + 1, n) - y;
+  }
   double matrix[entries];
   for (int k = 0; k < entries; ++k)
     matrix[k] = 0.;
   double covered = 0.;
   for (int half = 0; half < 2; ++half)
   {
-    double rectangle_half[6] = {x, y, x + h, y, x + h, y + h};
+    double rectangle_half[6] = {x, y, x + hx, y, x + hx, y + hy};
     if (half == 1)
     {
-      rectangle_half[2] = x + h;
-      rectangle_half[3] = y + h;
+      rectangle_half[2] = x + hx;
+      rectangle_half[3] = y + hy;
       rectangle_half[4] = x;
-      rectangle_half[5] = y + h;
+      rectangle_half[5] = y + hy;
     }
     Point* poly = polygons[warp];
     if (lane == 0)
@@ -187,9 +218,12 @@ extern "C" __global__ void carrier_blocks_warp(const double* triangles, int n, i
             poly[0].y + quadrature[3 * q] * e.y + quadrature[3 * q + 1] * f.y};
           Point position = map(t, a.x, a.y);
           basis(a.x, a.y, source_basis[warp]);
-          nodal_values(n * position.x - ix, nodes, basis_x[warp]);
-          nodal_values(n * position.y - iy, nodes, basis_y[warp]);
-          quadrature_weight[warp] = determinant(t) * det * quadrature[3 * q + 2] * n * n;
+          nodal_values(NONUNIFORM ? (position.x - x) / hx : n * position.x - ix, nodes,
+            basis_x[warp]);
+          nodal_values(NONUNIFORM ? (position.y - y) / hy : n * position.y - iy, nodes,
+            basis_y[warp]);
+          quadrature_weight[warp] = determinant(t) * det * quadrature[3 * q + 2] *
+            (NONUNIFORM ? 1. / (hx * hy) : double(n * n));
         }
         __syncwarp();
         const double w = quadrature_weight[warp];
@@ -247,7 +281,8 @@ extern "C" __global__ void adjoint_carrier(const int* sources, const int* target
   double value = 0.;
   for (int i = 0; i < NC; ++i)
   {
-    value += blocks[(pair * NC + i) * NB + j] * target_mass[i] *
+    value += blocks[(pair * NC + i) * NB + j] *
+      target_mass[NONUNIFORM ? targets[pair] * NC + i : i] *
       input[(targets[pair] * fields + field) * NC + i];
   }
   atomicAdd(output + (sources[pair] * fields + field) * NB + j,

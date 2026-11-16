@@ -124,7 +124,77 @@ def main():
             "Nouvelle exécution destinée aux visualisations, avec préparation et évolution séparées. Les deux méthodes atteignent une précision comparable pour le champ lisse. La comparaison des temps de la bosse fine doit tenir compte de l'échec de précision du support auxiliaire.",
         )
         r.tex.append(r"\clearpage")
-    r.section("Résultat algorithmique")
+    if (visuals / "fields-graded.pdf").exists():
+        r.section("Réparation du contre-exemple par des supports gradués")
+        r.paragraph(
+            "Le défaut de résolution de la bosse fine est traité par un support DG "
+            "tensoriel dont les cellules sont concentrées près de la structure. "
+            "Chaque cisaillement effectue des projections polynomiales exactes sur "
+            "les intervalles recouverts, ligne de Gauss par ligne de Gauss. Deux "
+            "supports orientés, également gradués, traitent les modes diagonaux "
+            "par des changements de coordonnées et leurs adjoints de masse. "
+            "L'état du support principal reste présent entre les pas."
+        )
+        r.figure(
+            "fields-graded",
+            "Même contre-exemple cellulaire à t = 0,005. Le support principal 128² Q4 "
+            "et quatre pas donnent une erreur L2 de 0,000480, pour une meilleure "
+            "projection FE de 0,000479. Le pic est maintenant transporté. Les valeurs "
+            "négatives résiduelles proviennent du polynôme FE et restent visibles.",
+        )
+        r.paragraph(
+            "Les 409600 valeurs du support principal et les deux supports orientés "
+            "remplacent les 9025 valeurs Fourier de l'essai initial. Le gain de "
+            "précision exige donc davantage d'inconnues auxiliaires. La graduation "
+            "est fixe et utilise la position initiale connue ; son adaptation "
+            "automatique et le suivi d'une structure quittant la zone fine restent ouverts."
+        )
+        r.tex.append(r"\clearpage")
+        r.figure(
+            "graded-resolution",
+            "À gauche, variation du nombre de pas à support fixé. L'erreur n'est pas "
+            "monotone sur 64² cellules ; à 128², le plancher FE domine dès quatre pas. "
+            "À droite, le support 64² gradué résout la largeur initiale de la bosse.",
+        )
+        tensor_rows = [
+            json.loads(line)["result"]
+            for line in (args.input / "tensor-cellular.jsonl").read_text().splitlines()
+        ]
+        r.table(
+            ["Cellules / direction", "Pas", "L2", "Préparation (s)", "Évolution (s)"],
+            [
+                [
+                    x["n"],
+                    x["steps"],
+                    f'{x["l2"][0]:.4g}',
+                    f'{x["setup_seconds"]:.4g}',
+                    f'{x["evolution_seconds"]:.4g}',
+                ]
+                for x in tensor_rows
+            ],
+        )
+        r.paragraph(
+            "Ces temps exploratoires comprennent les échanges FE initiaux et finaux "
+            "dans l'évolution. La première préparation inclut la compilation CUDA. "
+            "Ils ne constituent pas une comparaison statistique de performance. "
+            "La note tensor_theory.pdf établit la contraction discrète des transferts "
+            "sur partitions différentes et précise l'approximation transverse par "
+            "collocation. Les validations indépendantes vérifient les adjoints, "
+            "les constantes, la masse et les valeurs singulières ; la réalisation "
+            "uniforme est comparée à la version publiée avant cette extension."
+        )
+        r.paragraph(
+            "La non-monotonie sur 64² cellules est examinée avec des calculs à 1024 "
+            "et 2048 pas. La décomposition de l'erreur FE montre qu'à un seul pas, "
+            "l'écart à la solution de petit pas compense une grande partie de "
+            "l'erreur spatiale restante : le terme croisé vaut −5,147 × 10⁻⁷, "
+            "pour des normes au carré de 2,702 × 10⁻⁷ et 2,876 × 10⁻⁷. "
+            "Le bon résultat à un seul pas contient ainsi une compensation "
+            "d'erreurs. Les données et l'identité vérifiée figurent dans "
+            "tensor-time-defect.json et tensor_theory.pdf."
+        )
+        r.tex.append(r"\clearpage")
+    r.section("Construction du couplage FE avec mémoire")
     r.paragraph(
         "Le transport par projection statique est étendu à un flot cellulaire non séparable. "
         "Trois réalisations sont comparées : des supports DG orientés, un support DG unique "

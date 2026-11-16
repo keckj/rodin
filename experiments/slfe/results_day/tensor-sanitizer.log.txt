@@ -1,0 +1,3 @@
+========= COMPUTE-SANITIZER
+Uniform regression, graded projections, shears and cellular adjoints passed.
+========= ERROR SUMMARY: 0 errors

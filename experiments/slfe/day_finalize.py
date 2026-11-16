@@ -46,7 +46,7 @@ def main():
         check=True,
         timeout=240,
     )
-    for source in ("memory_theory", "rotation_theory"):
+    for source in ("memory_theory", "rotation_theory", "tensor_theory"):
         with (report / (source + "-build.log")).open("w") as log:
             for _ in range(2):
                 subprocess.run(

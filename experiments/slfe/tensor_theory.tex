@@ -1,0 +1,149 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath,amssymb,amsthm,geometry,hyperref}
+\geometry{margin=2.4cm}
+\setlength{\emergencystretch}{3em}
+\newtheorem{proposition}{Proposition}
+\title{Supports auxiliaires gradués pour le transport FE\\
+Construction discrète et portée du contre-exemple résolu}
+\author{Étude GPU SLFE, fork keckj/rodin}
+\date{16 novembre 2026}
+\begin{document}
+\maketitle
+
+\section{Résolution locale et norme discrète}
+Le contre-exemple initial transporte une bosse de largeur $0{,}0015$ sur
+un maillage triangulaire fortement gradué. Le transfert FE vers un support
+uniforme insuffisamment résolu supprime une partie de cette information.
+Un support tensoriel gradué est considéré pour conserver la résolution
+locale sans raffiner uniformément tout le domaine.
+
+Le domaine est le tore unité. Deux partitions périodiques croissantes
+définissent des rectangles de dimensions $h_i^x,h_j^y$. L'espace auxiliaire
+$W$ est constitué de polynômes $Q_q$ discontinus. Les inconnues sont leurs
+valeurs aux points de Gauss tensoriels, avec $q+1$ points par direction.
+Si $\omega_a$ sont les poids de Gauss sur $[0,1]$, la norme est
+\[
+ \|w\|_W^2=\sum_{i,j,a,b} h_i^x h_j^y\omega_a\omega_b
+                         |w_{ijab}|^2.
+\]
+La quadrature est exacte pour le carré d'un polynôme $Q_q$; cette norme
+coïncide donc avec sa norme $L^2$. Les graduations testées sont fixes dans
+le temps. La construction est un raffinement tensoriel, comportant des
+bandes fines, et non une adaptation locale par quadtree.
+
+\section{Transfert FE et translation sur chaque ligne}
+Le transfert $R:V\to W$ est la projection $L^2$ des polynômes triangulaires
+$P_p$ sur $Q_q$. Les intersections triangle--rectangle sont triangulées
+et intégrées par une quadrature de degré au moins $p+2q$.
+L'adjoint utilise les masses propres à chaque rectangle. Les noyaux
+uniformes antérieurs sont conservés comme cas particulier et comparés
+à leur version publiée.
+
+Pour un cisaillement horizontal, chaque point transverse $y_{jb}$ définit
+un déplacement $d_{jb}=\Delta t\,u(y_{jb})$. Sur cette ligne, les blocs du
+transfert entre un intervalle source $I_s$ et un intervalle cible $I_i$ sont
+\[
+ B_{ia,sc}(d)=\frac{1}{h_i^x\omega_a}
+ \int_{I_i\cap(I_s+d)}
+ \ell_a\!\left(\frac{x-x_i}{h_i^x}\right)
+ \ell_c\!\left(\frac{x-d-x_s}{h_s^x}\right)\,dx.
+\]
+L'intégrande a degré $2q$ et $q+1$ points de Gauss suffisent. La recherche
+d'intervalles, la quadrature, les produits et les réductions sont effectués
+sur GPU. Les intervalles sources et cibles peuvent appartenir à des
+partitions différentes, à condition de conserver la même partition transverse.
+
+\begin{proposition}
+Pour tout déplacement réel, le transfert par lignes préserve les constantes
+et la masse discrète et est contractant dans la norme tensorielle.
+Son adjoint de masse est obtenu en échangeant les partitions source et cible
+et en changeant le signe du déplacement.
+\end{proposition}
+\begin{proof}
+Sur chaque ligne, le transfert est une translation unitaire suivie d'une
+projection orthogonale dans l'espace polynomial cible. Les constantes sont
+contenues dans les deux espaces. L'intégration contre la constante établit
+la conservation de la masse sur la ligne. L'addition des inégalités de
+contraction avec les poids positifs $h_j^y\omega_b$ donne la contraction
+globale. Le changement de variable $x\mapsto x-d$ dans le produit scalaire
+établit l'expression de l'adjoint.
+\end{proof}
+
+La dépendance en la coordonnée transverse est traitée par collocation aux
+points de Gauss. La proposition concerne cet opérateur discret; elle
+n'affirme pas l'exactitude de la projection bidimensionnelle du cisaillement
+continu pour une vitesse transverse non polynomiale.
+
+\section{Modes diagonaux du flot cellulaire}
+La fonction de courant est $\psi=\sin^2(\pi x)\sin^2(\pi y)/\pi$.
+Ses modes cartésiens sont des cisaillements directs. Pour les modes
+diagonaux, les coordonnées sont $(\xi,\eta)=(x+y,y)$ et $(x-y,y)$.
+Chaque support orienté est gradué autour de la position correspondante de
+la bosse. Les transferts $C_+$ et $C_-$ réalisent le changement de
+coordonnées par les projections sur lignes précédentes. Ils sont
+contractants dans leurs normes discrètes respectives.
+
+Un sous-pas diagonal sur le support principal est défini par
+\[
+ A_\pm=I+C_\pm^*(S_\pm-I)C_\pm.
+\]
+Il est contractant. En effet, pour une contraction $C$, l'application
+$Jw=(Cw,(I-C^*C)^{1/2}w)$ est isométrique et
+$I+C^*(S-I)C=J^*\operatorname{diag}(S,I)J$.
+La racine carrée intervient uniquement dans cette preuve. Les propriétés
+sur les constantes et la masse se transmettent aux sous-pas et à leur
+composition. L'état principal $w$ est conservé entre les pas, avec retour
+FE final $v=v_0+R^*(w-Rv_0)$.
+
+Les sous-pas sont composés dans l'ordre symétrique
+$x/2,y/2,+/2,-,+/2,y/2,x/2$. Une projection DG ne possède pas en général
+d'inverse obtenu par un pas négatif. Cet ordre symétrique ne suffit donc
+pas à établir l'ordre temporel deux à espaces fixés. Une diminution du
+pas peut augmenter la diffusion de projection ou modifier les compensations
+d'erreurs; la comparaison numérique inclut plusieurs nombres de pas.
+
+\section{Observations et limites}
+Sur la bosse fine du flot cellulaire à $t=0{,}005$, les supports $128^2 Q_4$
+et quatre pas donnent une erreur $L^2$ d'environ $4{,}80\,10^{-4}$,
+pour une meilleure projection FE à $4{,}79\,10^{-4}$.
+Le support principal comporte $409600$ valeurs, contre $9025$ valeurs
+pour le support Fourier initial; deux supports orientés de même dimension
+interviennent temporairement. Ce résultat résout le défaut de précision
+du contre-exemple, sans établir une supériorité générale de coût.
+
+Le support $64^2 Q_4$ présente une erreur non monotone lorsque le nombre
+de pas augmente. Une décomposition numérique en explique la compensation.
+Soient $v_{2048}$ la solution à 2048 pas et $\Pi_Vu$ la projection FE de la
+référence indépendante. Pour $a=v_{2048}-\Pi_Vu$ et $b=v_1-v_{2048}$,
+les calculs GPU donnent
+\[
+ \|a\|^2=2{,}702\,10^{-7},\qquad
+ \|b\|^2=2{,}876\,10^{-7},\qquad
+ 2\langle a,b\rangle=-5{,}147\,10^{-7}.
+\]
+Le terme croisé négatif réduit fortement l'erreur à un seul pas.
+L'identité $\|a+b\|^2=\|a\|^2+\|b\|^2+2\langle a,b\rangle$ est
+vérifiée à $5\,10^{-23}$ près. La solution à 2048 pas est un substitut
+numérique du régime de petit pas, contrôlé par comparaison à 1024 pas,
+et non une limite temporelle exacte. La bonne erreur à un seul pas
+contient donc une compensation entre les deux écarts, sans établir
+une amélioration de la consistance.
+Le support $128^2 Q_4$ approche le plancher spatial entre
+quatre et soixante-quatre pas. Les mesures de préparation incluent la
+compilation lors de la première invocation. Les temps d'évolution sont
+des mesures exploratoires et ne constituent pas une campagne comparative
+avec intervalles de confiance.
+
+La graduation utilise la position initiale connue. Le déplacement d'une
+structure hors de la zone fine, le choix automatique des partitions,
+leur adaptation en temps, les frontières et les vitesses FE générales
+restent à étudier. Les projections conservatives, le transport SL-DG et
+leurs réalisations GPU ont des antécédents établis, notamment
+\href{https://arxiv.org/abs/2212.03036}{Einkemmer et Moriggl, méthode SL-DG GPU}
+et les travaux de remappage conservatif cités dans le rapport principal.
+La présente construction ne constitue pas, à elle seule, une revendication
+de nouveauté pour un article.
+\end{document}

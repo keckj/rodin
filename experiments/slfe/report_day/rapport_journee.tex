@@ -4,9 +4,9 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : flot non séparable\\et couplage FE avec mémoire}
-\author{Point d'étape de recherche GPU}\date{16/11/2026 à 18:00}
+\author{Point d'étape de recherche GPU}\date{16/11/2026 à 18:08}
 \begin{document}\maketitle
-Point d'étape de recherche du 16/11/2026 à 18:00. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
+Point d'étape de recherche du 16/11/2026 à 18:08. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
 
 \section{Voir le calcul : ce qui est transporté et comparé}
 Le problème est le transport d'une concentration scalaire par une vitesse prescrite sur le carré périodique. La concentration est représentée par des polynômes P4 sur les triangles. Deux calculs sont comparés : le DG amont à pas global et le transport avec un état auxiliaire conservé entre les pas. La référence suit les caractéristiques avec un intégrateur RK4 indépendant.
@@ -22,7 +22,31 @@ Les deux solutions finales sont visuellement superposables à la référence. Le
 \clearpage
 \begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{visible-cost.pdf}\caption{Nouvelle exécution destinée aux visualisations, avec préparation et évolution séparées. Les deux méthodes atteignent une précision comparable pour le champ lisse. La comparaison des temps de la bosse fine doit tenir compte de l'échec de précision du support auxiliaire.}\end{figure}
 \clearpage
-\section{Résultat algorithmique}
+\section{Réparation du contre-exemple par des supports gradués}
+Le défaut de résolution de la bosse fine est traité par un support DG tensoriel dont les cellules sont concentrées près de la structure. Chaque cisaillement effectue des projections polynomiales exactes sur les intervalles recouverts, ligne de Gauss par ligne de Gauss. Deux supports orientés, également gradués, traitent les modes diagonaux par des changements de coordonnées et leurs adjoints de masse. L'état du support principal reste présent entre les pas.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{fields-graded.pdf}\caption{Même contre-exemple cellulaire à t = 0,005. Le support principal 128² Q4 et quatre pas donnent une erreur L2 de 0,000480, pour une meilleure projection FE de 0,000479. Le pic est maintenant transporté. Les valeurs négatives résiduelles proviennent du polynôme FE et restent visibles.}\end{figure}
+Les 409600 valeurs du support principal et les deux supports orientés remplacent les 9025 valeurs Fourier de l'essai initial. Le gain de précision exige donc davantage d'inconnues auxiliaires. La graduation est fixe et utilise la position initiale connue ; son adaptation automatique et le suivi d'une structure quittant la zone fine restent ouverts.
+
+\clearpage
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{graded-resolution.pdf}\caption{À gauche, variation du nombre de pas à support fixé. L'erreur n'est pas monotone sur 64² cellules ; à 128², le plancher FE domine dès quatre pas. À droite, le support 64² gradué résout la largeur initiale de la bosse.}\end{figure}
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Cellules / direction & Pas & L2 & Préparation (s) & Évolution (s)\\\midrule
+64 & 1 & 0.000522 & 2.231 & 0.0005811\\
+64 & 4 & 0.0007344 & 0.1202 & 0.001787\\
+64 & 16 & 0.0006861 & 0.1201 & 0.006433\\
+64 & 64 & 0.0007009 & 0.12 & 0.02518\\
+128 & 1 & 0.000494 & 0.2254 & 0.0009366\\
+128 & 4 & 0.00048 & 0.2214 & 0.002048\\
+128 & 16 & 0.0004799 & 0.2213 & 0.007192\\
+128 & 64 & 0.0004799 & 0.2204 & 0.02846\\
+\bottomrule\end{tabular}\end{center}
+Ces temps exploratoires comprennent les échanges FE initiaux et finaux dans l'évolution. La première préparation inclut la compilation CUDA. Ils ne constituent pas une comparaison statistique de performance. La note tensor\_theory.pdf établit la contraction discrète des transferts sur partitions différentes et précise l'approximation transverse par collocation. Les validations indépendantes vérifient les adjoints, les constantes, la masse et les valeurs singulières ; la réalisation uniforme est comparée à la version publiée avant cette extension.
+
+La non-monotonie sur 64² cellules est examinée avec des calculs à 1024 et 2048 pas. La décomposition de l'erreur FE montre qu'à un seul pas, l'écart à la solution de petit pas compense une grande partie de l'erreur spatiale restante : le terme croisé vaut −5,147 × \(10^{-7}\), pour des normes au carré de 2,702 × \(10^{-7}\) et 2,876 × \(10^{-7}\). Le bon résultat à un seul pas contient ainsi une compensation d'erreurs. Les données et l'identité vérifiée figurent dans tensor-time-defect.json et tensor\_theory.pdf.
+
+\clearpage
+\section{Construction du couplage FE avec mémoire}
 Le transport par projection statique est étendu à un flot cellulaire non séparable. Trois réalisations sont comparées : des supports DG orientés, un support DG unique avec changements de coordonnées incrémentaux, puis un support de Fourier unitaire. Le dernier est couplé aux triangles par deux projections adjointes FE–DG–Fourier.
 
 Une différence structurelle apparaît entre le retour FE après chaque pas et la conservation d'un état auxiliaire. Le retour répété détruit en général l'ordre temporel élevé à espaces fixés. Conserver la mémoire auxiliaire permet de composer des sous-transports unitaires d'ordre quatre. Une règle de mise à jour de cette mémoire permet ensuite d'appliquer une opération physique directement dans l'espace FE.

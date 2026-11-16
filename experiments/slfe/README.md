@@ -69,6 +69,26 @@ accuracy, at substantial cost. The mathematical note includes a lower bound
 showing why time refinement alone cannot repair insufficient auxiliary
 resolution.
 
+The subsequent graded-carrier prototype resolves this specific counterexample.
+`Carrier(..., edges=...)` accepts nonuniform periodic tensor partitions.
+`tensor_remap.py` integrates each one-dimensional polynomial overlap exactly
+on CUDA, while `tensor_cellular.py` connects differently graded coordinate
+supports through mass-adjoint row projections. The principal state persists
+between steps. With 128² Q4 cells and four steps, the narrow cellular test
+has L2 error 0.000480, close to the FE projection error 0.000479. This requires
+409600 principal auxiliary values and two oriented supports, and does not
+establish a general cost advantage over the 9025-value Fourier construction.
+The partitions are fixed around the known initial feature, not adapted in time.
+The [graded-support note](report_day/tensor_theory.pdf) states the discrete
+contraction proof and the transverse collocation approximation.
+
+```sh
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/validate_tensor.py --output /tmp/slfe-tensor-validation.json
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/tensor_study.py --suite resolution --output /home/keckj/Documents/slfe-results-day/tensor-resolution.jsonl
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/tensor_study.py --suite cellular --output /home/keckj/Documents/slfe-results-day/tensor-cellular.jsonl
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/tensor_report.py --input /home/keckj/Documents/slfe-results-day
+```
+
 Cooperative cross-mass assembly reduces the measured P4 block construction
 from 297 to 98 ms; the earlier timing tables are retained with their original
 setup costs. Large-grid tests also motivated independent cuFFT-plan ownership

@@ -13,9 +13,26 @@ from flux import gauss_interval
 
 
 class Carrier:
-    def __init__(self, space, n=None, degree=None, qdegree=None, builder="auto"):
+    def __init__(
+        self, space, n=None, degree=None, qdegree=None, builder="auto", edges=None
+    ):
         self.space = space
         self.n = n or space.mesh.n
+        self.nonuniform = edges is not None
+        self.edges = cp.ascontiguousarray(
+            (
+                cp.stack((cp.linspace(0.0, 1.0, self.n + 1),) * 2)
+                if edges is None
+                else edges
+            ),
+            dtype=cp.float64,
+        )
+        if self.edges.shape != (2, self.n + 1):
+            raise ValueError("Expected two periodic partitions with n + 1 edges")
+        if not bool(cp.all(cp.diff(self.edges, axis=1) > 0)) or not bool(
+            cp.all(cp.abs(self.edges[:, -1] - self.edges[:, 0] - 1) < 1e-13)
+        ):
+            raise ValueError("Partitions must increase strictly and have period one")
         self.np = (space.degree if degree is None else degree) + 1
         if not 1 <= self.np <= 6:
             raise ValueError("Carrier polynomial degrees 0 through 5 are available")
@@ -24,11 +41,20 @@ class Carrier:
         self.mass = cp.ascontiguousarray(
             (self.weights[:, None] * self.weights[None, :]).ravel() / self.n**2
         )
+        if self.nonuniform:
+            sizes = cp.diff(self.edges, axis=1)
+            areas = (sizes[1, :, None] * sizes[0, None, :]).ravel()
+            self.mass = cp.ascontiguousarray(
+                areas[:, None] * (self.weights[:, None] * self.weights[None, :]).ravel()
+            )
         code = f"#define NB {space.nb}\n#define NP {self.np}\n#define NC {self.nc}\n#define M_SQRT2 1.41421356237309504880\n"
+        code += f"#define NONUNIFORM {int(self.nonuniform)}\n"
         code += (
             (HERE / "basis.cuh").read_text()
             + (HERE / "transfer.cu").read_text()
+            + (HERE / "tensor_intervals.cuh").read_text()
             + (HERE / "carrier.cu").read_text()
+            + (HERE / "tensor_remap.cu").read_text()
         )
         self.module = cp.RawModule(code=code, options=("--std=c++17",))
         # Cooperative assembly pays off for the high-order blocks measured in
@@ -72,6 +98,15 @@ class Carrier:
         self.polynomials[1, :, :, -1] = 0
         q = quadrature(qdegree or max(1, space.degree + 2 * (self.np - 1)))
         bounds = cp.floor(space.mesh.triangles * self.n)
+        if self.nonuniform:
+            for axis in (0, 1):
+                values = space.mesh.triangles[..., axis]
+                periods = cp.floor(values - self.edges[axis, 0])
+                bounds[..., axis] = (
+                    cp.searchsorted(self.edges[axis], values - periods, side="right")
+                    - 1
+                    + self.n * periods
+                )
         widths = cp.max(bounds, axis=1) - cp.min(bounds, axis=1) + 3
         slots = int(cp.max(widths[:, 0] * widths[:, 1]))
         sources, targets, matrices = [], [], []
@@ -85,6 +120,7 @@ class Carrier:
             arguments = (
                 space.mesh.triangles,
                 self.n,
+                self.edges,
                 first,
                 count,
                 slots,
@@ -154,6 +190,24 @@ class Carrier:
         return output
 
     def transport(self, dt, flow="translation"):
+        if self.nonuniform:
+            coordinates = [
+                (
+                    self.edges[axis, :-1, None]
+                    + cp.diff(self.edges[axis])[:, None] * self.nodes
+                ).ravel()
+                for axis in (0, 1)
+            ]
+            if flow == "translation":
+                velocities = [
+                    cp.ones_like(coordinates[1]),
+                    cp.full_like(coordinates[0], 0.37),
+                ]
+            elif flow == "shear":
+                velocities = [0.2 * cp.sin(2 * cp.pi * coordinates[1])]
+            else:
+                raise ValueError("Expected translation or shear")
+            return self.shears([(axis, dt, v) for axis, v in enumerate(velocities)])
         y = (cp.arange(self.n)[:, None] + self.nodes[None, :]).ravel() / self.n
         if flow == "translation":
             velocities = [cp.ones_like(y), cp.full_like(y, 0.37)]
@@ -174,6 +228,10 @@ class Carrier:
         Axis 0 advects x with a velocity depending only on y; axis 1 is the
         corresponding y shear. The input velocity array has n*(q+1) entries.
         """
+        if self.nonuniform:
+            from tensor_remap import TensorTransfer
+
+            return TensorTransfer(self, stages)
         operators = []
         for axis, dt, velocity in stages:
             if axis not in (0, 1) or velocity.shape != (self.n * self.np,):
