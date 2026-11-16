@@ -4,9 +4,9 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : flot non séparable\\et couplage FE avec mémoire}
-\author{Point d'étape de recherche GPU}\date{16/11/2026 à 11:52}
+\author{Point d'étape de recherche GPU}\date{16/11/2026 à 12:02}
 \begin{document}\maketitle
-Point d'étape de recherche du 16/11/2026 à 11:52. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
+Point d'étape de recherche du 16/11/2026 à 12:02. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
 
 \section{Résultat algorithmique}
 Le transport par projection statique est étendu à un flot cellulaire non séparable. Trois réalisations sont comparées : des supports DG orientés, un support DG unique avec changements de coordonnées incrémentaux, puis un support de Fourier unitaire. Le dernier est couplé aux triangles par deux projections adjointes FE–DG–Fourier.
@@ -22,7 +22,7 @@ Le domaine est le tore unité. Le champ initial est une bosse gaussienne périod
 Les résultats principaux sont évalués à t = 0,5. Le retour à t = 1 du flot réversible est un contrôle de réversibilité ; il ne suffit pas à mesurer la précision du transport. Toutes les simulations, projections, décompositions spectrales et réductions numériques s'exécutent sur RTX 5090 en double précision. Symox prépare les polynômes exacts.
 
 \section{Contrôles}
-740 cas principaux sont enregistrés dans les JSONL, avec 0 échec d'exécution. S'y ajoutent quatre validations du couplage augmenté, six comparaisons des graphes CUDA avec les opérateurs ordinaires et huit validations FE–Fourier sous Compute Sanitizer.
+778 cas principaux sont enregistrés dans les JSONL, avec 0 échec d'exécution. S'y ajoutent quatre validations du couplage augmenté, six comparaisons des graphes CUDA avec les opérateurs ordinaires et huit validations FE–Fourier sous Compute Sanitizer.
 
 Compute Sanitizer : ========= ERROR SUMMARY: 0 errors
 
@@ -98,6 +98,11 @@ Une bosse de norme L2 proche de un est centrée dans la zone raffinée. Le trans
 La borne démontrée dans la note vaut 0,357 dans ce cas : aucun raffinement temporel ne peut corriger ce défaut du support fixe. Augmenter seulement le nombre de modes ne suffit pas non plus lorsque la projection DG intermédiaire ne résout pas la bosse. Avec un support DG huit fois plus fin et 1535² valeurs de Fourier, l'erreur descend à 5,74e-4, au prix d'une augmentation importante du coût. Ce cas est favorable au DG direct.
 
 L'avantage mesuré sur les maillages gradués concerne donc les situations où les petits éléments sont nécessaires à la physique FE ou à la géométrie, alors que le champ transporté reste résolu sur un support plus économique. Une méthode générale doit encore traiter efficacement les petites échelles localisées.
+
+\section{Piste alternative testée : rotations directement dans le DG}
+Un second prototype évite le support auxiliaire. Il découpe l'opérateur DG centré en matrices locales antisymétriques, exponentiées sur GPU. Une rotation de rang deux corrige chaque sous-opérateur pour préserver la constante. La composition est orthogonale, conserve la masse et atteint l'ordre quatre. La note rotation\_theory.pdf donne la construction, la preuve et la condition de regroupement qui évite tout dénominateur singulier, quelle que soit la durée.
+
+Six validations denses, vingt-quatre essais d'advection et huit raffinements confirment les invariants et l'ordre à espace fixé. Cependant, sur n = 32 gradué, l'erreur reste proche de 0,16 entre 16 et 128 pas. La résolution temporelle des commutateurs locaux demeure coûteuse. Cette construction stable n'est donc pas retenue comme solution rapide au problème des petits éléments. Le résultat négatif est conservé avec son implémentation.
 
 \section{Portée scientifique}
 \begin{center}\small\begin{tabular}{lllll}\toprule

@@ -50,6 +50,9 @@ def main():
         "scale-limits",
         "scale-enrichment",
         "scale-fourier-enrichment",
+        "rotation-validation",
+        "rotation-accuracy",
+        "rotation-refinement",
     )
     raw = {
         name: [
@@ -458,6 +461,23 @@ def main():
         "où les petits éléments sont nécessaires à la physique FE ou à la géométrie, "
         "alors que le champ transporté reste résolu sur un support plus économique. "
         "Une méthode générale doit encore traiter efficacement les petites échelles localisées."
+    )
+    r.section("Piste alternative testée : rotations directement dans le DG")
+    r.paragraph(
+        "Un second prototype évite le support auxiliaire. Il découpe l'opérateur DG "
+        "centré en matrices locales antisymétriques, exponentiées sur GPU. Une rotation "
+        "de rang deux corrige chaque sous-opérateur pour préserver la constante. La "
+        "composition est orthogonale, conserve la masse et atteint l'ordre quatre. "
+        "La note rotation_theory.pdf donne la construction, la preuve et la condition "
+        "de regroupement qui évite tout dénominateur singulier, quelle que soit la durée."
+    )
+    r.paragraph(
+        "Six validations denses, vingt-quatre essais d'advection et huit raffinements "
+        "confirment les invariants et l'ordre à espace fixé. Cependant, sur n = 32 "
+        "gradué, l'erreur reste proche de 0,16 entre 16 et 128 pas. La résolution "
+        "temporelle des commutateurs locaux demeure coûteuse. Cette construction "
+        "stable n'est donc pas retenue comme solution rapide au problème des petits "
+        "éléments. Le résultat négatif est conservé avec son implémentation."
     )
     r.section("Portée scientifique")
     r.table(

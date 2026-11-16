@@ -1,0 +1,103 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}\usepackage[T1]{fontenc}\usepackage[french]{babel}
+\usepackage{amsmath,amssymb,amsthm,geometry,hyperref}
+\geometry{margin=2.4cm}
+\setlength{\emergencystretch}{3em}
+\newtheorem{proposition}{Proposition}
+\title{Découpage orthogonal DG avec correction de la constante}
+\author{Note exploratoire SLFE}\date{16 novembre 2026}
+\begin{document}\maketitle
+\paragraph{Statut.} Cette construction a été implémentée et testée sur GPU.
+Les invariants et l'ordre temporel sont confirmés sur les petits systèmes
+étudiés. Les essais d'advection montrent cependant une erreur de découpage
+trop importante aux grands pas, particulièrement sur les maillages gradués.
+Aucune supériorité de coût ni nouveauté bibliographique n'est revendiquée.
+
+\section{Construction}
+Dans les coordonnées normalisées par la masse, soit $A^T=-A$ l'opérateur DG
+centré, avec $Ac=0$ et $\|c\|=1$. Le vecteur $c$ représente la constante.
+Décomposer $A=\sum_j A_j$ en opérateurs antisymétriques locaux. Le prototype
+sépare les blocs diagonaux des cellules et les couplages de faces. Un coloriage
+du graphe dual partitionne les faces en ensembles de paires disjointes.
+Les exponentielles locales $U_j(t)=\exp(tA_j)$ sont orthogonales, mais elles
+ne préservent pas individuellement $c$.
+
+Pour $b=Uc$, $\gamma=c^Tb>-1$ et $K=cb^T-bc^T$, poser
+\[
+ Q(b,c)=I+K+\frac{K^2}{1+\gamma},\qquad F_j(t)=Q(U_j(t)c,c)U_j(t).
+\]
+La matrice $Q$ est la rotation du plan engendré par $b,c$ qui envoie $b$ sur
+$c$, et agit comme l'identité sur son orthogonal. Il s'agit d'une formule
+classique de rotation, utilisée ici comme correction de l'invariant.
+
+\begin{proposition}
+$F_j(t)$ est orthogonal, fixe $c$, et vérifie
+$F_j(-t)=F_j(t)^T$. Son générateur infinitésimal est
+$F_j'(0)=P A_j P$, avec $P=I-cc^T$.
+\end{proposition}
+\begin{proof}
+Les deux premières propriétés découlent de $Q^TQ=I$ et $Qb=c$.
+La rotation est équivariante sous changement orthogonal de coordonnées,
+et $Q(b,c)^T=Q(c,b)$. Ainsi
+\[
+ U_j(t)^T Q(c,U_j(t)c)U_j(t)=Q(U_j(t)^Tc,c),
+\]
+ce qui donne la symétrie temporelle.
+En différentiant en zéro, $b'(0)=A_jc$ et
+$Q'(0)=c(A_jc)^T-(A_jc)c^T$.
+Comme $c^TA_jc=0$ et $A_j^T=-A_j$, on obtient
+$F_j'(0)=A_j-cc^TA_j-A_jcc^T=P A_j P$.
+\end{proof}
+
+Puisque $Ac=0$, la somme des générateurs corrigés vaut
+$\sum_j P A_j P=PAP=A$. Une composition symétrique des $F_j$ est donc
+consistante d'ordre deux à dimension fixée. La composition de Yoshida
+$S_2(at)S_2((1-2a)t)S_2(at)$, $a=(2-2^{1/3})^{-1}$, porte l'ordre à quatre.
+L'orthogonalité, la masse $c^Tv$ et les constantes sont conservées par
+chaque facteur, y compris pour les durées négatives.
+
+\section{Éviter les antipodes pour toute durée}
+Supposons que $A_j$ agisse seulement sur un ensemble de cellules $E_j$.
+La masse de la composante constante sur cet ensemble est
+$\mu_j=\|c|_{E_j}\|^2$. Comme $U_j$ est l'identité ailleurs,
+\[
+ c^TU_j(t)c\geq (1-\mu_j)-\mu_j=1-2\mu_j.
+\]
+Le prototype subdivise chaque ensemble de blocs disjoints pour imposer
+$\mu_j<1/2$. Le dénominateur $1+\gamma$ est donc strictement supérieur à un,
+quelle que soit la durée. Cela requiert que chaque bloc élémentaire couvre
+moins de la moitié du domaine, condition vérifiée sur les maillages testés.
+Ce découpage permet une stabilité sans restriction de pas; il ne donne
+aucune borne d'erreur uniforme par rapport au plus petit élément.
+
+\section{Application de rang deux et réalisation GPU}
+Les matrices locales sont exponentiées par diagonalisation hermitienne de
+$iA_j$ sur GPU. Pour $\delta=b-c$, une forme de l'application de $Q$ est
+\[
+ Qx=x+c\frac{2(\gamma-1)c^Tx+2\gamma\delta^Tx}{1+\gamma}
+       -\delta\frac{2c^Tx+\delta^Tx}{1+\gamma}.
+\]
+Elle demande deux produits scalaires globaux et une mise à jour de rang deux.
+Le noyau \texttt{rotation\_dg.cu} applique les matrices aux cellules ou aux
+paires disjointes. Le coloriage, les partitions en masse et les décompositions
+spectrales s'exécutent également sur GPU. Les matrices des sous-pas sont
+préparées pour une durée fixe, puis capturées dans un graphe CUDA.
+
+\section{Résultat expérimental et limite}
+Six contrôles denses couvrent P1 à P3 sur deux maillages. Ils comparent la
+composition à une exponentielle indépendante du générateur, à sa transposée
+et à son inverse temporel. Les rapports d'erreur sous division du pas par
+deux approchent quatre et seize. Le contrôle mémoire CUDA ne détecte pas
+d'erreur sur le cas instrumenté.
+
+Vingt-quatre essais P4 utilisent $n=8,16,32$, deux graduations et
+$16,32,64,128$ pas jusqu'à $t=0,5$. L'énergie reste conservée, mais les
+erreurs sont grandes. Sur $n=32$ fortement gradué, elles restent proches de
+$0,16$ pour ces quatre nombres de pas. Huit raffinements supplémentaires sur
+$n=8$ confirment le retour vers le régime spatial lorsque le pas diminue;
+sur le maillage gradué, l'erreur passe de $0,0929$ à 256 pas à $0,0170$ à
+2048 pas. Les temps correspondants vont d'environ $0,29$ à $2,32$ secondes.
+La propriété de stabilité ne supprime donc pas le coût de résolution des
+commutateurs locaux. Cette piste n'est pas retenue comme remplacement rapide
+du transport semi-lagrangien.
+\end{document}

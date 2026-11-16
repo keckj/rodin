@@ -60,6 +60,13 @@ setup costs. Large-grid tests also motivated independent cuFFT-plan ownership
 for each CUDA graph. Focused memory checks and graph lifetime tests pass;
 the complete racecheck log retains warnings in CuPy's nonzero scan.
 
+An alternative direct DG construction is recorded in `rotation_dg.py` and
+[its mathematical note](report_day/rotation_theory.pdf). Rank-two rotations
+correct local orthogonal substeps to preserve constants and mass. Dense GPU
+checks confirm order four and the invariants, but the advection tests retain
+a severe accuracy restriction on the timestep. This is a documented negative
+result for the intended large-step acceleration, not the selected method.
+
 ```sh
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/day_study.py --suite validation --output /tmp/slfe-day
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/fourier_study.py --suite validation --output /tmp/slfe-day

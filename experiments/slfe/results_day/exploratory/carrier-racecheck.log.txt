@@ -1,28 +1,28 @@
 ========= COMPUTE-SANITIZER
 ========= Warning: Race reported between Read access at cupy_nonzero_kernel_incomplete_scan+0x4b0
 =========     and Write access at cupy_nonzero_kernel_incomplete_scan+0x670 [512 hazards]
-========= 
+=========
 ========= Warning: Race reported between Read access at cupy_nonzero_kernel_incomplete_scan+0x4b0
 =========     and Write access at cupy_nonzero_kernel_incomplete_scan+0x670 [512 hazards]
-========= 
+=========
 ========= Warning: Race reported between Read access at cupy_nonzero_kernel_incomplete_scan+0x4b0
 =========     and Write access at cupy_nonzero_kernel_incomplete_scan+0x670 [512 hazards]
-========= 
+=========
 ========= Warning: Race reported between Read access at cupy_nonzero_kernel_incomplete_scan+0x4b0
 =========     and Write access at cupy_nonzero_kernel_incomplete_scan+0x670 [512 hazards]
-========= 
+=========
 {"n": 8, "p": 4, "grading": 0.95, "medians": {"scalar": 0.07974162296159193, "warp": 1.8047624109894969}, "block_error": 0.0}
 ========= Warning: Race reported between Read access at cupy_nonzero_kernel_incomplete_scan+0x4b0
 =========     and Write access at cupy_nonzero_kernel_incomplete_scan+0x670 [896 hazards]
-========= 
+=========
 ========= Warning: Race reported between Read access at cupy_nonzero_kernel_incomplete_scan+0x4b0
 =========     and Write access at cupy_nonzero_kernel_incomplete_scan+0x670 [896 hazards]
-========= 
+=========
 ========= Warning: Race reported between Read access at cupy_nonzero_kernel_incomplete_scan+0x4b0
 =========     and Write access at cupy_nonzero_kernel_incomplete_scan+0x670 [896 hazards]
-========= 
+=========
 ========= Warning: Race reported between Read access at cupy_nonzero_kernel_incomplete_scan+0x4b0
 =========     and Write access at cupy_nonzero_kernel_incomplete_scan+0x670 [896 hazards]
-========= 
+=========
 {"n": 8, "p": 2, "grading": 0.95, "medians": {"scalar": 0.08475035300944, "warp": 2.352440108952578}, "block_error": 0.0}
 ========= RACECHECK SUMMARY: 8 hazards displayed (0 errors, 8 warnings)
