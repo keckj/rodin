@@ -1,6 +1,6 @@
 {
-  "generated": "15/11/2026 \u00e0 21:39:36",
-  "final": false,
+  "generated": "16/11/2026 \u00e0 07:50:01",
+  "final": true,
   "counts": {
     "translation": 170,
     "spectrum": 20,
@@ -9,13 +9,13 @@
     "long_time": 36,
     "deformation": 135,
     "moments": 80,
-    "curved_moments": 10,
-    "robustness": 0,
-    "support": 0
+    "curved_moments": 36,
+    "robustness": 1200,
+    "support": 52
   },
   "execution_failures": 0,
   "moment_cases": 80,
   "accepted_moment_cases": 36,
-  "robustness_cases": 0,
+  "robustness_cases": 1200,
   "pdf": "/home/keckj/Documents/slfe-results/report/rapport.pdf"
 }

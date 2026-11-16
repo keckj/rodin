@@ -2,6 +2,56 @@
   "pid": 2422450,
   "started": 1794775094.3963885,
   "deadline": 1794810900.0,
-  "stages": [],
-  "current": "curved_moments"
+  "stages": [
+    {
+      "name": "curved_moments",
+      "command": [
+        "/usr/bin/python3",
+        "/home/keckj/Documents/rodin-SLFE/experiments/slfe/research.py",
+        "--suite",
+        "curved_moments",
+        "--output",
+        "/home/keckj/Documents/slfe-results",
+        "--deadline",
+        "1794810900.0"
+      ],
+      "started": 1794775094.3964071,
+      "finished": 1794776026.1722398,
+      "returncode": 0
+    },
+    {
+      "name": "support",
+      "command": [
+        "/usr/bin/python3",
+        "/home/keckj/Documents/rodin-SLFE/experiments/slfe/research.py",
+        "--suite",
+        "support",
+        "--output",
+        "/home/keckj/Documents/slfe-results",
+        "--deadline",
+        "1794810900.0"
+      ],
+      "started": 1794776030.0441067,
+      "finished": 1794776183.2854543,
+      "returncode": 0
+    },
+    {
+      "name": "robustness",
+      "command": [
+        "/usr/bin/python3",
+        "/home/keckj/Documents/rodin-SLFE/experiments/slfe/research.py",
+        "--suite",
+        "robustness",
+        "--output",
+        "/home/keckj/Documents/slfe-results",
+        "--deadline",
+        "1794810900.0"
+      ],
+      "started": 1794776187.1571536,
+      "finished": 1794785260.8334694,
+      "returncode": 0
+    }
+  ],
+  "current": null,
+  "finished": 1794785264.80563
 }

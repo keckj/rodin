@@ -8,11 +8,11 @@ pdftitle={SLFE GPU research campaign},pdfauthor={SLFE research experiment}}
 \setlength{\emergencystretch}{3em}
 \title{SLFE sur RTX 5090\\Résultats et pistes de recherche}
 \author{Campagne GPU, branche SLFE}
-\date{15/11/2026 à 21:39:36}
+\date{16/11/2026 à 07:50:01}
 \begin{document}\maketitle\tableofcontents
-Rapport provisoire, campagne en cours. Généré le 15/11/2026 à 21:39:36 (Europe/Paris).
+Rapport de campagne. Généré le 16/11/2026 à 07:50:01 (Europe/Paris).
 
-558 expériences enregistrées sur RTX 5090, dont 0 échecs d'exécution. Un calcul terminé n'est pas nécessairement une méthode validée : les résidus et les poids sont contrôlés séparément.
+1836 expériences enregistrées sur RTX 5090, dont 0 échecs d'exécution. Un calcul terminé n'est pas nécessairement une méthode validée : les résidus et les poids sont contrôlés séparément.
 
 \section{Ce que les expériences permettent de conclure}
 La voie semi-lagrangienne FE fonctionne sur les triangles testés : le transfert géométrique GPU conserve la masse et retrouve les ordres spatiaux attendus pour la translation. Le dépôt direct de points de quadrature peut conserver la masse tout en amplifiant des perturbations et en perdant la précision.
@@ -39,7 +39,9 @@ performance & 51 & 0\\
 long\_time & 36 & 0\\
 deformation & 135 & 0\\
 moments & 80 & 0\\
-curved\_moments & 10 & 0\\
+curved\_moments & 36 & 0\\
+robustness & 1200 & 0\\
+support & 52 & 0\\
 \bottomrule\end{tabular}\end{center}
 \section{Validation indépendante}
 validation : statut True, 38 contrôles enregistrés.
@@ -100,9 +102,50 @@ La suppression irréversible des sites de poids négatif est une recherche activ
 
 \begin{center}\small\begin{tabular}{lllll}\toprule
 Flot & Pas & Erreur L2 & Résidu moments & Accepté\\\midrule
+shear & 1 & 0.005957 & 1.237e-15 & oui\\
+shear & 4 & 0.5247 & 0.3659 & non\\
+shear & 16 & 0.9448 & 0.4935 & non\\
+compressible & 1 & 0.01818 & 1.714e-15 & oui\\
+compressible & 4 & 0.6683 & 0.537 & non\\
+compressible & 16 & 2.024 & 0.5606 & non\\
 \bottomrule\end{tabular}\end{center}
 Les lignes non acceptées documentent un échec de construction. Leur erreur de champ n'est pas une mesure de précision d'un opérateur satisfaisant le théorème.
 
+L'étude du support sépare le petit déplacement et la réduction du degré des contraintes. Une cellule isolée n'échange aucune particule avec ses voisines. Pour une translation non nulle, la preuve de theory.pdf établit alors une incompatibilité exacte des premiers moments. Un critère numérique à tolérance finie ne remplace pas cette obstruction.
+
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Degré & Déplacement / h & Acceptés & Meilleur résidu & Cellules isolées, min.\\\midrule
+1 & 0.1 & 4/5 & 3.018e-16 & 0\\
+1 & 0.01 & 0/5 & 0.01344 & 0\\
+1 & 0.001 & 0/5 & 0.002354 & 0\\
+1 & 0.0001 & 0/5 & 0.0002657 & 11\\
+2 & 0.1 & 2/5 & 4.027e-16 & 0\\
+2 & 0.01 & 0/5 & 0.02977 & 0\\
+2 & 0.001 & 0/5 & 0.002943 & 0\\
+2 & 0.0001 & 0/5 & 0.0003132 & 11\\
+\bottomrule\end{tabular}\end{center}
+\begin{center}\small\begin{tabular}{llll}\toprule
+Degré & Déplacement / h & Résidu moments & Valeur singulière max.\\\midrule
+1 & 0.173 & 7.12e-16 & 1.005\\
+1 & 0.731 & 5.324e-16 & 1\\
+1 & 1.37 & 4.804e-16 & 1\\
+2 & 0.173 & 7.159e-16 & 1.015\\
+2 & 0.731 & 2.113e-15 & 1.002\\
+2 & 1.37 & 1.179e-15 & 1.003\\
+\bottomrule\end{tabular}\end{center}
+Imposer seulement les moments de degré p peut préserver masse et constante, mais ne garantit pas les identités de Gram de degré 2p ni la contraction.
+
+Robustesse : 1200 cas terminés, 889 acceptés selon les deux critères. Les graines de maillage, déplacements et densités de particules varient. Les cas restants doivent être traités comme des limites de la construction, pas comme des validations.
+
+\begin{center}\small\begin{tabular}{llll}\toprule
+Degré & Subdivision & Cas terminés & Acceptés\\\midrule
+1 & 2 & 200 & 160\\
+1 & 3 & 200 & 158\\
+1 & 4 & 200 & 124\\
+2 & 2 & 200 & 127\\
+2 & 3 & 200 & 160\\
+2 & 4 & 200 & 160\\
+\bottomrule\end{tabular}\end{center}
 \section{GPU et référence HySoP}
 Les noyaux Lambda 2,1 et Lambda 4,2 ont été reconstruits avec Symox à partir des contraintes mathématiques lues dans HySoP, puis évalués dans des kernels CUDA. Il s'agit d'une référence cartésienne des mêmes noyaux, pas d'un benchmark du runtime HySoP complet. Les moments exacts et leur réalisation GPU font l'objet de contrôles distincts.
 

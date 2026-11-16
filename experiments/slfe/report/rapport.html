@@ -1,5 +1,5 @@
-<!doctype html><html lang='fr'><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>SLFE sur RTX 5090 : résultats et pistes de recherche</title><style>body{max-width:1080px;margin:40px auto;padding:0 24px;font:17px/1.65 system-ui;color:#172c3b;background:#fbfcfe}h1{font-size:2.4rem;line-height:1.15}h2{margin-top:2.5em;border-top:1px solid #ccd7df;padding-top:1em}a{color:#096b85}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:9px;border-bottom:1px solid #dce3e8;text-align:left}.table{overflow:auto}figure{margin:30px 0}img{max-width:100%}figcaption{font-size:14px;color:#405765}pre{overflow:auto;background:#eaf0f4;padding:20px}</style><body><h1>SLFE sur RTX 5090 : résultats et pistes de recherche</h1><p>Rapport provisoire, campagne en cours. Généré le 15/11/2026 à 21:39:36 (Europe/Paris).</p>
-<p>558 expériences enregistrées sur RTX 5090, dont 0 échecs d&#x27;exécution. Un calcul terminé n&#x27;est pas nécessairement une méthode validée : les résidus et les poids sont contrôlés séparément.</p>
+<!doctype html><html lang='fr'><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>SLFE sur RTX 5090 : résultats et pistes de recherche</title><style>body{max-width:1080px;margin:40px auto;padding:0 24px;font:17px/1.65 system-ui;color:#172c3b;background:#fbfcfe}h1{font-size:2.4rem;line-height:1.15}h2{margin-top:2.5em;border-top:1px solid #ccd7df;padding-top:1em}a{color:#096b85}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:9px;border-bottom:1px solid #dce3e8;text-align:left}.table{overflow:auto}figure{margin:30px 0}img{max-width:100%}figcaption{font-size:14px;color:#405765}pre{overflow:auto;background:#eaf0f4;padding:20px}</style><body><h1>SLFE sur RTX 5090 : résultats et pistes de recherche</h1><p>Rapport de campagne. Généré le 16/11/2026 à 07:50:01 (Europe/Paris).</p>
+<p>1836 expériences enregistrées sur RTX 5090, dont 0 échecs d&#x27;exécution. Un calcul terminé n&#x27;est pas nécessairement une méthode validée : les résidus et les poids sont contrôlés séparément.</p>
 <h2>Ce que les expériences permettent de conclure</h2>
 <p>La voie semi-lagrangienne FE fonctionne sur les triangles testés : le transfert géométrique GPU conserve la masse et retrouve les ordres spatiaux attendus pour la translation. Le dépôt direct de points de quadrature peut conserver la masse tout en amplifiant des perturbations et en perdant la précision.</p>
 <p>Une construction par cubature commune à moments compatibles a été implémentée. Sous deux identités de Gram et des poids non négatifs, une preuve donne conservation, reproduction de la constante et contraction en norme L2 pour un flot incompressible. Les petits cas acceptés illustrent ce mécanisme. Le coût et le conditionnement de la construction restent les obstacles principaux.</p>
@@ -17,7 +17,9 @@
 <tr><td>long_time</td><td>36</td><td>0</td></tr>
 <tr><td>deformation</td><td>135</td><td>0</td></tr>
 <tr><td>moments</td><td>80</td><td>0</td></tr>
-<tr><td>curved_moments</td><td>10</td><td>0</td></tr>
+<tr><td>curved_moments</td><td>36</td><td>0</td></tr>
+<tr><td>robustness</td><td>1200</td><td>0</td></tr>
+<tr><td>support</td><td>52</td><td>0</td></tr>
 </tbody></table></div>
 <h2>Validation indépendante</h2>
 <p>validation : statut True, 38 contrôles enregistrés.</p>
@@ -62,8 +64,43 @@
 <p>La SVD dense établit un diagnostic de faisabilité sur de petits systèmes, mais ne constitue pas un algorithme compétitif de grand calcul. Le gradient conjugué sur les équations normales souffre du carré du conditionnement. Une correction grossière par modes de Fourier a été explorée sur le tore ; elle ne fournit pas à ce stade un préconditionneur général pour domaines non structurés.</p>
 <p>La suppression irréversible des sites de poids négatif est une recherche active restreinte. Son échec ne prouve pas l&#x27;infaisabilité du problème positif. Une variante par projections de Dykstra est conservée comme diagnostic. Les cas dont les moments ne convergent pas ne bénéficient pas de la preuve de stabilité.</p>
 <div class='table'><table><thead><tr><th>Flot</th><th>Pas</th><th>Erreur L2</th><th>Résidu moments</th><th>Accepté</th></tr></thead><tbody>
+<tr><td>shear</td><td>1</td><td>0.005957</td><td>1.237e-15</td><td>oui</td></tr>
+<tr><td>shear</td><td>4</td><td>0.5247</td><td>0.3659</td><td>non</td></tr>
+<tr><td>shear</td><td>16</td><td>0.9448</td><td>0.4935</td><td>non</td></tr>
+<tr><td>compressible</td><td>1</td><td>0.01818</td><td>1.714e-15</td><td>oui</td></tr>
+<tr><td>compressible</td><td>4</td><td>0.6683</td><td>0.537</td><td>non</td></tr>
+<tr><td>compressible</td><td>16</td><td>2.024</td><td>0.5606</td><td>non</td></tr>
 </tbody></table></div>
 <p>Les lignes non acceptées documentent un échec de construction. Leur erreur de champ n&#x27;est pas une mesure de précision d&#x27;un opérateur satisfaisant le théorème.</p>
+<p>L&#x27;étude du support sépare le petit déplacement et la réduction du degré des contraintes. Une cellule isolée n&#x27;échange aucune particule avec ses voisines. Pour une translation non nulle, la preuve de theory.pdf établit alors une incompatibilité exacte des premiers moments. Un critère numérique à tolérance finie ne remplace pas cette obstruction.</p>
+<div class='table'><table><thead><tr><th>Degré</th><th>Déplacement / h</th><th>Acceptés</th><th>Meilleur résidu</th><th>Cellules isolées, min.</th></tr></thead><tbody>
+<tr><td>1</td><td>0.1</td><td>4/5</td><td>3.018e-16</td><td>0</td></tr>
+<tr><td>1</td><td>0.01</td><td>0/5</td><td>0.01344</td><td>0</td></tr>
+<tr><td>1</td><td>0.001</td><td>0/5</td><td>0.002354</td><td>0</td></tr>
+<tr><td>1</td><td>0.0001</td><td>0/5</td><td>0.0002657</td><td>11</td></tr>
+<tr><td>2</td><td>0.1</td><td>2/5</td><td>4.027e-16</td><td>0</td></tr>
+<tr><td>2</td><td>0.01</td><td>0/5</td><td>0.02977</td><td>0</td></tr>
+<tr><td>2</td><td>0.001</td><td>0/5</td><td>0.002943</td><td>0</td></tr>
+<tr><td>2</td><td>0.0001</td><td>0/5</td><td>0.0003132</td><td>11</td></tr>
+</tbody></table></div>
+<div class='table'><table><thead><tr><th>Degré</th><th>Déplacement / h</th><th>Résidu moments</th><th>Valeur singulière max.</th></tr></thead><tbody>
+<tr><td>1</td><td>0.173</td><td>7.12e-16</td><td>1.005</td></tr>
+<tr><td>1</td><td>0.731</td><td>5.324e-16</td><td>1</td></tr>
+<tr><td>1</td><td>1.37</td><td>4.804e-16</td><td>1</td></tr>
+<tr><td>2</td><td>0.173</td><td>7.159e-16</td><td>1.015</td></tr>
+<tr><td>2</td><td>0.731</td><td>2.113e-15</td><td>1.002</td></tr>
+<tr><td>2</td><td>1.37</td><td>1.179e-15</td><td>1.003</td></tr>
+</tbody></table></div>
+<p>Imposer seulement les moments de degré p peut préserver masse et constante, mais ne garantit pas les identités de Gram de degré 2p ni la contraction.</p>
+<p>Robustesse : 1200 cas terminés, 889 acceptés selon les deux critères. Les graines de maillage, déplacements et densités de particules varient. Les cas restants doivent être traités comme des limites de la construction, pas comme des validations.</p>
+<div class='table'><table><thead><tr><th>Degré</th><th>Subdivision</th><th>Cas terminés</th><th>Acceptés</th></tr></thead><tbody>
+<tr><td>1</td><td>2</td><td>200</td><td>160</td></tr>
+<tr><td>1</td><td>3</td><td>200</td><td>158</td></tr>
+<tr><td>1</td><td>4</td><td>200</td><td>124</td></tr>
+<tr><td>2</td><td>2</td><td>200</td><td>127</td></tr>
+<tr><td>2</td><td>3</td><td>200</td><td>160</td></tr>
+<tr><td>2</td><td>4</td><td>200</td><td>160</td></tr>
+</tbody></table></div>
 <h2>GPU et référence HySoP</h2>
 <p>Les noyaux Lambda 2,1 et Lambda 4,2 ont été reconstruits avec Symox à partir des contraintes mathématiques lues dans HySoP, puis évalués dans des kernels CUDA. Il s&#x27;agit d&#x27;une référence cartésienne des mêmes noyaux, pas d&#x27;un benchmark du runtime HySoP complet. Les moments exacts et leur réalisation GPU font l&#x27;objet de contrôles distincts.</p>
 <div class='table'><table><thead><tr><th>Degré</th><th>Champs</th><th>DDL / champ</th><th>Application (ms)</th><th>Blocs (Mo)</th></tr></thead><tbody>
