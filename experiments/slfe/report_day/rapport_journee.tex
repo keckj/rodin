@@ -4,9 +4,9 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : flot non séparable\\et couplage FE avec mémoire}
-\author{Point d'étape de recherche GPU}\date{16/11/2026 à 11:34}
+\author{Point d'étape de recherche GPU}\date{16/11/2026 à 11:52}
 \begin{document}\maketitle
-Point d'étape de recherche du 16/11/2026 à 11:34. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
+Point d'étape de recherche du 16/11/2026 à 11:52. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
 
 \section{Résultat algorithmique}
 Le transport par projection statique est étendu à un flot cellulaire non séparable. Trois réalisations sont comparées : des supports DG orientés, un support DG unique avec changements de coordonnées incrémentaux, puis un support de Fourier unitaire. Le dernier est couplé aux triangles par deux projections adjointes FE–DG–Fourier.
@@ -22,7 +22,7 @@ Le domaine est le tore unité. Le champ initial est une bosse gaussienne périod
 Les résultats principaux sont évalués à t = 0,5. Le retour à t = 1 du flot réversible est un contrôle de réversibilité ; il ne suffit pas à mesurer la précision du transport. Toutes les simulations, projections, décompositions spectrales et réductions numériques s'exécutent sur RTX 5090 en double précision. Symox prépare les polynômes exacts.
 
 \section{Contrôles}
-631 cas principaux sont enregistrés dans les JSONL, avec 0 échec d'exécution. S'y ajoutent quatre validations du couplage augmenté, six comparaisons des graphes CUDA avec les opérateurs ordinaires et huit validations FE–Fourier sous Compute Sanitizer.
+740 cas principaux sont enregistrés dans les JSONL, avec 0 échec d'exécution. S'y ajoutent quatre validations du couplage augmenté, six comparaisons des graphes CUDA avec les opérateurs ordinaires et huit validations FE–Fourier sous Compute Sanitizer.
 
 Compute Sanitizer : ========= ERROR SUMMARY: 0 errors
 
@@ -80,6 +80,25 @@ Le rapport proche de quatre correspond au dernier doublement du nombre de pas d'
 \begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{reaction-convergence.pdf}\caption{Le puits vaut \(\lambda\)(x)=1+0,5 sin(2\(\pi\)x). Les exponentielles de réaction sont calculées dans chaque élément. La référence RK4 intègre indépendamment les caractéristiques et leur atténuation.}\end{figure}
 Le test physique utilise une vitesse stationnaire et une réaction spatialement variable. La masse décroît physiquement ; la propriété contrôlée est la borne d'énergie, et l'erreur est évaluée contre la solution caractéristique. Les plafonds d'erreur aux petits pas diminuent avec le raffinement du maillage.
 
+\section{Préparation coopérative et plans CUDA}
+Une construction coopérative répartit les entrées d'un bloc de projection entre les 32 threads d'un warp. Vingt-neuf comparaisons couvrent les degrés, les maillages gradués et plusieurs résolutions auxiliaires. Les blocs P4 sont identiques bit à bit à l'oracle scalaire dans les cas testés ; les autres différences restent sous 6e-14. Sur n = 64 gradué, la construction P4 passe d'une médiane de 297 ms à 98 ms. Les petits blocs conservent le noyau scalaire. Ces temps concernent la construction des blocs, pas toute la préparation. Les tableaux précédents conservent leurs mesures antérieures à cette optimisation.
+
+Le contrôle mémoire passe. Racecheck ne signale aucun conflit dans le noyau coopératif ; le contrôle complet signale huit avertissements dans le scan nonzero de CuPy, conservés dans les diagnostics. Les grands supports ont révélé séparément une réutilisation défectueuse de plans cuFFT capturés entre graphes. Chaque graphe possède maintenant ses propres plans. Douze séquences de changement de taille et quatre sous Compute Sanitizer passent, avec identité numérique face à l'exécution ordinaire. La campagne concernée a été relancée.
+
+\section{Extension aux directions de Fourier entières}
+Une transformation entière unimodulaire ramène chaque mode incompressible à un cisaillement, réalisable par permutation et FFT. La somme finie accepte aussi une vitesse moyenne. La décomposition trigonométrique intégrable a des antécédents explicites chez Quispel et McLaren (JCP 186, 2003, 308–316). Les validations contrôlent les constantes, la masse, l'unitarité, la réversibilité, le générateur dense et une exponentielle GPU indépendante. Les rapports de raffinement temporel valent 4,000 et 15,996 aux ordres deux et quatre.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{mode-resolution.pdf}\caption{Les traits horizontaux indiquent les erreurs des meilleures projections FE. Les paramètres complets des six modes figurent dans les JSONL.}\end{figure}
+Sur ce flot plus déformant, 95² valeurs auxiliaires ne suffisent plus : l'erreur plafonne vers 4,56e-3 malgré le raffinement FE. À 767² valeurs, l'erreur sur le maillage gradué descend à 1,73e-5, proche de la projection FE à 1,64e-5. L'unitarité n'élimine ni la troncature ni l'aliasing des changements de coordonnées. Le coût croît avec la résolution et les directions.
+
+\section{Contre-exemple : petites échelles résolues seulement en FE}
+Une bosse de norme L2 proche de un est centrée dans la zone raffinée. Le transport cellulaire stationnaire dure 0,005. L'erreur est recomputée avec subdivision de la quadrature. Pour une largeur de 0,0015, la projection FE finale atteint 4,79e-4 et le DG amont 6,17e-4. Le support auxiliaire 95² ne capture que 22,4 \% de l'énergie initiale et donne une erreur de 1,28.
+
+\[\|v(t)-\widehat v(t)\|\geq\max\{0,\|\widehat v(t)-v_0\|-2\|Rv_0\|\}.\]
+La borne démontrée dans la note vaut 0,357 dans ce cas : aucun raffinement temporel ne peut corriger ce défaut du support fixe. Augmenter seulement le nombre de modes ne suffit pas non plus lorsque la projection DG intermédiaire ne résout pas la bosse. Avec un support DG huit fois plus fin et 1535² valeurs de Fourier, l'erreur descend à 5,74e-4, au prix d'une augmentation importante du coût. Ce cas est favorable au DG direct.
+
+L'avantage mesuré sur les maillages gradués concerne donc les situations où les petits éléments sont nécessaires à la physique FE ou à la géométrie, alors que le champ transporté reste résolu sur un support plus économique. Une méthode générale doit encore traiter efficacement les petites échelles localisées.
+
 \section{Portée scientifique}
 \begin{center}\small\begin{tabular}{lllll}\toprule
 \(\alpha\) & Méthode & Pas & Erreur L2 & Évolution (s)\\\midrule
@@ -98,7 +117,7 @@ Les ingrédients ont des antécédents : transfert d'incréments FLIP, projectio
 
 LEoPart applique déjà des incréments de champs FE aux propriétés particulaires (Maljaars et al., arXiv:1912.13375 ; méthode particles.increment de la documentation). Le retour de la physique FE vers un état auxiliaire n'est donc pas, à lui seul, une nouveauté. La question scientifique porte sur les garanties du couplage contractant, sa consistance et le bénéfice mesuré sur les maillages gradués.
 
-Les expériences actuelles couvrent un domaine périodique et une vitesse prescrite à quatre modes. Les frontières, les vitesses FE arbitraires, la compression, les flux locaux, le calcul distribué et une preuve générale de convergence restent ouverts. Les graphes CUDA accélèrent l'exécution sans changer les opérateurs numériques ; leurs résultats ont été comparés directement à ceux des exécutions ordinaires.
+Les expériences actuelles couvrent un domaine périodique et des vitesses prescrites à quatre ou six modes. Les frontières, les vitesses FE arbitraires, la compression, les flux locaux, le calcul distribué et une preuve générale de convergence restent ouverts. Les graphes CUDA accélèrent l'exécution sans changer les opérateurs numériques ; leurs résultats ont été comparés directement à ceux des exécutions ordinaires.
 
 \section{Reproduction}
 Les scripts day\_study.py, fourier\_study.py, spectral\_reference.py, memory\_study.py reaction\_study.py, dg\_study.py, graded\_study.py et coupled\_benchmark.py acceptent un répertoire de sortie explicite. Les JSONL contiennent les paramètres et les empreintes des sources. Les preuves sont dans incremental\_theory.tex et memory\_theory.tex. Aucun code de production Rodin ni fichier de la bibliothèque HySoP n'est modifié.

@@ -40,6 +40,26 @@ LEoPart already feeds FE increments back to particle properties; that general
 pattern is not claimed as new. The research question concerns the specific
 contractive coupling, consistency bounds and measured costs.
 
+Further checks extend the Fourier flow to six arbitrary integer wave
+directions and a mean velocity (`fourier_modes.py`). A unimodular integer
+change of coordinates turns each mode into a shear; the continuous splitting
+principle has Quispel–McLaren antecedents (2003). Refinement from 95 to 767
+points per direction resolves the stronger deformation in the new test.
+
+The narrow-feature study is a counterexample to general superiority. A
+graded FE mesh resolves a bump of width 0.0015 that a 95² auxiliary space
+misses: L2 errors are 0.000617 for DG and 1.28 for the auxiliary scheme.
+Refining both the intermediate DG space and Fourier support recovers
+accuracy, at substantial cost. The mathematical note includes a lower bound
+showing why time refinement alone cannot repair insufficient auxiliary
+resolution.
+
+Cooperative cross-mass assembly reduces the measured P4 block construction
+from 297 to 98 ms; the earlier timing tables are retained with their original
+setup costs. Large-grid tests also motivated independent cuFFT-plan ownership
+for each CUDA graph. Focused memory checks and graph lifetime tests pass;
+the complete racecheck log retains warnings in CuPy's nonzero scan.
+
 ```sh
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/day_study.py --suite validation --output /tmp/slfe-day
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/fourier_study.py --suite validation --output /tmp/slfe-day
@@ -52,10 +72,15 @@ CUDA_PATH=/usr/local/cuda python3 experiments/slfe/validate_comparisons.py --out
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/dg_study.py --suite upwind --output /tmp/slfe-day
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/graded_study.py --output /tmp/slfe-day
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/coupled_benchmark.py --output /tmp/slfe-day
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/carrier_build_study.py --output /tmp/slfe-day/carrier-build.jsonl
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/mode_study.py --suite resolution --output /tmp/slfe-day
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/scale_study.py --suite limits --output /tmp/slfe-day
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/scale_study.py --suite enrichment --output /tmp/slfe-day
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/validate_graph_lifetime.py --output /tmp/slfe-day/graph-large-validation.json
 ```
 
 Recorded data are in `results_day/`; all simulation kernels run on CUDA.
-The geometry is periodic and affine, and the prescribed flow has four
+The geometry is periodic and affine, and the prescribed flows have four or six
 Hamiltonian modes. Arbitrary FE velocities, boundaries, local physical flux
 conservation and distributed execution remain unvalidated. This is a research
 checkpoint; the production Rodin variational API is unchanged.

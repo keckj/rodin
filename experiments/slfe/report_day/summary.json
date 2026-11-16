@@ -1,5 +1,5 @@
 {
-  "generated": "16/11/2026 \u00e0 11:34",
+  "generated": "16/11/2026 \u00e0 11:52",
   "counts": {
     "day-validation": 7,
     "day-cellular": 48,
@@ -23,7 +23,14 @@
     "dg-cfl": 96,
     "graded": 18,
     "graded-repeated": 12,
-    "coupled-benchmark": 16
+    "coupled-benchmark": 16,
+    "carrier-build": 29,
+    "modes-validation": 1,
+    "modes-accuracy": 36,
+    "modes-resolution": 12,
+    "scale-limits": 20,
+    "scale-enrichment": 9,
+    "scale-fourier-enrichment": 2
   },
   "execution_failures": 0
 }

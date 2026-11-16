@@ -43,6 +43,13 @@ def main():
         "graded",
         "graded-repeated",
         "coupled-benchmark",
+        "carrier-build",
+        "modes-validation",
+        "modes-accuracy",
+        "modes-resolution",
+        "scale-limits",
+        "scale-enrichment",
+        "scale-fourier-enrichment",
     )
     raw = {
         name: [
@@ -362,6 +369,96 @@ def main():
         "et l'erreur est évaluée contre la solution caractéristique. Les plafonds d'erreur "
         "aux petits pas diminuent avec le raffinement du maillage."
     )
+    r.section("Préparation coopérative et plans CUDA")
+    r.paragraph(
+        "Une construction coopérative répartit les entrées d'un bloc de projection "
+        "entre les 32 threads d'un warp. Vingt-neuf comparaisons couvrent les degrés, "
+        "les maillages gradués et plusieurs résolutions auxiliaires. Les blocs P4 "
+        "sont identiques bit à bit à l'oracle scalaire dans les cas testés ; les autres "
+        "différences restent sous 6e-14. Sur n = 64 gradué, la construction P4 passe "
+        "d'une médiane de 297 ms à 98 ms. Les petits blocs conservent le noyau scalaire. "
+        "Ces temps concernent la construction des blocs, pas toute la préparation. "
+        "Les tableaux précédents conservent leurs mesures antérieures à cette optimisation."
+    )
+    r.paragraph(
+        "Le contrôle mémoire passe. Racecheck ne signale aucun conflit dans le noyau "
+        "coopératif ; le contrôle complet signale huit avertissements dans le scan "
+        "nonzero de CuPy, conservés dans les diagnostics. Les grands supports ont "
+        "révélé séparément une réutilisation défectueuse de plans cuFFT capturés entre "
+        "graphes. Chaque graphe possède maintenant ses propres plans. Douze séquences "
+        "de changement de taille et quatre sous Compute Sanitizer passent, avec "
+        "identité numérique face à l'exécution ordinaire. La campagne concernée a été relancée."
+    )
+    r.section("Extension aux directions de Fourier entières")
+    r.paragraph(
+        "Une transformation entière unimodulaire ramène chaque mode incompressible "
+        "à un cisaillement, réalisable par permutation et FFT. La somme finie accepte "
+        "aussi une vitesse moyenne. La décomposition trigonométrique intégrable a des "
+        "antécédents explicites chez Quispel et McLaren (JCP 186, 2003, 308–316). "
+        "Les validations contrôlent les constantes, la masse, l'unitarité, la réversibilité, "
+        "le générateur dense et une exponentielle GPU indépendante. Les rapports "
+        "de raffinement temporel valent 4,000 et 15,996 aux ordres deux et quatre."
+    )
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    combined = data["modes-accuracy"] + data["modes-resolution"]
+    for grading, label in ((0.0, "Non gradué"), (0.95, "Gradué")):
+        rows = sorted(
+            [
+                x
+                for x in combined
+                if x["n"] == 64 and x["grading"] == grading and x["steps"] == 64
+            ],
+            key=lambda x: x["modes"],
+        )
+        ax.loglog(
+            [x["modes"] for x in rows], [x["l2"][0] for x in rows], "o-", label=label
+        )
+        ax.axhline(rows[-1]["best_projection_error"], linestyle="--", alpha=0.5)
+    ax.set(
+        xlabel="Points par direction auxiliaire",
+        ylabel=r"$\|q_h-q\|_{L^2}$",
+        title="Six modes et vitesse moyenne, P4, n = 64, t = 0,5",
+    )
+    ax.grid(True, which="both", alpha=0.2)
+    ax.legend()
+    r.save_figure(
+        fig,
+        "mode-resolution",
+        "Les traits horizontaux indiquent les erreurs des meilleures projections FE. Les paramètres complets des six modes figurent dans les JSONL.",
+    )
+    r.paragraph(
+        "Sur ce flot plus déformant, 95² valeurs auxiliaires ne suffisent plus : "
+        "l'erreur plafonne vers 4,56e-3 malgré le raffinement FE. À 767² valeurs, "
+        "l'erreur sur le maillage gradué descend à 1,73e-5, proche de la projection "
+        "FE à 1,64e-5. L'unitarité n'élimine ni la troncature ni l'aliasing des "
+        "changements de coordonnées. Le coût croît avec la résolution et les directions."
+    )
+    r.section("Contre-exemple : petites échelles résolues seulement en FE")
+    r.paragraph(
+        "Une bosse de norme L2 proche de un est centrée dans la zone raffinée. "
+        "Le transport cellulaire stationnaire dure 0,005. L'erreur est recomputée "
+        "avec subdivision de la quadrature. Pour une largeur de 0,0015, la projection "
+        "FE finale atteint 4,79e-4 et le DG amont 6,17e-4. Le support auxiliaire "
+        "95² ne capture que 22,4 % de l'énergie initiale et donne une erreur de 1,28."
+    )
+    r.tex.append(
+        r"\[\|v(t)-\widehat v(t)\|\geq\max\{0,\|\widehat v(t)-v_0\|-2\|Rv_0\|\}.\]"
+    )
+    r.body.append("<p>Erreur FE ≥ max(0, déplacement FE requis − 2 ‖Rv₀‖).</p>")
+    r.paragraph(
+        "La borne démontrée dans la note vaut 0,357 dans ce cas : aucun raffinement "
+        "temporel ne peut corriger ce défaut du support fixe. Augmenter seulement "
+        "le nombre de modes ne suffit pas non plus lorsque la projection DG "
+        "intermédiaire ne résout pas la bosse. Avec un support DG huit fois plus fin "
+        "et 1535² valeurs de Fourier, l'erreur descend à 5,74e-4, au prix d'une "
+        "augmentation importante du coût. Ce cas est favorable au DG direct."
+    )
+    r.paragraph(
+        "L'avantage mesuré sur les maillages gradués concerne donc les situations "
+        "où les petits éléments sont nécessaires à la physique FE ou à la géométrie, "
+        "alors que le champ transporté reste résolu sur un support plus économique. "
+        "Une méthode générale doit encore traiter efficacement les petites échelles localisées."
+    )
     r.section("Portée scientifique")
     r.table(
         ["α", "Méthode", "Pas", "Erreur L2", "Évolution (s)"],
@@ -396,8 +493,8 @@ def main():
         "contractant, sa consistance et le bénéfice mesuré sur les maillages gradués."
     )
     r.paragraph(
-        "Les expériences actuelles couvrent un domaine périodique et une vitesse prescrite "
-        "à quatre modes. Les frontières, les vitesses FE arbitraires, la compression, les "
+        "Les expériences actuelles couvrent un domaine périodique et des vitesses prescrites "
+        "à quatre ou six modes. Les frontières, les vitesses FE arbitraires, la compression, les "
         "flux locaux, le calcul distribué et une preuve générale de convergence restent ouverts. "
         "Les graphes CUDA accélèrent l'exécution sans changer les opérateurs numériques ; "
         "leurs résultats ont été comparés directement à ceux des exécutions ordinaires."

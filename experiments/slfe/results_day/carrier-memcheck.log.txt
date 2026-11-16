@@ -1,0 +1,4 @@
+========= COMPUTE-SANITIZER
+{"n": 8, "p": 4, "grading": 0.95, "medians": {"scalar": 0.09901319298660383, "warp": 0.025046978960745037}, "block_error": 0.0}
+{"n": 8, "p": 2, "grading": 0.95, "medians": {"scalar": 0.04395107994787395, "warp": 0.028565377986524254}, "block_error": 0.0}
+========= ERROR SUMMARY: 0 errors

@@ -234,6 +234,43 @@ avant cette composition. Une dépendance temporelle arbitraire de chaque
 mode demande un traitement distinct.
 
 \section{Portée et antécédents}
+\subsection*{Directions de Fourier entières}
+La réalisation ne se limite pas aux directions cartésiennes et diagonales.
+La décomposition du flot en modes trigonométriques exactement intégrables
+est un principe établi \cite{quispel}; la construction ci-dessous décrit
+sa réalisation sur le support auxiliaire discret.
+Pour un vecteur d'onde $k=g(a,b)$, avec $(a,b)$ primitif, le mode de vitesse
+\[
+u_k=\beta(-b,a)\sin(2\pi g(ax+by)+\theta)
+\]
+devient un cisaillement dans les coordonnées
+$\xi=ax+by$, $\eta=cx+dy$, où les entiers $c,d$ satisfont $ad-bc=1$.
+En effet, $\dot\xi=0$ et
+$\dot\eta=\beta\sin(2\pi g\xi+\theta)$.
+La matrice entière unimodulaire induit une permutation bijective de toute
+grille périodique. Sur une grille impaire, le cisaillement de Fourier est
+réel et unitaire. Une vitesse moyenne constante est transportée par une
+translation de Fourier. Les compositions précédentes s'étendent donc à
+une somme finie de tels modes. Le coût croît avec le nombre de directions;
+les permutations peuvent toujours replier les fréquences. Cette extension
+n'est pas un solveur efficace déjà démontré pour une vitesse FE quelconque.
+
+\subsection*{Obstruction de résolution du support auxiliaire}
+En advection pure, $v(t)-v_0=R^*(S(t)-I)Rv_0$. Par contraction,
+\[
+\|v(t)-v_0\|\leq 2\|Rv_0\|.
+\]
+Pour toute cible FE $\widehat v(t)$, l'inégalité triangulaire donne
+\[
+\|v(t)-\widehat v(t)\|\geq
+\max\{0,\|\widehat v(t)-v_0\|-2\|Rv_0\|\}.
+\]
+Cette borne vaut pour tout nombre de pas et toute composition contractante.
+Elle expose une limite structurelle : un champ bien représenté par le
+maillage FE mais presque invisible sur le support auxiliaire ne peut pas
+être correctement transporté. La stabilité indépendante du pas ne dispense
+donc jamais d'une résolution spatiale auxiliaire adaptée.
+
 Le transfert d'incréments, les dilatations d'opérateurs contractants,
 les projections orthogonales et les compositions d'ordre élevé sont
 des outils établis. Les transformations DG--Fourier sur GPU ont également
@@ -256,6 +293,11 @@ du support, les couplages non linéaires et le calcul distribué ne sont pas
 validés par ces résultats.
 
 \begin{thebibliography}{9}
+\bibitem{quispel} G. R. W. Quispel et D. I. McLaren,
+\emph{Explicit volume-preserving and symplectic integrators for
+trigonometric polynomial flows}, Journal of Computational Physics 186
+(2003), 308--316,
+\url{https://doi.org/10.1016/S0021-9991(03)00068-8}.
 \bibitem{leopart} J. M. Maljaars, C. N. Richardson et N. Sime,
 \emph{LEoPart: a particle library for FEniCS},
 Computers \& Mathematics with Applications 81 (2021), 289--315,

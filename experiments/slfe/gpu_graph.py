@@ -12,6 +12,10 @@ class EvolutionGraph:
         cp.cuda.Stream.null.synchronize()
         self.pool = cp.cuda.MemoryPool()
         self.stream = cp.cuda.Stream(non_blocking=True)
+        # A captured cuFFT plan must not be reused by a later graph with a
+        # different allocator/stream lifetime. Each graph warms its own plans;
+        # existing graphs retain theirs below when the global cache is cleared.
+        cp.fft.config.get_plan_cache().clear()
         with cp.cuda.using_allocator(self.pool.malloc), self.stream:
             self.value = initial.copy()
             self.duration = cp.asarray(duration, dtype=cp.float64).copy()
@@ -24,6 +28,7 @@ class EvolutionGraph:
             self.graph = self.stream.end_capture()
         # Graph replay also needs cuFFT workspace and plans to remain alive.
         self.plans = [node.plan for _, node in cp.fft.config.get_plan_cache()]
+        cp.fft.config.get_plan_cache().clear()
 
     def reset(self, value):
         cp.cuda.Stream.null.synchronize()

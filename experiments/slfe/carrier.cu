@@ -120,6 +120,106 @@ extern "C" __global__ void carrier_blocks(const double* triangles, int n, int fi
     blocks[pair * NC * NB + k] = matrix[k];
 }
 
+extern "C" __global__ void carrier_blocks_warp(const double* triangles, int n, int first,
+  int cells, int slots, const double* quadrature, int nq, const double* nodes,
+  const double* weights, int* destinations, double* blocks, int* errors)
+{
+  // Four warps cooperate independently; each lane owns disjoint matrix entries.
+  constexpr int lanes = 32, entries = (NC * NB + lanes - 1) / lanes;
+  const int lane = threadIdx.x % lanes, warp = threadIdx.x / lanes;
+  int pair = (blockIdx.x * blockDim.x + threadIdx.x) / lanes;
+  __shared__ Point polygons[4][12];
+  __shared__ int counts[4];
+  __shared__ double source_basis[4][NB], basis_x[4][NP], basis_y[4][NP];
+  __shared__ double quadrature_weight[4];
+  if (pair >= cells * slots)
+    return;
+  int source = first + pair / slots, candidate = pair % slots;
+  if (lane == 0)
+    destinations[pair] = -1;
+  const double* t = triangles + 6 * source;
+  int xmin = (int)floor(fmin(t[0], fmin(t[2], t[4])) * n) - 1;
+  int xmax = (int)floor(fmax(t[0], fmax(t[2], t[4])) * n) + 1;
+  int ymin = (int)floor(fmin(t[1], fmin(t[3], t[5])) * n) - 1;
+  int ymax = (int)floor(fmax(t[1], fmax(t[3], t[5])) * n) + 1;
+  int width = xmax - xmin + 1, height = ymax - ymin + 1;
+  if (width * height > slots)
+  {
+    if (candidate == 0 && lane == 0)
+      atomicAdd(errors, 1);
+    return;
+  }
+  if (candidate >= width * height)
+    return;
+  int ix = xmin + candidate % width, iy = ymin + candidate / width;
+  double x = double(ix) / n, y = double(iy) / n, h = 1. / n;
+  double matrix[entries];
+  for (int k = 0; k < entries; ++k)
+    matrix[k] = 0.;
+  double covered = 0.;
+  for (int half = 0; half < 2; ++half)
+  {
+    double rectangle_half[6] = {x, y, x + h, y, x + h, y + h};
+    if (half == 1)
+    {
+      rectangle_half[2] = x + h;
+      rectangle_half[3] = y + h;
+      rectangle_half[4] = x;
+      rectangle_half[5] = y + h;
+    }
+    Point* poly = polygons[warp];
+    if (lane == 0)
+      counts[warp] = intersection(t, rectangle_half, poly);
+    __syncwarp();
+    int count = counts[warp];
+    for (int fan = 1; fan < count - 1; ++fan)
+    {
+      Point e = sub(poly[fan], poly[0]), f = sub(poly[fan + 1], poly[0]);
+      double det = cross(e, f);
+      if (!(det > 0.))
+        continue;
+      covered += det;
+      for (int q = 0; q < nq; ++q)
+      {
+        if (lane == 0)
+        {
+          Point a = {poly[0].x + quadrature[3 * q] * e.x + quadrature[3 * q + 1] * f.x,
+            poly[0].y + quadrature[3 * q] * e.y + quadrature[3 * q + 1] * f.y};
+          Point position = map(t, a.x, a.y);
+          basis(a.x, a.y, source_basis[warp]);
+          nodal_values(n * position.x - ix, nodes, basis_x[warp]);
+          nodal_values(n * position.y - iy, nodes, basis_y[warp]);
+          quadrature_weight[warp] = determinant(t) * det * quadrature[3 * q + 2] * n * n;
+        }
+        __syncwarp();
+        const double w = quadrature_weight[warp];
+        for (int item = 0; item < entries; ++item)
+        {
+          const int index = item * lanes + lane;
+          if (index < NC * NB)
+          {
+            const int k = index % NB, i = (index / NB) % NP, j = index / (NB * NP);
+            matrix[item] += w * basis_x[warp][i] * basis_y[warp][j] *
+              source_basis[warp][k] / (weights[i] * weights[j]);
+          }
+        }
+        __syncwarp();
+      }
+    }
+    __syncwarp();
+  }
+  if (!(covered > 0.))
+    return;
+  if (lane == 0)
+    destinations[pair] = modulo(iy, n) * n + modulo(ix, n);
+  for (int item = 0; item < entries; ++item)
+  {
+    const int index = item * lanes + lane;
+    if (index < NC * NB)
+      blocks[pair * NC * NB + index] = matrix[item];
+  }
+}
+
 extern "C" __global__ void project_carrier(const int* sources, const int* targets,
   const double* blocks, int pairs, const double* input, double* output, int fields)
 {

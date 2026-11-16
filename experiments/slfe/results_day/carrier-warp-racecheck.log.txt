@@ -1,0 +1,4 @@
+========= COMPUTE-SANITIZER
+{"n": 8, "p": 4, "grading": 0.95, "medians": {"scalar": 0.024310045002494007, "warp": 1.7652127629844472}, "block_error": 0.0}
+{"n": 8, "p": 2, "grading": 0.95, "medians": {"scalar": 0.017702961980830878, "warp": 2.11940816702554}, "block_error": 0.0}
+========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
