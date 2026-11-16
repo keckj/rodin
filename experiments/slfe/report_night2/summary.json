@@ -1,0 +1,73 @@
+{
+  "generated": "16/11/2026 \u00e0 23:59",
+  "matched": [
+    {
+      "fields": 1,
+      "methods": [
+        {
+          "method": "dg",
+          "median": 5.47478554199995,
+          "minimum": 5.46945773799996,
+          "maximum": 5.609824853000077,
+          "error": 0.00028651928511241263
+        },
+        {
+          "method": "moving",
+          "median": 0.6194909659999439,
+          "minimum": 0.6037931419999722,
+          "maximum": 0.6301463319999812,
+          "error": 0.0002478452281900097
+        }
+      ],
+      "speedup": 8.837555093580566
+    },
+    {
+      "fields": 4,
+      "methods": [
+        {
+          "method": "dg",
+          "median": 7.908237288000009,
+          "minimum": 7.907816541000102,
+          "maximum": 8.055095788999893,
+          "error": 0.000821543261391263
+        },
+        {
+          "method": "moving",
+          "median": 0.5915836179999587,
+          "minimum": 0.5846832120000727,
+          "maximum": 0.6027238360001093,
+          "error": 0.00048128317403386804
+        }
+      ],
+      "speedup": 13.367911225696856
+    },
+    {
+      "fields": 16,
+      "methods": [
+        {
+          "method": "dg",
+          "median": 21.11835531899999,
+          "minimum": 20.889387553000006,
+          "maximum": 21.254412356000103,
+          "error": 0.0008769662671340364
+        },
+        {
+          "method": "moving",
+          "median": 0.609119891999967,
+          "minimum": 0.5970948960000442,
+          "maximum": 0.6182338600000321,
+          "error": 0.0004549376921021969
+        }
+      ],
+      "speedup": 34.67027689682006
+    }
+  ],
+  "counts": {
+    "matched": 18,
+    "adaptive-memory": 4,
+    "adaptive-projected": 10,
+    "adaptive-physics": 24,
+    "moving-resolution": 36,
+    "moving-fields": 18
+  }
+}

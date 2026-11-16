@@ -1,0 +1,67 @@
+<!doctype html><html lang='fr'><meta charset='utf-8'><title>SLFE : supports mobiles et transfert de mémoire</title><style>body{max-width:1080px;margin:40px auto;padding:0 24px;font:17px/1.6 system-ui;color:#152c3a}h2{margin-top:2em}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #ccd6df;padding:8px;text-align:left}img{max-width:100%}figcaption{font-size:14px}</style><h1>SLFE : supports mobiles et transfert de mémoire</h1><p>Résultats disponibles le 16/11/2026 à 23:59 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les figures représentent les solutions calculées, avec une référence indépendante par caractéristiques.</p>
+<h2>Résultat et portée</h2>
+<p>Un support auxiliaire mobile résout le défaut observé lorsque la bosse quitte la zone fine d&#x27;une grille fixe. Le couplage FE avec mémoire accepte désormais un changement de support contractant, et un raffinement exactement emboîté sans perte d&#x27;énergie. Les formules s&#x27;exécutent sans racine ni inversion de matrice. Ces propriétés sont démontrées dans restart_theory.pdf et vérifiées sur GPU; elles n&#x27;établissent ni une nouveauté bibliographique, ni une convergence générale vers l&#x27;EDP.</p>
+<p>Deux méthodes sont distinguées : le couplage avec mémoire maintient le champ FE à chaque changement; la référence d&#x27;advection pure transporte uniquement le champ DG auxiliaire entre une projection FE initiale et une projection FE finale. Cette seconde méthode est la plus rapide ici, mais elle n&#x27;offre pas les opérations physiques FE intermédiaires du couplage.</p>
+<figure><img src='night-fields.svg' alt='Même domaine et mêmes échelles de couleur. Champ initial, référence, supports fixe et mobile, puis erreurs absolues. Le tracé est un échantillonnage FE; l&#x27;erreur L2 est intégrée séparément sur les triangles.'><figcaption>Même domaine et mêmes échelles de couleur. Champ initial, référence, supports fixe et mobile, puis erreurs absolues. Le tracé est un échantillonnage FE; l&#x27;erreur L2 est intégrée séparément sur les triangles.</figcaption></figure>
+<h2>Problème et protocole</h2>
+<p>Le domaine est le tore unité. Une vitesse cellulaire incompressible prescrite transporte jusqu&#x27;à t=0,25 une bosse de largeur 0,01, initialement centrée en (0,35; 0,45), de norme L2 proche de 1. L&#x27;espace FE principal possède 32768 triangles DG P4, soit 491520 coefficients par champ; la graduation fixe vaut 0,95. Le support principal auxiliaire comporte 64×64 cellules Q4, soit 102400 valeurs par champ. Deux supports orientés supplémentaires servent aux cisaillements diagonaux. Les méthodes n&#x27;ont donc pas le même nombre d&#x27;inconnues.</p>
+<p>Le centre circulaire de l&#x27;énergie est calculé à partir de la solution, tous les quatre pas. Le support se déplace lorsque ce centre s&#x27;éloigne de plus de 0,03. Ce critère convient à une structure localisée; il n&#x27;est pas un estimateur d&#x27;erreur et ne traite pas plusieurs structures éloignées. La référence intègre les caractéristiques sur GPU par 512 pas RK4; les erreurs sont intégrées avec quadrature de degré 20 et subdivision indépendante. Les extrema sont échantillonnés.</p>
+<figure><img src='night-trajectory.svg' alt='Trajectoire du centre d&#x27;énergie et dissipation observée. Les croix indiquent les changements décidés à partir du champ numérique.'><figcaption>Trajectoire du centre d&#x27;énergie et dissipation observée. Les croix indiquent les changements décidés à partir du champ numérique.</figcaption></figure>
+<h2>Précision du support mobile</h2>
+<figure><img src='night-convergence.svg' alt='À support fixe, réduire le pas ne corrige pas le manque de résolution le long de la trajectoire. Aucune pente temporelle universelle n&#x27;est revendiquée pour cette composition avec projections.'><figcaption>À support fixe, réduire le pas ne corrige pas le manque de résolution le long de la trajectoire. Aucune pente temporelle universelle n&#x27;est revendiquée pour cette composition avec projections.</figcaption></figure>
+<h2>Coût complet à précision imposée</h2>
+<p>Trois répétitions alternent DG eulérien et support mobile pour 1, 4 et 16 champs distincts et proches spatialement (graine 752). Chaque champ doit satisfaire L2 ≤ 0,001. Le coût inclut construction des opérateurs, détection initiale du centre, évolution, adaptations et transfert final. Le maillage FE et la projection initiale communs, ainsi que les diagnostics de référence, sont exclus des deux côtés. La compilation CUDA utilise le cache; ce ne sont pas des mesures de premier lancement sans cache.</p>
+<figure><img src='night-cost.svg' alt='Médiane et étendue des trois répétitions. Gain mesuré contre un DG amont RK4 à pas global sur ce maillage fortement gradué. Un DG à pas locaux et un solveur SL-DG GPU externe ne sont pas encore comparés.'><figcaption>Médiane et étendue des trois répétitions. Gain mesuré contre un DG amont RK4 à pas global sur ce maillage fortement gradué. Un DG à pas locaux et un solveur SL-DG GPU externe ne sont pas encore comparés.</figcaption></figure>
+<div class='table'><table><thead><tr><th>Champs</th><th>DG (s)</th><th>Mobile (s)</th><th>Ratio</th><th>L2 DG max</th><th>L2 mobile max</th></tr></thead><tbody>
+<tr><td>1</td><td>5.475</td><td>0.6195</td><td>8.838</td><td>0.0002865</td><td>0.0002478</td></tr>
+<tr><td>4</td><td>7.908</td><td>0.5916</td><td>13.37</td><td>0.0008215</td><td>0.0004813</td></tr>
+<tr><td>16</td><td>21.12</td><td>0.6091</td><td>34.67</td><td>0.000877</td><td>0.0004549</td></tr>
+</tbody></table></div>
+<p>Le pas DG retenu passe un contrôle de croissance sur champs aléatoires et la tolérance finale. Le réglage plus agressif (échelle 12) est rejeté : le contrôle aléatoire révèle une croissance d&#x27;énergie supérieure au seuil. Ce contrôle fini n&#x27;est pas un certificat spectral de stabilité. La variante mobile à 16 pas échoue à la tolérance; le benchmark utilise 64 pas.</p>
+<h2>Mémoire : changement d&#x27;espace sans changer le champ FE</h2>
+<p>L&#x27;état est représenté par trois tableaux (v,w,a), avec v=R*w+(I−R*R)a. Son énergie est ||w||²+||a||²−||Ra||². La remise à zéro conserve v mais perd toute la mémoire invisible dans ce champ. Le transfert contractant conserve une partie de cette mémoire. En cas de raffinement exactement emboîté, l&#x27;injection corrige w par les nouveaux modes de a et préserve toute l&#x27;énergie augmentée.</p>
+<div class='table'><table><thead><tr><th>FE n</th><th>Remise à zéro L2</th><th>Mémoire L2</th><th>Plancher FE</th></tr></thead><tbody>
+<tr><td>64</td><td>0.006198</td><td>0.003851</td><td>0.003729</td></tr>
+<tr><td>128</td><td>0.0001984</td><td>0.0001602</td><td>0.0001427</td></tr>
+</tbody></table></div>
+<figure><img src='night-memory.svg' alt='Six changements de support, 128 pas et auxiliaire 64×64 Q4. Le transfert de mémoire améliore ici l&#x27;erreur finale; la contraction seule ne garantit pas cette amélioration pour toute EDP.'><figcaption>Six changements de support, 128 pas et auxiliaire 64×64 Q4. Le transfert de mémoire améliore ici l&#x27;erreur finale; la contraction seule ne garantit pas cette amélioration pour toute EDP.</figcaption></figure>
+<p>Une projection itérative supplémentaire utilise le recouvrement des deux espaces dans le même L2. Son filtre spectral contractant conserve davantage de mémoire lorsque le nombre d&#x27;itérations augmente. Cela ne garantit pas une diminution de l&#x27;erreur de transport. Les résultats ci-dessous sont rapportés séparément.</p>
+<div class='table'><table><thead><tr><th>FE n</th><th>Itérations</th><th>L2</th><th>Coût total (s)</th></tr></thead><tbody>
+<tr><td>64</td><td>1</td><td>0.003825</td><td>0.9891</td></tr>
+<tr><td>64</td><td>2</td><td>0.003782</td><td>0.9307</td></tr>
+<tr><td>64</td><td>4</td><td>0.003753</td><td>0.9062</td></tr>
+<tr><td>64</td><td>8</td><td>0.003739</td><td>0.9432</td></tr>
+<tr><td>64</td><td>16</td><td>0.003733</td><td>0.9106</td></tr>
+<tr><td>128</td><td>1</td><td>0.0001574</td><td>1.923</td></tr>
+<tr><td>128</td><td>2</td><td>0.000156</td><td>1.87</td></tr>
+<tr><td>128</td><td>4</td><td>0.0001551</td><td>1.911</td></tr>
+<tr><td>128</td><td>8</td><td>0.0001548</td><td>1.931</td></tr>
+<tr><td>128</td><td>16</td><td>0.0001547</td><td>1.9</td></tr>
+</tbody></table></div>
+<figure><img src='night-projected.svg' alt='Conserver davantage de mémoire rapproche ici le résultat du plancher spatial. La projection itérative utilise le recouvrement physique des espaces, condition plus forte qu&#x27;un simple remap contractant.'><figcaption>Conserver davantage de mémoire rapproche ici le résultat du plancher spatial. La projection itérative utilise le recouvrement physique des espaces, condition plus forte qu&#x27;un simple remap contractant.</figcaption></figure>
+<h2>Couplage avec une réaction FE spatiale</h2>
+<p>Une réaction de taux 1+0,5 sin(2πx) est appliquée par l&#x27;exponentielle exacte de son générateur Galerkin local, en deux demi-pas autour de chaque advection. Chaque mise à jour FE est réinjectée dans la mémoire. La référence indépendante intègre simultanément la trajectoire et l&#x27;exposant de réaction. L&#x27;énergie doit décroître; la masse n&#x27;est plus conservée par cette EDP.</p>
+<figure><img src='night-physics.svg' alt='Transport et réaction calculés sur GPU. L&#x27;amélioration due à la projection de mémoire persiste dans ce couplage linéaire; cela ne valide pas encore une physique non linéaire ou un transport à vitesse FE générale.'><figcaption>Transport et réaction calculés sur GPU. L&#x27;amélioration due à la projection de mémoire persiste dans ce couplage linéaire; cela ne valide pas encore une physique non linéaire ou un transport à vitesse FE générale.</figcaption></figure>
+<h2>Raffinement : identité validée, contrôleur insuffisant</h2>
+<div class='table'><table><thead><tr><th>Degré</th><th>Raffinement</th><th>Défaut Gram</th><th>Défaut observation</th></tr></thead><tbody>
+<tr><td>1</td><td>global</td><td>1.221e-15</td><td>6.661e-16</td></tr>
+<tr><td>1</td><td>local</td><td>7.772e-16</td><td>5.551e-16</td></tr>
+<tr><td>2</td><td>global</td><td>2.22e-15</td><td>1.11e-15</td></tr>
+<tr><td>2</td><td>local</td><td>1.665e-15</td><td>1.221e-15</td></tr>
+<tr><td>4</td><td>global</td><td>4.219e-15</td><td>3.386e-15</td></tr>
+<tr><td>4</td><td>local</td><td>4.108e-15</td><td>3.209e-15</td></tr>
+</tbody></table></div>
+<p>Le premier contrôleur raffine selon la partie du générateur FE non représentée par le support. Les sélections par énergie et par détail hiérarchique atteignent toutes deux la limite de 96 intervalles dès le deuxième contrôle. L&#x27;erreur finale reste proche de 0,148. La conservation de l&#x27;énergie lors du raffinement ne répare donc pas ce contrôleur : le budget est épuisé tôt, et aucun déraffinement ne libère les cellules derrière la structure. L&#x27;indicateur utilisé ne mesure qu&#x27;un terme du défaut de consistance.</p>
+<figure><img src='night-refinement.svg' alt='Résultat négatif conservé : changer le classement des cellules ne suffit pas à rendre le contrôleur efficace.'><figcaption>Résultat négatif conservé : changer le classement des cellules ne suffit pas à rendre le contrôleur efficace.</figcaption></figure>
+<h2>Contrôles et limites pour un article</h2>
+<p>nested-sanitizer : ========= ERROR SUMMARY: 0 errors</p>
+<p>memory-transfer-sanitizer : ========= ERROR SUMMARY: 0 errors</p>
+<p>ambient-sanitizer : ========= ERROR SUMMARY: 0 errors</p>
+<p>Les validations indépendantes couvrent les degrés 1, 2 et 4, les projections, les adjoints en masse, les constantes, les changements de support et les identités de Gram. Toutes les opérations numériques — recouvrements, quadrature, réductions, matrices denses de contrôle — sont exécutées sur CUDA. Le processeur pilote les expériences et dessine les figures. Il s&#x27;agit de prototypes isolés dans experiments/slfe, pas d&#x27;une intégration de production au langage variationnel Rodin.</p>
+<p>La piste d&#x27;article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d&#x27;énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture.</p>
+<p><a href='https://www.oca.eu/images/LAGRANGE/pages_perso/nbesse/pub/NBesse_jcp17.pdf'>Besse, Deriaz et Madaule (2017), adaptation multirésolution SL-DG</a></p>
+<p><a href='https://arxiv.org/abs/2603.19959'>Adams (2026), recouvrements SL-DG sur grilles adaptatives</a></p>
+<p><a href='https://cseweb.ucsd.edu/~ravir/sinasiga.pdf'>Nabizadeh et al. (2024), CO-FLIP et remise à zéro des cartes de flot</a></p>
+<p><a href='https://arxiv.org/abs/2212.03036'>Einkemmer et Moriggl, SL-DG sur GPU</a></p>
+<h2>Reproduction</h2>
+<p>Les sources sont dans experiments/slfe : matched_benchmark.py, adaptive_study.py, moving_study.py, refinement_study.py, nested_validation.py et ambient_validation.py. Les fichiers results_night2 contiennent les paramètres, erreurs, historiques et empreintes du code. night_fields.py reproduit les champs; night_report.py reconstruit ce rapport sans simulation; restart_theory.tex fournit les hypothèses et preuves. Publication exclusivement sur la branche SLFE du fork keckj/rodin.</p></html>

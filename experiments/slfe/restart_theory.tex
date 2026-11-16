@@ -1,0 +1,243 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath,amssymb,amsthm,geometry,hyperref}
+\geometry{margin=2.4cm}
+\newtheorem{proposition}{Proposition}
+\title{Changement de support auxiliaire avec mémoire FE\\
+Transition contractante et mesure de la mémoire supprimée}
+\author{Étude GPU SLFE, fork keckj/rodin}
+\date{16 novembre 2026}
+\begin{document}
+\maketitle
+
+\section{Le problème du support variable}
+Le couplage avec mémoire possède une preuve d'énergie pour un transfert
+fixé $R:V\to W$. Changer le support $W$ et remplacer simplement $R$ dans
+les mises à jour ne conserve pas cette preuve. Le diagnostic étudié
+ici maintient le champ FE inchangé au changement et reconstruit un état
+augmenté compatible avec le nouveau support.
+
+L'espace FE $V$ est fixé. Chaque support $W_k$ est muni de sa norme de
+masse et d'une contraction $R_k:V\to W_k$ préservant les constantes,
+de même que son adjoint. On pose
+\[
+ D_k=(I-R_k^*R_k)^{1/2},\qquad J_k v=(R_kv,D_kv).
+\]
+Les $J_k$ sont des isométries. Entre changements, le calcul conserve
+trois tableaux $v,w,a$ vérifiant
+\[
+ Z=(w,D_ka),\qquad v=J_k^*Z=R_k^*w+(I-R_k^*R_k)a.
+\]
+L'initialisation est $a=v_0$, $w=R_kv_0$. Une advection modifie uniquement
+$w$ dans l'espace augmenté. Une opération physique FE de variation
+$\delta v$ ajoute $R_k\delta v$ à $w$ et $\delta v$ à $a$.
+Ces mises à jour conservent l'identité précédente.
+
+\section{Une énergie accessible sans racine de matrice}
+L'énergie augmentée est calculable directement par
+\[
+ E=\|w\|_{W_k}^2+\|a\|_V^2-\|R_ka\|_{W_k}^2.
+\]
+Cette formule ne requiert ni $D_k$, ni résolution linéaire. Les opérations
+d'advection et de physique considérées restent contractantes sous les
+hypothèses établies pour le couplage à support fixé.
+
+\begin{proposition}
+La remise à zéro $a^+=v$, $w^+=R_{k+1}v$ préserve exactement les coefficients
+FE au changement de support. La transition augmentée est
+$Z^+=J_{k+1}J_k^*Z$ et elle est contractante. Sa perte d'énergie est
+\[
+ E-E^+=E-\|v\|_V^2=\|(I-J_kJ_k^*)Z\|^2\geq0.
+\]
+\end{proposition}
+\begin{proof}
+Le champ observé après transition est
+$J_{k+1}^*Z^+=J_{k+1}^*J_{k+1}J_k^*Z=v$.
+L'isométrie de $J_{k+1}$ donne $\|Z^+\|^2=\|v\|^2$.
+L'opérateur $J_kJ_k^*$ est un projecteur orthogonal; l'identité de
+Pythagore donne l'expression de la perte.
+\end{proof}
+
+La quantité supprimée mesure une composante de mémoire invisible dans
+l'observation FE au moment du changement. Ce n'est pas une borne d'erreur
+par rapport à l'EDP: le transport futur peut rendre cette composante
+observable, et le nouveau support introduit ses propres erreurs spatiales.
+Des pertes légèrement négatives peuvent apparaître par soustraction en
+virgule flottante; les journaux les conservent sans troncature.
+
+Les constantes et la masse FE sont préservées au changement. Toute suite
+de transports et de physiques contractants, séparée par ces transitions,
+reste bornée par l'énergie initiale. Cette propriété reste vraie si la
+décision de changer de support dépend du champ calculé: chaque transition
+choisie conserve individuellement la même inégalité. Aucune linéarité du
+contrôleur d'adaptation n'est requise.
+
+\section{Transférer une partie de la mémoire invisible}
+Soit $C:W_0\to W_1$ une contraction entre les normes auxiliaires.
+Avec $Q_k=I-J_kJ_k^*$, la transition
+\[
+ B=J_1J_0^*+Q_1\begin{pmatrix}C&0\\0&0\end{pmatrix}Q_0
+\]
+préserve l'observation FE et est contractante. Les deux termes ont des
+images orthogonales et agissent sur les composantes orthogonales
+$J_0J_0^*Z$ et $Q_0Z$, respectivement.
+
+Cette formule possède une réalisation sans racine de matrice. Posons
+\[
+ r=w-R_0v,\qquad h=Cr,\qquad b=R_1^*h,
+ \qquad a^+=v-b,\qquad w^+=R_1a^++h.
+\]
+Le champ $v$ reste inchangé, puisque
+$R_1^*w^++(I-R_1^*R_1)a^+=v$. La nouvelle énergie cachée vaut
+\[
+ E^+-\|v\|^2=\|h\|^2-\|R_1^*h\|^2.
+\]
+La perte possède la décomposition exacte
+\[
+ E-E^+=\underbrace{\|D_0(a-v)\|^2}_{\text{mémoire du défaut FE}}
+       +\underbrace{\|r\|^2-\|Cr\|^2}_{\text{projection entre supports}}
+       +\underbrace{\|R_1^*Cr\|^2}_{\text{correction de l'observation}}.
+\]
+Les trois termes sont non négatifs. Le premier est calculable par
+$\|a-v\|^2-\|R_0(a-v)\|^2$. La remise à zéro complète correspond à
+$C=0$. Pour tout $C$ contractant, la perte est inférieure ou égale à
+celle de cette remise à zéro, pour un même état initial. Cette comparaison
+locale des énergies n'implique pas une réduction de l'erreur globale de
+transport; cette dernière est mesurée séparément.
+
+Les validations denses GPU aux degrés 1, 2 et 4 reconstruisent $D_k$,
+$J_k$, $Q_k$ et $B$ indépendamment des mises à jour à trois tableaux.
+Elles contrôlent la norme de $B$, l'identité $J_1^*B=J_0^*$ et les trois
+termes de perte. Sur le transport cellulaire testé avec six changements,
+le transfert de mémoire réduit l'erreur $L^2$ de $0{,}00620$ à $0{,}00385$
+sur le maillage FE $64^2P_4$, dont le plancher est $0{,}00373$.
+Sur $128^2P_4$, les erreurs correspondantes sont $1{,}98\,10^{-4}$ et
+$1{,}60\,10^{-4}$, pour un plancher de $1{,}43\,10^{-4}$.
+
+\section{Raffinement emboîté sans perte de mémoire}
+Un cas structurel mérite d'être distingué. Supposons que les supports
+soient des sous-espaces du même $L^2$ et que $W_0\subset W_1$.
+L'injection isométrique $C:W_0\to W_1$ vérifie $C^*R_1=R_0$.
+Alors la mise à jour
+\[
+ a^+=a,\qquad w^+=Cw+R_1a-CR_0a
+\]
+conserve exactement $v$ et l'énergie augmentée. En effet, dans la
+représentation ambiante $q=w+(I-P_{W_0})a$, la nouvelle décomposition
+est $q=w^++(I-P_{W_1})a$; le champ ambiant n'a pas changé.
+La conservation de la norme suit de l'orthogonalité des deux composantes.
+La formule injecte aussi les modes de l'ancre FE nouvellement résolus.
+Ce résultat suppose un emboîtement exact. Il ne s'applique pas directement
+au déplacement non emboîté des partitions graduées.
+L'implémentation GPU est contrôlée aux degrés 1, 2 et 4, pour un
+raffinement global et un raffinement local. Les matrices de Gram de
+l'état augmenté avant et après changement diffèrent de moins de
+$4{,}3\,10^{-15}$ sur ces six cas; l'identité d'observation FE diffère
+de moins de $3{,}4\,10^{-15}$. Ces contrôles d'algèbre linéaire ne valident
+pas à eux seuls un critère de choix des cellules à raffiner.
+
+\section{Projection itérative dans un espace ambiant commun}
+Une transition plus informative est possible lorsque $R_k=P_{W_k}|_V$
+et $C=P_{W_1}|_{W_0}$ sont les projections exactes du même espace $L^2$.
+Une contraction $C$ abstraite ne suffit plus. L'état possède alors la
+représentation physique
+\[
+ q=w+(I-P_{W_0})a,\qquad v=P_Vq,\qquad \|q\|^2=E.
+\]
+Posons $H=(I-P_V)|_{W_1}$ et $K=H^*H=I-R_1R_1^*$.
+La donnée pour projeter la mémoire invisible est calculable sans
+reconstruire $q$ :
+\[
+ h=H^*(q-v)=C(w-R_0a)+R_1(a-v).
+\]
+Partant de $x_0=0$, on effectue $k$ itérations
+\[
+ x_{j+1}=h+R_1R_1^*x_j,
+ \qquad a^+=v-R_1^*x_k,\qquad w^+=R_1a^++x_k.
+\]
+Le nouvel état ambiant est $q^+=v+Hx_k$, donc son observation FE
+reste exactement $v$.
+
+\begin{proposition}
+Pour chaque entier $k\geq1$, cette transition est contractante.
+Pour un état entrant fixé, l'énergie de mémoire conservée croît avec
+$k$, et $q^+$ converge vers $P_{V+W_1}q$ lorsque $k\to\infty$.
+\end{proposition}
+\begin{proof}
+Les valeurs propres de $K$ appartiennent à $[0,1]$. Sur un vecteur
+singulier gauche de $H$ associé à $\lambda>0$, l'opérateur
+\[
+ H\sum_{j=0}^{k-1}(I-K)^jH^*
+\]
+multiplie la mémoire par $g_k(\lambda)=1-(1-\lambda)^k$.
+Ce facteur appartient à $[0,1]$, croît avec $k$, et tend vers 1.
+Sur l'orthogonal de l'image de $H$, le facteur est nul.
+La partie dans $V$ est conservée et orthogonale à ces composantes.
+Enfin $V+W_1=V\mathbin{\oplus}\operatorname{im}H$, ce qui identifie
+la limite au projecteur orthogonal annoncé.
+\end{proof}
+
+Cette transition distingue deux notions : conserver la mémoire
+approximable sur le nouveau support et diminuer l'erreur par rapport à
+l'EDP. La première propriété est démontrée; la seconde reste une question
+expérimentale. La convergence de l'itération peut être lente lorsque
+$K$ possède de petites valeurs propres non nulles, c'est-à-dire lorsque
+les espaces présentent de petits angles principaux. Les itérations
+finies ne requièrent ni racine, ni inverse, ni estimation du noyau de $K$.
+
+L'oracle GPU reconstruit indépendamment le Gram conjoint de $V,W_0,W_1$,
+plonge ces espaces dans un même espace euclidien et applique le filtre
+par diagonalisation. Les degrés 1, 2 et 4 et les nombres d'itérations
+1, 2, 4, 8, 16 et 32 sont contrôlés. Les écarts d'état sont inférieurs
+à $10^{-14}$ et les écarts d'énergie absolus à $2{,}3\,10^{-13}$ pour
+des énergies initiales de l'ordre de plusieurs centaines.
+
+\section{Choix du support et limites de coût}
+Le premier contrôleur utilise le centre circulaire de l'énergie du champ,
+calculé aux points de Gauss. Il déplace le minimum de taille des cellules
+lorsque ce centre s'écarte d'une distance prescrite. Il s'agit d'une
+heuristique pour une structure localisée unique; le module des moments
+circulaires est enregistré pour détecter une perte de concentration.
+Les cas à plusieurs structures séparées demandent un autre choix de
+support. La reconstruction FE--auxiliaire au changement est incluse
+dans les coûts mesurés.
+
+Le transport du seul état DG entre supports mobiles est également une
+référence nécessaire. Les projections tensorielles successives dans les
+deux directions préservent masse et contraction. Cette variante peut
+éviter les reconstructions FE intermédiaires pour l'advection pure, au
+prix de l'abandon du défaut FE initial. La comparaison distingue ce
+choix du couplage avec mémoire et physique FE.
+
+\section{Antécédents et revendications}
+L'itération de projection et son interprétation par les angles entre
+sous-espaces appartiennent à une théorie classique; l'itération de
+Richardson ci-dessus n'est pas revendiquée comme un nouvel algorithme
+d'algèbre linéaire. Bauschke et Borwein exposent le cadre des projections
+alternées \href{https://cmps-people.ok.ubc.ca/bauschke/Research/01.pdf}{(article)}.
+Adams, Finn, Knepley et Pusztay étudient déjà le rééchantillonnage de
+particules par projection FE et pseudo-inverse, avec conservation des
+moments représentables
+\href{https://arxiv.org/abs/2501.13681}{(prépublication 2025, publication 2026)}.
+La question à comparer précisément est ici le maintien du champ FE et
+de sa mémoire augmentée à chaque troncature de l'itération.
+
+L'adaptation SL-DG est établie, notamment par Besse, Deriaz et Madaule,
+\emph{Adaptive multiresolution semi-Lagrangian discontinuous Galerkin
+methods for the Vlasov equations}, JCP 332 (2017), 376--417
+\href{https://www.oca.eu/images/LAGRANGE/pages_perso/nbesse/pub/NBesse_jcp17.pdf}{(article)}.
+Adams étend les intégrales de recouvrement DG à des grilles AMR
+\href{https://arxiv.org/abs/2603.19959}{(prépublication, 2026)}.
+Le changement de taille des intervalles et l'adaptation ne sont donc
+pas des revendications de nouveauté.
+
+CO-FLIP utilise des transferts par projection et une remise à zéro
+adaptative des cartes de flot, déclenchée par leur déformation
+\href{https://cseweb.ucsd.edu/~ravir/sinasiga.pdf}{(Nabizadeh et al., 2024)}.
+La remise à zéro étudiée ici concerne un état augmenté FE--auxiliaire
+linéaire et son défaut de projection. La proximité conceptuelle avec
+ces antécédents impose une analyse de nouveauté au-delà de l'identité
+élémentaire de projection démontrée ci-dessus.
+\end{document}

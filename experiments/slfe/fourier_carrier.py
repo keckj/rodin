@@ -11,6 +11,7 @@ from flux import gauss_interval
 
 class FourierCarrier:
     def __init__(self, space, factor=1, degree=None, modes=None, quadrature_order=32):
+        self.space = space
         self.dg = Carrier(space, n=space.mesh.n * factor, degree=degree)
         c = self.dg
         self.n = modes or c.n * c.np - 1
@@ -34,6 +35,10 @@ class FourierCarrier:
         )
         self.project_kernel = module.get_function("dg_to_fourier")
         self.adjoint_kernel = module.get_function("fourier_to_dg")
+
+    def energy(self, values):
+        """Trigonometric L2 norm squared for the odd periodic nodal grid."""
+        return cp.mean(values**2, axis=(0, 1))
 
     def project_dg(self, coefficients):
         c = self.dg

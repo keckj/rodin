@@ -1,5 +1,47 @@
 # SLFE GPU research experiment
 
+## Night of November 16–17: moving supports and memory projection
+
+The [illustrated night report](report_night2/rapport_nuit.pdf),
+[HTML version](report_night2/rapport_nuit.html), and
+[mathematical note](report_night2/restart_theory.pdf) cover variable auxiliary
+spaces. Actual FE fields, error maps, convergence curves, complete costs and
+failed adaptive refinement experiments are included. All numerical work uses
+CUDA; host code orchestrates experiments and renders figures.
+
+`MemoryTransport` now retains an FE anchor `a`, so that
+`v = R*w + (I-R*R)a`. This permits a contractive restart, a partial memory
+transfer, a lossless nested refinement, and an iterative projection onto the
+sum of the FE and new auxiliary spaces. The last method preserves the FE
+observation at every finite iteration and requires exact projections in a
+common ambient L2 space, not merely arbitrary contractive maps. Its stationary
+iteration is classical linear algebra; novelty of the complete construction
+is not established. Dense GPU oracles reconstruct independent lifted and
+common-ambient representations. Focused Compute Sanitizer checks pass.
+
+For a moving localized structure on 32768 graded P4 triangles, the pure
+advection baseline with a 64×64 Q4 moving carrier meets L2 < 1e-3 for every
+one of 1, 4 and 16 distinct fields. Three interleaved repetitions measure
+complete-cost ratios of 8.84, 13.37 and 34.67 against global-step upwind
+DG/RK4. This comparison includes setup and endpoint transfers, and excludes
+common mesh construction, initial FE projection and reference diagnostics.
+It does not compare local-time DG or an external GPU SL-DG solver. The pure
+advection baseline does not provide intermediate FE physics operations.
+
+For the coupled method, preserving more memory reduces the observed error
+after six support changes. With spatial FE reaction, 128 steps and a 64²
+FE mesh, eight projection iterations give L2 = 0.002728 versus 0.004535 for
+a reset; the FE projection floor is 0.002720. The nested-refinement identity
+passes its Gram tests, but its initial controllers exhaust their cell budget
+early and fail the transport accuracy target. These failures are retained.
+
+```sh
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/ambient_validation.py --output /tmp/slfe-ambient.json
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/adaptive_study.py --suite physics --output /tmp/slfe-physics.jsonl
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/matched_benchmark.py --output /tmp/slfe-matched.jsonl
+python3 experiments/slfe/night_finalize.py --input /home/keckj/Documents/slfe-results-night2
+```
+
 ## Daytime checkpoint: nonseparable flow and FE coupling with memory
 
 The daytime study extends the auxiliary-space transport to a prescribed

@@ -1,0 +1,440 @@
+{
+  "results": [
+    {
+      "p": 1,
+      "minimum_joint_gram": -1.118789659858066e-15,
+      "initial_energy": [
+        57.63542546803376,
+        76.11258022954101,
+        68.89084507751653
+      ],
+      "results": [
+        {
+          "iterations": 1,
+          "state_error": 2.5118795932144167e-15,
+          "observation_error": 1.021405182655144e-14,
+          "energy_error": 3.552713678800501e-14,
+          "retained_hidden_energy": [
+            0.33033011419436065,
+            0.3923753014024953,
+            0.18902761657390954
+          ],
+          "loss": [
+            5.941584769929165,
+            5.8618174901181135,
+            6.224407919671691
+          ],
+          "minimum_gain": 0.18902761657390954
+        },
+        {
+          "iterations": 2,
+          "state_error": 2.7200464103316335e-15,
+          "observation_error": 1.1324274851176597e-14,
+          "energy_error": 4.263256414560601e-14,
+          "retained_hidden_energy": [
+            0.40098370562248675,
+            0.4944940481966711,
+            0.2825745870903589
+          ],
+          "loss": [
+            5.8709311785010385,
+            5.759698743323938,
+            6.130860949155249
+          ],
+          "minimum_gain": 0.0706535914281261
+        },
+        {
+          "iterations": 4,
+          "state_error": 3.469446951953614e-15,
+          "observation_error": 1.0658141036401503e-14,
+          "energy_error": 2.842170943040401e-14,
+          "retained_hidden_energy": [
+            0.4544843969011012,
+            0.5859553758478171,
+            0.3793531353645676
+          ],
+          "loss": [
+            5.817430487222424,
+            5.668237415672792,
+            6.034082400881033
+          ],
+          "minimum_gain": 0.053500691278614454
+        },
+        {
+          "iterations": 8,
+          "state_error": 3.635980405647388e-15,
+          "observation_error": 1.2434497875801753e-14,
+          "energy_error": 2.842170943040401e-14,
+          "retained_hidden_energy": [
+            0.4922849278972947,
+            0.6414864182933968,
+            0.4542969227586724
+          ],
+          "loss": [
+            5.7796299562262305,
+            5.612706373227212,
+            5.959138613486928
+          ],
+          "minimum_gain": 0.037800530996193515
+        },
+        {
+          "iterations": 16,
+          "state_error": 3.885780586188048e-15,
+          "observation_error": 1.2434497875801753e-14,
+          "energy_error": 4.263256414560601e-14,
+          "retained_hidden_energy": [
+            0.5197241765612333,
+            0.6626611833491438,
+            0.5178575381352175
+          ],
+          "loss": [
+            5.752190707562285,
+            5.591531608171465,
+            5.895577998110383
+          ],
+          "minimum_gain": 0.021174765055747002
+        },
+        {
+          "iterations": 32,
+          "state_error": 4.052314039881821e-15,
+          "observation_error": 1.2878587085651816e-14,
+          "energy_error": 2.842170943040401e-14,
+          "retained_hidden_energy": [
+            0.5432304298049431,
+            0.6729989983841449,
+            0.5942909005776187
+          ],
+          "loss": [
+            5.728684454318582,
+            5.581193793136464,
+            5.819144635667982
+          ],
+          "minimum_gain": 0.010337815035001086
+        }
+      ]
+    },
+    {
+      "p": 2,
+      "minimum_joint_gram": -6.612545000007445e-16,
+      "initial_energy": [
+        121.89934582394152,
+        131.42779394194906,
+        133.5599259541642
+      ],
+      "results": [
+        {
+          "iterations": 1,
+          "state_error": 4.440892098500626e-15,
+          "observation_error": 1.2240208846492351e-14,
+          "energy_error": 5.684341886080802e-14,
+          "retained_hidden_energy": [
+            0.6857960573628503,
+            0.9981221534348634,
+            1.2727814107640825
+          ],
+          "loss": [
+            14.17041217499765,
+            16.746707690848183,
+            15.757847534930917
+          ],
+          "minimum_gain": 0.6857960573628503
+        },
+        {
+          "iterations": 2,
+          "state_error": 4.496403249731884e-15,
+          "observation_error": 1.1879386363489175e-14,
+          "energy_error": 8.526512829121202e-14,
+          "retained_hidden_energy": [
+            0.9442560188691829,
+            1.3566413315061396,
+            1.6893020326801462
+          ],
+          "loss": [
+            13.911952213491318,
+            16.388188512776892,
+            15.341326913014854
+          ],
+          "minimum_gain": 0.25845996150633255
+        },
+        {
+          "iterations": 4,
+          "state_error": 4.829470157119431e-15,
+          "observation_error": 1.2351231148954867e-14,
+          "energy_error": 7.105427357601002e-14,
+          "retained_hidden_energy": [
+            1.1580674161500468,
+            1.6148278802248512,
+            2.1037749787632407
+          ],
+          "loss": [
+            13.698140816210454,
+            16.13000196405818,
+            14.926853966931759
+          ],
+          "minimum_gain": 0.21381139728086396
+        },
+        {
+          "iterations": 8,
+          "state_error": 4.6629367034256575e-15,
+          "observation_error": 1.2406742300186124e-14,
+          "energy_error": 5.684341886080802e-14,
+          "retained_hidden_energy": [
+            1.3442481346159383,
+            1.78631929946431,
+            2.4806902204766317
+          ],
+          "loss": [
+            13.511960097744563,
+            15.958510544818722,
+            14.549938725218368
+          ],
+          "minimum_gain": 0.17149141923945876
+        },
+        {
+          "iterations": 16,
+          "state_error": 4.440892098500626e-15,
+          "observation_error": 1.2545520178264269e-14,
+          "energy_error": 8.526512829121202e-14,
+          "retained_hidden_energy": [
+            1.5329289247008546,
+            1.8832184720982355,
+            2.7361769276788124
+          ],
+          "loss": [
+            13.323279307659647,
+            15.86161137218481,
+            14.294452018016187
+          ],
+          "minimum_gain": 0.09689917263392545
+        },
+        {
+          "iterations": 32,
+          "state_error": 4.6629367034256575e-15,
+          "observation_error": 1.2823075934420558e-14,
+          "energy_error": 7.105427357601002e-14,
+          "retained_hidden_energy": [
+            1.6971492906415193,
+            1.9511985572551964,
+            2.8904824459189626
+          ],
+          "loss": [
+            13.159058941718982,
+            15.793631287027836,
+            14.140146499776023
+          ],
+          "minimum_gain": 0.06798008515697518
+        }
+      ]
+    },
+    {
+      "p": 4,
+      "minimum_joint_gram": -7.427280867420643e-16,
+      "initial_energy": [
+        330.944985651279,
+        365.3973545135652,
+        355.6947275395371
+      ],
+      "results": [
+        {
+          "iterations": 1,
+          "state_error": 7.549516567451064e-15,
+          "observation_error": 1.687538997430238e-14,
+          "energy_error": 2.2737367544323206e-13,
+          "retained_hidden_energy": [
+            3.7494449901479356,
+            3.5855910867379635,
+            6.555264040260511
+          ],
+          "loss": [
+            40.01935160296546,
+            45.660746880828185,
+            44.58548563344317
+          ],
+          "minimum_gain": 3.5855910867380203
+        },
+        {
+          "iterations": 2,
+          "state_error": 5.773159728050814e-15,
+          "observation_error": 2.2648549702353193e-14,
+          "energy_error": 2.2737367544323206e-13,
+          "retained_hidden_energy": [
+            5.030766556310823,
+            5.052370001675399,
+            8.721838904876222
+          ],
+          "loss": [
+            38.73803003680257,
+            44.19396796589075,
+            42.41891076882746
+          ],
+          "minimum_gain": 1.2813215661628874
+        },
+        {
+          "iterations": 4,
+          "state_error": 6.022959908591474e-15,
+          "observation_error": 1.9317880628477724e-14,
+          "energy_error": 1.7053025658242404e-13,
+          "retained_hidden_energy": [
+            6.190945939143546,
+            6.328601281751958,
+            10.694300066488267
+          ],
+          "loss": [
+            37.57785065396985,
+            42.91773668581419,
+            40.44644960721541
+          ],
+          "minimum_gain": 1.1601793828327231
+        },
+        {
+          "iterations": 8,
+          "state_error": 6.772360450213455e-15,
+          "observation_error": 1.9539925233402755e-14,
+          "energy_error": 1.7053025658242404e-13,
+          "retained_hidden_energy": [
+            7.184266339685053,
+            7.371599491740312,
+            11.899278856216142
+          ],
+          "loss": [
+            36.58453025342834,
+            41.874738475825836,
+            39.24147081748748
+          ],
+          "minimum_gain": 0.9933204005415632
+        },
+        {
+          "iterations": 16,
+          "state_error": 6.5503158452884236e-15,
+          "observation_error": 1.687538997430238e-14,
+          "energy_error": 1.1368683772161603e-13,
+          "retained_hidden_energy": [
+            7.86961357342625,
+            8.32638615102826,
+            12.454656501785735
+          ],
+          "loss": [
+            35.89918301968714,
+            40.91995181653789,
+            38.686093171917946
+          ],
+          "minimum_gain": 0.5553776455695925
+        },
+        {
+          "iterations": 32,
+          "state_error": 9.547918011776346e-15,
+          "observation_error": 1.9984014443252818e-14,
+          "energy_error": 1.7053025658242404e-13,
+          "retained_hidden_energy": [
+            8.34848729773961,
+            9.144381591225113,
+            12.832250895802417
+          ],
+          "loss": [
+            35.420309295373784,
+            40.10195637634109,
+            38.30849877790132
+          ],
+          "minimum_gain": 0.37759439401662576
+        }
+      ]
+    }
+  ],
+  "provenance": {
+    "utc": "2026-11-16T22:55:10Z",
+    "git": "0a2101d45d8b3915a1e9b7eabb4d61ad4a8ff882",
+    "source_sha256": {
+      "validate_day.py": "b738c0efaaf9b2bf970d5b0de6918c9b31431c4e7aa96cf5d62f75ff20a2cfa4",
+      "adaptive_study.py": "5376fa595cb6f2745db94c4613aa51b0c4ce528de8e11f69c49b7eff539da71e",
+      "campaign.py": "e6a291611f732588ba743f379a1eb458dc4e0a242f52f02fecff270e5f817900",
+      "report.py": "95ec606f2dcf21a1f911fbc1d42bd4b0e7aaa5855515d7b1f0090a4ccd0f0328",
+      "local_operator.cu": "85e3a46780114fdcc3930178ee6fb05874200ef66059134656a302c7ff1a0ec6",
+      "spectral_reference.py": "20b6e1afe7881b47a368fd33356516caecec78a0238ef9ce9f4d738194f1304e",
+      "symbolic.py": "1aeea1bb6bfa89c3a1cbcaf18d712b4551d3abc0656d5cd2b0fdfddd60791354",
+      "transfer.cu": "816b5c16ccf51e8476bd362188a2b76cca17c4baac84de3c83aff9016beb1fe8",
+      "day_report.py": "7d3dd047b63be0e193334edb5f8b7bf5df17a111b8e5ecc5f5452bc1d7a261be",
+      "mode_study.py": "03df17c3ccad09d88370f08b9447bf288f956ca22200570676084748a770acf1",
+      "eulerian_dg.cu": "26babd6b8fc0f53952da3b3efda271de348e816b7f5323e0709147487d49b20c",
+      "carrier.cu": "188fe54e8227d0a5d71ccfb3fdddf60547a8f0534136299ac4b44ba9f10cf8be",
+      "day_finalize.py": "3969ce97da218141cdd2ee39ce7029f14680a54efe5e652d741fff22cba2f438",
+      "nested_validation.py": "26a5e646b9b0e465daa2c182764e109a0f6c5161db6b8bedcd18774fa27f44c1",
+      "coupled_benchmark.py": "0fee0f17a07a5bd2e681c5f48acf927be8217533243b594bd7fff7415f13b37a",
+      "validate_graph_lifetime.py": "6a8dfa690914ff5796ab5de658f15444d4895a61abde0d2f1e0fed56c056149e",
+      "carrier_study.py": "2c5c214a15cf5ca1ea4e12ee1df02441c606a2a53f9f3a2987c7c5e0fc752736",
+      "carrier_build_study.py": "4650308fc730c75404eccf347b8fa315de9ce8e299be258bffb41c4c2e57036d",
+      "memory_study.py": "72e805affdf81cab5dc9fe64b231de3ebd877f990c986bbfae6289e8f4a8c196",
+      "night_fields.py": "d1a6aeb719f6c1efc4205454baab70ef95f2959f429a10709d9b2c3e33ad44dd",
+      "fourier_carrier.py": "3bc27d0e0b02e03fbe50e41188255ad83089273b91eb71ce4a16883994acde6c",
+      "fourier_modes.py": "12b1e8a86390c312621aba1eb8212637a498ca2fc48a74d602d1aa9a01be0fcc",
+      "carrier.py": "33637290ffdc35aa009ff23240c34c7c0599d836c0a2c9b6396a1bf3a1c27bd2",
+      "night_dg_benchmark.py": "6d6d3c1f935c9fe73e3649b0fccb722a0c001b3c12c5a6484212333de3a0bf82",
+      "tensor_report.py": "19f4ed44eccb44f0177912a2ed2029f48aa122c5d8d5a40fd0c6604fb06f4764",
+      "moments.py": "ff0e0ad6508686b627cee867a11b490494c3389b285c1b0d1b873d4fc4e5510f",
+      "tensor_study.py": "83b1a38eb7a0b68e5a1fa2d7dca86b443832a1b98eade9717d10eb7d3b8d91a5",
+      "tensor_projection.py": "d83c45402e758e38c69c02ec7f7f8676861f21a5d50b01b556e26559357d65ad",
+      "reaction_study.py": "09e5a789d15582b54a24e5eb99649da3b0adf07f7b525069849918a4cbf8d71c",
+      "geometry_control.py": "2fea76b0032bcb6a22f98d4651d844c3c309eb90102250dcc5ac5675eb5f1f1a",
+      "memory_transport.py": "878dc0553432560767007d291923bd938b282e0cda97499642d61b726ad33a18",
+      "basis.cuh": "067d7dde2ffed83d1159eefcfb434a94fbbb562bea7d30768f5db1ac1f77dbd2",
+      "tensor_time_defect.py": "5923b717befb8834ced7b1e9b044b62d31b5a502834ebd1008f777394dd6fa85",
+      "cellular_reference.cu": "5b92154658c8dd49d916074c45d759d12477cfc34774230f4ac6e593a4c81710",
+      "tensor_cellular.py": "b5e0eaca494a2d9ad152b93327583bba17ba5b0821a5ef8170aadddc263ee972",
+      "restart_study.py": "fff7a6836dbb1df7c9812e1dfdd614f5c83f5c86671461d22b48b814fb726230",
+      "validate.py": "3d6296852c6d19234614a1d9775e71031042a7686617367f97b421ceaffd271d",
+      "night_report.py": "d55c1859181a75a0208af1f60000d789126b956f4da9e4413dd4ce8fe8f7dc43",
+      "overnight.py": "d7a5a85e3485e188657adf2381349db9f06b2b47c0c39311b8a05ddb612622ee",
+      "gpu.py": "63659f9a5fbfbd3d806b588e16e3eb70aeb03a68b3062f8663a3e5e442504800",
+      "ensemble_study.py": "549b5b2fb7d4ce077fef2866edf526dafb3597d9d4271e9bb2018023d4cbc3f6",
+      "day_artifacts.json": "2ae00743eed8581dd108651aaf75c9960a98ed90cdaac3409031311dddd57296",
+      "symbolic.json": "3fe2f294f613777861bf03ba2a26ece3cae8cda67e5a7b3f486285ec85907f64",
+      "refinement_study.py": "aecca3c2c89286164252a228b324e29dd5812d5bf922a93f844ec551ee4ad9e5",
+      "normalized.py": "1c7eabc8c7fbdfa7055ac902f22795d54346bb59a026c53b7a2dc8958e687c94",
+      "finalize.py": "bb13fa4a9a44840f8662677370093e9bf0f59ae88ced60683e0a41733dbab8a4",
+      "incremental_report.py": "080475751509b8ff8e80eb2d6ce3304359c83e1d9b086a39ea7f580d2e8ee281",
+      "fourier_carrier.cu": "c1483ef0083d5f889a7ae99aa0cdee44ef78b56344389741baeb8e179c0e274f",
+      "basis_gradient.cuh": "90d4971421cbae591dd9701dcb9d1ae9ce81c17562e47c7d5cf1a3ada329fa93",
+      "cfl_study.py": "869eb81f610b52d5fc20df90227cefd0a28519f64c6b6ee0ca32af19725c4f66",
+      "field_report.py": "851cb5fc65e45aa15368e68ad5b2e6b82c748a4e294634f85d22e6a925d56245",
+      "validate_tensor.py": "fedd2276354cb3a9d88989afb54de094b44da2cd6207577d7fbe8eb70f07a161",
+      "fourier_study.py": "ce8f3324d279478ebb0b71ae692412ab018737be252d0f2255d625229cc9065c",
+      "flows.py": "5ee21e0f2a569630e345b202f497e1a48458a9770192021b957fb444deaf88e3",
+      "research.py": "90fc9ad028fdb311156d020fb9bcee86c47959167d2f658fc84aedab546e5067",
+      "dg_study.py": "05a051126d81fdbfdd259286f7f82e787a3114f3610b6af23914dc363dc3a474",
+      "flux.py": "2a62349b1a0402c04a86bc360dbf48a2527fd29c0130b045ca066291696c0a2d",
+      "eulerian_dg.py": "4c894a131006176a9e7b3403e98c1aa6b3a2260dc70237944c77a6c3d87b78c4",
+      "symbolic_gradient.py": "5cc885cf9fc7c682db3f13c079ec68eaa5ca154a6247d0fa88c54e70c0bcd4e8",
+      "scale_study.py": "b2ba5395f1faf57859030a152839ecc6c2c38dcbdf7e26d6f80382f596176fe6",
+      "gpu_graph.py": "277fa5ad444a6a467fce728dff6036f6d68f77ba4c18a6e647f265524dc38ede",
+      "carrier_polynomials.json": "9130f39e95d5bcca65d02b452972d851f835caaebb855a918217d1c8aa1de50e",
+      "references.json": "3e41af93b0ed3f789e8625c9863470ecbf8e86c4167dc2961025563d249b3123",
+      "day_study.py": "d7e2475c2af15b35d3685bf33db0332d3399ce6508a9e8f5bbcaa151df72f0f1",
+      "tensor_intervals.cuh": "27f24db4c976a83eaad78335295a07042d30e6fcded8009f794563a4fa8ded9b",
+      "reaction_reference.cu": "8149303457db5d7b98a8912cd3efb8932acbd36aadb1ec7652caa162e8b34141",
+      "tensor_remap.cu": "ff2537cc9c118378785064d4c86a65901e722d141b7bd0d284d2f5fb0ace08df",
+      "field_sample.cu": "ad6c5fb4c75be65a7ded791bc1de43484329e5d9be1299cefffa651aeaea3802",
+      "graded_study.py": "72c6d0c31c04ceece1571ca9c475f1e916b3ef2ff08108484b580947f84fc9db",
+      "memory_transfer_study.py": "cbf8342c4809d3b80716d465f0f6edcbe42f5cd40f3e72dcb94aee01af716adb",
+      "tensor_remap.py": "6f5eab932d6e3f3d480b42b2d4ba40b86453c38c5642946d1e4ecb319ba22cc0",
+      "validate_comparisons.py": "019215fb038c1306175da5d817677ceea5643a55e0c59e9c085b3cad1fc65464",
+      "fourier_reference.cu": "ff222b62b56c963602be923e84f867228d2ddc89d06601df87d5da83cfea0d7e",
+      "rotation_dg.py": "e34896c738c59209dfc2383147196c3e0a9201f9c57d8c51d88fb4846336aa7b",
+      "matched_benchmark.py": "db70ec8578144543c1a1740d9643b1dea57c0591ba08291f107c6ddf30745fcd",
+      "cartesian.py": "a27d6a2b8996333ab260b0553c75c3e6eccbffc95f5fd1d3c38bbffd53e95cc2",
+      "validate_moments.py": "1c255dbec9db3cfbbcd9c5897bbf325c73dc92719d467437f9ed29610a75a709",
+      "fourier_flow.py": "0ce1f24ede2c44497b5c688e595a2f893f6edb04a5b0e469b866582cd31bebfb",
+      "ambient_validation.py": "d65100181dbf5830f934aa1a2620d6b4cdbc6e406d38e9a34dce36f4f055a944",
+      "symbolic_carrier.py": "f872956e57ae551640bdacab505f991b708b80b062ea2b5ea1b876563bd41b0b",
+      "ray_flux.cu": "909d47a1c0fb0d940f9b0877f84c8cdb82c388f56a6511ee451f88480221226c",
+      "moving_validation.py": "bdd60d702cefd1bf900abde5f3cdaebb7662ee16f18bcd7c0dd638dc2bd2b6f1",
+      "moving_study.py": "ee330c110d42a0d088841aa95d8ae42a230251244e9a6e65890a10729fbed748",
+      "tensor_grid.py": "480360fb44f440ae503f4411ef6d5e3429596207120f627db7af0d4995dcbc5b",
+      "rotation_dg.cu": "50e34d67cd351d6c5a58cd187462fc8a78a6807220b06b5a0134f12237c5684a",
+      "rotation_study.py": "99eaceda9f6508926980a1eaeec38bba86e3d68c5079ed8fa5af55d56f73875b"
+    },
+    "python": "3.10.12",
+    "cupy": "13.6.0",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "cuda_driver": 13020,
+    "cuda_runtime": 12090
+  }
+}

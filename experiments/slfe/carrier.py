@@ -149,6 +149,11 @@ class Carrier:
         cp.cuda.Stream.null.synchronize()
         self.build_seconds = time.perf_counter() - start
 
+    def energy(self, coefficients):
+        """Exact tensor-polynomial L2 norm squared, one entry per field."""
+        weights = self.mass[:, None, :] if self.nonuniform else self.mass
+        return cp.sum(weights * coefficients**2, axis=(0, 2))
+
     def project(self, coefficients):
         fields = coefficients.shape[1]
         output = cp.zeros((self.n * self.n, fields, self.nc), dtype=cp.float64)
