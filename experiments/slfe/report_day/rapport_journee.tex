@@ -4,10 +4,24 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : flot non séparable\\et couplage FE avec mémoire}
-\author{Point d'étape de recherche GPU}\date{16/11/2026 à 12:39}
+\author{Point d'étape de recherche GPU}\date{16/11/2026 à 17:54}
 \begin{document}\maketitle
-Point d'étape de recherche du 16/11/2026 à 12:39. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
+Point d'étape de recherche du 16/11/2026 à 17:54. La branche SLFE contient des prototypes GPU distincts de l'interface de production Rodin. La campagne de nuit et le premier rapport incrémental restent disponibles séparément.
 
+\section{Voir le calcul : ce qui est transporté et comparé}
+Le problème est le transport d'une concentration scalaire par une vitesse prescrite sur le carré périodique. La concentration est représentée par des polynômes P4 sur les triangles. Deux calculs sont comparés : le DG amont à pas global et le transport avec un état auxiliaire conservé entre les pas. La référence suit les caractéristiques avec un intégrateur RK4 indépendant.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{method-diagram.pdf}\caption{Les échanges FE–auxiliaire portent sur les incréments. L'état auxiliaire reste présent entre les pas et reçoit les modifications de la physique FE.}\end{figure}
+\clearpage
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{fields-smooth.pdf}\caption{Champ lisse sur le maillage gradué : état initial, référence, deux solutions et leurs erreurs ponctuelles. Les quatre champs utilisent une même échelle de couleur ; les deux erreurs partagent une échelle logarithmique. Les normes L2 sont intégrées sur les éléments, indépendamment des pixels affichés.}\end{figure}
+Les deux solutions finales sont visuellement superposables à la référence. Les cartes d'erreur révèlent les écarts que l'échelle du champ masque. Les champs montrés sont les polynômes FE reconstruits, évalués sur GPU dans leur élément ; aucune moyenne entre éléments n'est appliquée.
+
+\clearpage
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{mesh-vs-carrier.pdf}\caption{Zoom identique autour de (0,35 ; 0,45). Le cercle rouge a un rayon de 0,0015, égal à la largeur du profil fin. La grille de droite montre les points du support Fourier ; la projection DG cartésienne intermédiaire intervient également dans le transfert.}\end{figure}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{fields-narrow.pdf}\caption{Contre-exemple de la bosse fine, en zoom local : le DG suit le déplacement alors que le support auxiliaire à 95² valeurs conserve une forte trace de la position initiale. Les couleurs communes rendent visibles les valeurs négatives et les différences d'amplitude. L'erreur L2 est calculée sur le domaine entier.}\end{figure}
+\clearpage
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{visible-cost.pdf}\caption{Nouvelle exécution destinée aux visualisations, avec préparation et évolution séparées. Les deux méthodes atteignent une précision comparable pour le champ lisse. La comparaison des temps de la bosse fine doit tenir compte de l'échec de précision du support auxiliaire.}\end{figure}
+\clearpage
 \section{Résultat algorithmique}
 Le transport par projection statique est étendu à un flot cellulaire non séparable. Trois réalisations sont comparées : des supports DG orientés, un support DG unique avec changements de coordonnées incrémentaux, puis un support de Fourier unitaire. Le dernier est couplé aux triangles par deux projections adjointes FE–DG–Fourier.
 

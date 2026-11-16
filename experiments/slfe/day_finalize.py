@@ -64,7 +64,7 @@ def main():
                     timeout=120,
                 )
     for path in report.iterdir():
-        if path.suffix in (".pdf", ".svg", ".html", ".tex", ".json"):
+        if path.suffix in (".pdf", ".svg", ".png", ".html", ".tex", ".json"):
             shutil.copy2(path, HERE / "report_day" / path.name)
     for name in ("ensemble.jsonl", "ensemble-status.json", "ensemble-smoke.jsonl"):
         if (args.input / name).exists():

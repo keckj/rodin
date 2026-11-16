@@ -7,6 +7,7 @@ import argparse
 from datetime import datetime
 import json
 from pathlib import Path
+import shutil
 import subprocess
 from statistics import median
 from zoneinfo import ZoneInfo
@@ -80,6 +81,49 @@ def main():
         "distincts de l'interface de production Rodin. La campagne de nuit et le premier "
         "rapport incrémental restent disponibles séparément."
     )
+    visuals = args.input / "visuals"
+    if (visuals / "fields-smooth.pdf").exists():
+        for source in visuals.iterdir():
+            if source.suffix in (".pdf", ".svg", ".png", ".json"):
+                shutil.copy2(source, args.output / source.name)
+        r.section("Voir le calcul : ce qui est transporté et comparé")
+        r.paragraph(
+            "Le problème est le transport d'une concentration scalaire par une vitesse "
+            "prescrite sur le carré périodique. La concentration est représentée par des "
+            "polynômes P4 sur les triangles. Deux calculs sont comparés : le DG amont "
+            "à pas global et le transport avec un état auxiliaire conservé entre les pas. "
+            "La référence suit les caractéristiques avec un intégrateur RK4 indépendant."
+        )
+        r.figure(
+            "method-diagram",
+            "Les échanges FE–auxiliaire portent sur les incréments. L'état auxiliaire reste présent entre les pas et reçoit les modifications de la physique FE.",
+        )
+        r.tex.append(r"\clearpage")
+        r.figure(
+            "fields-smooth",
+            "Champ lisse sur le maillage gradué : état initial, référence, deux solutions et leurs erreurs ponctuelles. Les quatre champs utilisent une même échelle de couleur ; les deux erreurs partagent une échelle logarithmique. Les normes L2 sont intégrées sur les éléments, indépendamment des pixels affichés.",
+        )
+        r.paragraph(
+            "Les deux solutions finales sont visuellement superposables à la référence. "
+            "Les cartes d'erreur révèlent les écarts que l'échelle du champ masque. "
+            "Les champs montrés sont les polynômes FE reconstruits, évalués sur GPU "
+            "dans leur élément ; aucune moyenne entre éléments n'est appliquée."
+        )
+        r.tex.append(r"\clearpage")
+        r.figure(
+            "mesh-vs-carrier",
+            "Zoom identique autour de (0,35 ; 0,45). Le cercle rouge a un rayon de 0,0015, égal à la largeur du profil fin. La grille de droite montre les points du support Fourier ; la projection DG cartésienne intermédiaire intervient également dans le transfert.",
+        )
+        r.figure(
+            "fields-narrow",
+            "Contre-exemple de la bosse fine, en zoom local : le DG suit le déplacement alors que le support auxiliaire à 95² valeurs conserve une forte trace de la position initiale. Les couleurs communes rendent visibles les valeurs négatives et les différences d'amplitude. L'erreur L2 est calculée sur le domaine entier.",
+        )
+        r.tex.append(r"\clearpage")
+        r.figure(
+            "visible-cost",
+            "Nouvelle exécution destinée aux visualisations, avec préparation et évolution séparées. Les deux méthodes atteignent une précision comparable pour le champ lisse. La comparaison des temps de la bosse fine doit tenir compte de l'échec de précision du support auxiliaire.",
+        )
+        r.tex.append(r"\clearpage")
     r.section("Résultat algorithmique")
     r.paragraph(
         "Le transport par projection statique est étendu à un flot cellulaire non séparable. "

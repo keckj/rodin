@@ -19,6 +19,21 @@ composition when both sub-operators are contractive. The implementation in
 The [daytime report](report_day/rapport_journee.pdf) and
 [mathematical note](report_day/memory_theory.pdf) explain the construction,
 conditional consistency estimates, numerical evidence and open questions.
+The opening figures show the reconstructed FE fields, independent
+characteristic reference, pointwise errors, local mesh resolution and costs
+for a smooth profile and the unresolved narrow-feature counterexample.
+The [HTML report](report_day/rapport_journee.html) provides the same figures.
+Numerical field evaluation runs in `field_sample.cu`; the renderer preserves
+cell-local DG values and uses common color scales across methods. Element
+interior evaluations are checked against direct basis evaluation, independently
+of the locator. The focused Compute Sanitizer log is retained in
+`results_day/field-sampler-sanitizer.log.txt`.
+
+```sh
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/field_report.py --output /home/keckj/Documents/slfe-results-day/visuals
+python3 experiments/slfe/day_finalize.py --input /home/keckj/Documents/slfe-results-day
+```
+
 The study includes a spatially varying FE reaction, independent GPU matrix
 exponentials for the coupling validation, and a Fourier/RK4 GPU comparator.
 Both timing comparisons use CUDA graph replay. The Fourier comparator is
