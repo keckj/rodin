@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh the SLFE daytime report at 18:00 Paris time
+
+[Timer]
+OnCalendar=2026-11-16 18:00:00 Europe/Paris
+Persistent=true
+Unit=slfe-day-report-20261116.service
+
+[Install]
+WantedBy=timers.target

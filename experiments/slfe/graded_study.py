@@ -57,10 +57,12 @@ def evolve(
     seed=17,
     fields=1,
     repeats=1,
+    profile=gaussian,
 ):
     mesh = GradedMesh(n, grading, seed=seed)
     space = Space(mesh, p)
-    initial = cp.repeat(space.project(gaussian), fields, axis=1)
+    initial = cp.repeat(space.project(profile), fields, axis=1)
+    fields = initial.shape[1]
     cp.cuda.Stream.null.synchronize()
     start = time.perf_counter()
     if method == "auxiliary":
@@ -94,7 +96,8 @@ def evolve(
         cp.cuda.Stream.null.synchronize()
         samples.append(time.perf_counter() - start)
     elapsed = median(samples)
-    errors = space.errors(value, lambda points, t: exact_field(points, t, True), 0.5)
+    reference = lambda points, t: exact_field(points, t, True, profile=profile)
+    errors = space.errors(value, reference, 0.5)
     mass = float(cp.max(cp.abs(space.mass(value) - space.mass(initial))))
     energy = float(cp.max(space.energy(value) / space.energy(initial)))
     assert mass < 3e-10 and energy <= 1 + 3e-10, (mass, energy)
@@ -116,10 +119,8 @@ def evolve(
         check.result()
         probe = float(cp.max(maximum))
         assert probe < 1 + 1e-8, probe
-    best = space.project(lambda points, t: exact_field(points, t, True), 0.5, degree=20)
-    floor = space.errors(
-        best, lambda points, t: exact_field(points, t, True), 0.5, degree=20
-    )["l2"][0]
+    best = space.project(reference, 0.5, degree=20)
+    floors = space.errors(best, reference, 0.5, degree=20)["l2"]
     return dict(
         n=n,
         p=p,
@@ -136,7 +137,8 @@ def evolve(
         mass_error=mass,
         energy_ratio=energy,
         random_energy_probe=probe,
-        best_projection_error=floor,
+        best_projection_error=floors[0],
+        best_projection_errors=floors,
         fields=fields,
         evolution_samples=samples,
         repeats=repeats,

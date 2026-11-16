@@ -1,0 +1,13 @@
+[Unit]
+Description=SLFE GPU ensemble robustness campaign
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/keckj/Documents/rodin-SLFE
+Environment=CUDA_PATH=/usr/local/cuda
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/systemd-inhibit --what=sleep --mode=block --who=SLFE "--why=SLFE GPU robustness campaign" /usr/bin/python3 /home/keckj/Documents/rodin-SLFE/experiments/slfe/ensemble_study.py --output /home/keckj/Documents/slfe-results-day --deadline 2026-11-16T17:40:00+01:00
+ExecStartPost=/usr/bin/python3 /home/keckj/Documents/rodin-SLFE/experiments/slfe/day_finalize.py --input /home/keckj/Documents/slfe-results-day --publish
+TimeoutStartSec=8h
+StandardOutput=append:/home/keckj/Documents/slfe-results-day/ensemble-service.log
+StandardError=inherit

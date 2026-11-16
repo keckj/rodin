@@ -8,6 +8,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 import subprocess
+from statistics import median
 from zoneinfo import ZoneInfo
 
 from report import Report, apply_style, plt, tex_escape
@@ -54,6 +55,8 @@ def main():
         "rotation-accuracy",
         "rotation-refinement",
     )
+    if (args.input / "ensemble.jsonl").exists():
+        names += ("ensemble",)
     raw = {
         name: [
             json.loads(line)
@@ -479,6 +482,51 @@ def main():
         "stable n'est donc pas retenue comme solution rapide au problème des petits "
         "éléments. Le résultat négatif est conservé avec son implémentation."
     )
+    if "ensemble" in data:
+        r.section("Robustesse : maillages et champs indépendants")
+        samples = data["ensemble"]
+        complete = [x for x in samples if x["evolution_ratio"] is not None]
+        attempts = [a for x in samples for a in x["attempts"]]
+        r.paragraph(
+            f"{len(samples)} ensembles de champs sont enregistrés ; {len(complete)} "
+            "atteignent la tolérance commune de 1e-5 dans tous les champs avec les "
+            "deux méthodes. Les autres cas restent dans les données. Les centres "
+            "des bosses périodiques sont tirés sur GPU dans [0,15 ; 0,85]² ; "
+            "les champs sont distincts et les graines de maillage varient. "
+            f"{sum(a['status'] != 'ok' for a in attempts)} tentatives de réglage "
+            "ont échoué à un contrôle ou à l'exécution et sont conservées."
+        )
+        table = []
+        for n, fields in sorted({(x["n"], x["fields"]) for x in samples}):
+            group = [x for x in samples if (x["n"], x["fields"]) == (n, fields)]
+            matched = [x for x in group if x["evolution_ratio"] is not None]
+            ratios = [x["evolution_ratio"] for x in matched]
+            table.append(
+                [
+                    n,
+                    fields,
+                    f"{len(matched)}/{len(group)}",
+                    median(ratios) if ratios else "—",
+                    min(ratios) if ratios else "—",
+                    max(ratios) if ratios else "—",
+                    median([x["total_ratio"] for x in matched]) if matched else "—",
+                ]
+            )
+        r.table(
+            ["n", "Champs", "Acceptés", "Gain médian", "Min.", "Max.", "Total médian"],
+            table,
+        )
+        r.paragraph(
+            "Les temps d'évolution sont les médianes de trois répétitions. DG essaie "
+            "successivement les facteurs de pas 8, 6 et 4, avec contrôle aléatoire ; "
+            "l'auxiliaire essaie les couples (points, pas) (95,16), (95,32), (127,32), "
+            "(191,32), (191,64). Le premier réglage satisfaisant tous les champs est "
+            "retenu. Si la meilleure projection FE dépasse la tolérance, le cas est "
+            "déclaré non comparable sur ce maillage. Les coûts de recherche du réglage "
+            "sont exclus des rapports. Le total ajoute la préparation mesurée une fois ; "
+            "l'ordre fixe DG puis auxiliaire peut influencer les caches et ce coût. "
+            "Chaque ensemble utilise un processus GPU neuf."
+        )
     r.section("Portée scientifique")
     r.table(
         ["α", "Méthode", "Pas", "Erreur L2", "Évolution (s)"],

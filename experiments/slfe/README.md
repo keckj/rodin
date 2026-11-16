@@ -67,6 +67,26 @@ checks confirm order four and the invariants, but the advection tests retain
 a severe accuracy restriction on the timestep. This is a documented negative
 result for the intended large-step acceleration, not the selected method.
 
+The follow-up ensemble campaign runs 60 combinations of mesh seed, resolution
+and number of distinct Gaussian profiles. Each isolated GPU worker tunes the
+two methods against a common all-field L2 tolerance, retaining rejected
+settings and unresolved cases. Three timing repeats are recorded. The user
+service `slfe-day-campaign-20261116` refreshes and publishes the report when
+this finite campaign completes, with a deadline of 17:40 Europe/Paris.
+`slfe-day-report-20261116.timer` refreshes it again at 18:00 on 16 November.
+These services execute predefined numerical tests and report generation;
+they do not perform further interactive algorithm design.
+
+```sh
+systemctl --user status slfe-day-campaign-20261116.service
+systemctl --user list-timers slfe-day-report-20261116.timer
+cat /home/keckj/Documents/slfe-results-day/ensemble-status.json
+```
+
+`day_finalize.py` refuses another branch or push destination, and refuses to
+commit when the index already has staged changes. It stages only generated
+daytime artifacts. The sole publication destination remains `keckj/rodin:SLFE`.
+
 ```sh
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/day_study.py --suite validation --output /tmp/slfe-day
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/fourier_study.py --suite validation --output /tmp/slfe-day

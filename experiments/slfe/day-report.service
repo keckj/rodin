@@ -1,0 +1,10 @@
+[Unit]
+Description=SLFE daytime report and authorized fork publication
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/keckj/Documents/rodin-SLFE
+ExecStart=/usr/bin/python3 /home/keckj/Documents/rodin-SLFE/experiments/slfe/day_finalize.py --input /home/keckj/Documents/slfe-results-day --publish
+TimeoutStartSec=10min
+StandardOutput=append:/home/keckj/Documents/slfe-results-day/day-scheduled-report.log
+StandardError=inherit
