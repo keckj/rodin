@@ -74,6 +74,15 @@ def main():
             "reaction-moments-fine",
             "reaction-moments-quadrature",
             "reaction-projection",
+            "spectral-reaction",
+            "tiled-return-pilot",
+            "long-return-benchmark",
+            "residual-return",
+            "reaction-increment-projection",
+            "reaction-residual-projection",
+            "increment-physical",
+            "increment-reanchor",
+            "increment-conditioning",
             "material-minimax",
             "minimax-return",
             "diffusion",
@@ -1297,6 +1306,118 @@ def main():
         r.paragraph(
             "Les contrôles indépendants comparent les produits pondérés, les rangs retenus, les coefficients et l'état ambiant. Les directions presque nulles peuvent amplifier les différences de coefficients; le fichier brut conserve également la variabilité entre répétitions du calcul initial. Le gain local doit être distingué du temps de construction des supports."
         )
+    tiled_file = args.input / "carrier-tiled.json"
+    if tiled_file.exists():
+        tiled = json.loads(tiled_file.read_text())
+        r.section("Évaluer la quadrature en parallèle pour reconstruire les supports")
+        r.paragraph(
+            "Le noyau précédent évaluait chaque point de quadrature avec une seule voie du warp avant de répartir les entrées de la matrice. Le nouveau noyau prépare 32 points en parallèle dans la mémoire partagée, puis accumule les mêmes produits de bases. La normalisation par les poids de masse est effectuée à la fin de l'intégration. Les intersections, quadratures et espaces polynomiaux restent identiques. L'option tiled est explicite; les campagnes précédentes utilisaient l'ancien constructeur."
+        )
+        checks = tiled["controls"]
+        r.paragraph(
+            f"Les {len(checks)} contrôles comparent le constructeur au noyau scalaire indépendant : degrés 1, 2, 4, partitions uniformes ou périodiques non uniformes, intégrales ordinaires ou pondérées par la réaction, et deux subdivisions de quadrature. L'écart relatif maximal des blocs est {max(x['relative_block_error'] for x in checks):.3g}. Les applications et l'adjoint de masse sont également comparés."
+        )
+        timings = tiled.get("timings", [])
+        if timings:
+            r.table(
+                [
+                    "FE n",
+                    "Aux. n",
+                    "Ancien (s)",
+                    "Quadrature parallèle (s)",
+                    "Rapport",
+                    "Écart L2 après 16 transports",
+                ],
+                [
+                    [
+                        x["nfe"],
+                        x["naux"],
+                        x["median_total_seconds"]["warp"],
+                        x["median_total_seconds"]["tiled"],
+                        x["median_total_seconds"]["warp"]
+                        / x["median_total_seconds"]["tiled"],
+                        x["transport_l2"],
+                    ]
+                    for x in timings
+                ],
+            )
+            fig, ax = plt.subplots(figsize=(8, 3.5), layout="constrained")
+            for offset, builder, label in (
+                (-0.18, "warp", "Construction précédente"),
+                (0.18, "tiled", "Quadrature parallèle"),
+            ):
+                ax.bar(
+                    [i + offset for i in range(len(timings))],
+                    [x["median_total_seconds"][builder] for x in timings],
+                    width=0.34,
+                    label=label,
+                )
+            ax.set_xticks(
+                range(len(timings)),
+                [f"FE {x['nfe']}, auxiliaire {x['naux']}" for x in timings],
+            )
+            ax.set(ylabel="Construction complète (s)", yscale="log")
+            ax.legend()
+            ax.grid(axis="y", alpha=0.2)
+            r.save_figure(
+                fig,
+                "night-carrier-tiled",
+                "Médianes de cinq constructions après chauffe, dans un ordre alterné. La construction géométrique, la compaction des blocs et les allocations sont incluses. Les temps ne sont pas ceux d'une résolution complète.",
+            )
+        r.paragraph(
+            "Compute Sanitizer memcheck ne signale aucune erreur sur la validation entière. Le contrôle racecheck ciblant le nouveau noyau ne signale ni erreur ni avertissement. Le contrôle non filtré émet 48 avertissements dans le noyau de scan de CuPy utilisé par nonzero, et aucun dans le nouveau noyau. Les journaux non filtrés et ciblés sont conservés; ces avertissements de bibliothèque ne sont pas présentés comme résolus."
+        )
+    repeated = [x["result"] for x in raw["long-return-benchmark"]]
+    pilot = [x["result"] for x in raw["tiled-return-pilot"]]
+    if repeated or pilot:
+        r.section("Coût complet après accélération de la reconstruction géométrique")
+        r.paragraph(
+            "Le retour long utilise FE n = 256, auxiliaire n = 128, quatre champs, deux trajets de durée 1 et 512 pas par trajet. Le coût inclut la préparation du couplage, les contrôles, les changements géométriques et l'évolution. La quadrature d'erreur finale reste hors chronométrage, comme dans la campagne initiale. Les répétitions alternent l'ordre des configurations."
+        )
+        if repeated:
+            groups = sorted({(x["carrier_builder"], x["method"]) for x in repeated})
+            rows = []
+            for builder, method in groups:
+                xs = [
+                    x
+                    for x in repeated
+                    if (x["carrier_builder"], x["method"]) == (builder, method)
+                ]
+                seconds = [x["complete_seconds"] for x in xs]
+                errors = [max(x["l2"]) for x in xs]
+                rows.append(
+                    [
+                        builder,
+                        method,
+                        len(xs),
+                        statistics.median(seconds),
+                        min(seconds),
+                        max(seconds),
+                        min(errors),
+                        max(errors),
+                    ]
+                )
+            r.table(
+                [
+                    "Construction",
+                    "Transfert",
+                    "N",
+                    "Médiane (s)",
+                    "Min. (s)",
+                    "Max. (s)",
+                    "L2 min.",
+                    "L2 max.",
+                ],
+                rows,
+            )
+        else:
+            x = pilot[0]
+            r.paragraph(
+                f"Un premier calcul avec Galerkin à trois directions coûte {x['complete_seconds']:.3g} s et donne une erreur maximale L2 de {max(x['l2']):.5g}, avec {x['changes']} changements de support. L'exécution précédente utilisait environ 255 s avec la même méthode et l'ancien constructeur. Cette comparaison initiale est une seule exécution; les répétitions sont rapportées dès qu'elles sont terminées."
+            )
+        r.paragraph(
+            "Les réductions atomiques et les petits Grams proches d'un défaut de rang peuvent amplifier les différences d'arrondi dans le calcul adaptatif. Les intervalles d'erreur des répétitions sont donc conservés à côté des temps; un accord à l'arrondi des blocs n'implique pas un accord à l'arrondi du champ après 255 changements non linéaires."
+        )
     fast_return = [x["result"] for x in raw["fast-return"]]
     if fast_return:
         r.section("Coût du trajet complet avec la réduction CUDA")
@@ -1659,6 +1780,90 @@ def main():
                 name,
                 "Champs calculés et erreurs, normalisés par le maximum exact dans la fenêtre affichée. Les deux cartes supérieures utilisent la même échelle; la coupe emploie une échelle logarithmique symétrique. Les trois cartes d'erreur ont une échelle logarithmique commune. Ce calcul pour la visualisation est séparé des mesures de temps.",
             )
+    spectral = [x["result"] for x in raw["spectral-reaction"]]
+    if spectral:
+        r.section("Réaction couplée de quatre espèces")
+        r.paragraph(
+            "L'extension utilise la réaction κ(1 + 0,5 sin(2πx)) B, où B est le Laplacien d'un cycle à quatre espèces. Son spectre 0, 2, 2, 4 sépare un mode conservé et trois modes dissipatifs. Les blocs de moments pondérés sont réutilisés pour les valeurs propres répétées; une seule projection spatiale partagée traite les quatre composantes. La somme des fractions est un invariant de la réaction et du transport."
+        )
+        r.paragraph(
+            "Pour mesurer correctement l'approche d'un équilibre non nul, le calcul évolue les écarts à (1/4, 1/4, 1/4, 1/4). Leur somme initiale est nulle. La référence et le plancher FE sont calculés directement sur ces écarts, sans soustraction de deux références proches de 1/4. L'erreur relative utilise la norme finale de l'écart à l'équilibre. Les comparateurs traitent soit la seule observation FE, soit cette observation et un amortissement uniforme spécifique à chaque mode dissipatif."
+        )
+        names = {
+            "fe-only": "FE seule",
+            "modal-lift": "Mémoire amortie par mode",
+            "ambient-moments": "Moments complets partagés",
+        }
+        rows = [x for x in spectral if x["nfe"] == 64 and x["steps"] == 256]
+        r.table(
+            [
+                "κ",
+                "Modèle",
+                "L2 relative",
+                "Plancher relatif",
+                "Défaut de somme L2",
+                "Évolution (s)",
+            ],
+            [
+                [
+                    x["strength"],
+                    names[x["method"]],
+                    x["relative_l2"],
+                    x["relative_fe_floor"],
+                    x["fe_closure_l2"],
+                    x["evolution_seconds"],
+                ]
+                for x in rows
+            ],
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 3.8), layout="constrained")
+        for ax, nfe in zip(axes, (32, 64)):
+            for method in names:
+                selected = sorted(
+                    [
+                        x
+                        for x in spectral
+                        if x["nfe"] == nfe
+                        and x["steps"] == 256
+                        and x["method"] == method
+                    ],
+                    key=lambda x: x["strength"],
+                )
+                ax.semilogy(
+                    [x["strength"] for x in selected],
+                    [x["relative_l2"] for x in selected],
+                    "o-",
+                    label=names[method],
+                )
+            ax.semilogy(
+                [x["strength"] for x in selected],
+                [x["relative_fe_floor"] for x in selected],
+                "k--",
+                label="Plancher FE",
+            )
+            ax.set(
+                xlabel="Intensité κ",
+                ylabel="Erreur / norme de l'écart exact",
+                title=f"FE n = {nfe}, 256 pas",
+            )
+            ax.grid(alpha=0.2)
+            ax.legend(fontsize=7)
+        r.save_figure(
+            fig,
+            "night-spectral-reaction",
+            "La réaction du champ complet reste proche du plancher FE pour ce système conservant la somme des fractions. Elle coûte ici environ dix fois plus par évolution que la réaction FE seule; les trois calculs ne représentent pas avec la même précision la physique de la mémoire.",
+        )
+        check_file = args.input / "spectral-reaction.validation.json"
+        if check_file.exists():
+            checks = json.loads(check_file.read_text())["results"]
+            shared = [x for x in checks if x["shared"]]
+            independent = [x for x in checks if not x["shared"]]
+            r.paragraph(
+                f"Les {len(checks)} contrôles denses donnent un écart de covariance maximal de {max(x['covariance_error'] for x in shared):.3g} pour la projection partagée, contre {max(x['covariance_error'] for x in independent):.3g} pour les projections séparées. Le défaut de somme dans le champ auxiliaire atteint {max(x['auxiliary_closure_l2'] for x in independent):.3g} avec les projections séparées, contre {max(x['auxiliary_closure_l2'] for x in shared):.3g} avec l'espace partagé. Les deux variantes ont pourtant la même observation FE immédiate à la précision des arrondis. Compute Sanitizer ne signale aucune erreur sur ces contrôles."
+            )
+        r.paragraph(
+            f"Dans les {len(spectral)} essais d'EDP, le défaut maximal de somme FE est {max(x['fe_closure_l2'] for x in spectral):.3g}. Les fractions échantillonnées restent positives, avec un minimum de {min(x['minimum_fraction_sampled'] for x in spectral):.3g}; aucune garantie générale de positivité n'en découle. Cette expérience porte sur une matrice de réaction symétrique constante multipliée par un taux spatial, et ne couvre pas un réseau chimique non linéaire général."
+        )
     projection = [x["result"] for x in raw["reaction-projection"]]
     if projection:
         r.section("Compression des moments face à une projection ambiante complète")
@@ -1701,6 +1906,89 @@ def main():
             fig,
             "night-reaction-projection",
             "Enrichir la projection retient davantage de mémoire sur une même entrée. Le calcul partagé réunit les directions des quatre composantes. La distance résiduelle à la projection complète quantifie la limite d'une compression de petite dimension.",
+        )
+    residual = [x["result"] for x in raw["residual-return"]]
+    if residual:
+        r.section("Choisir les directions à partir d'un résidu")
+        r.paragraph(
+            "Deux variantes remplacent le moment h servant à générer les directions par h − Kd, ou par h − σKd avec σ ajusté au mieux dans la direction entrante. La projection finale conserve sa définition orthogonale. Le deuxième choix utilise un seul coefficient commun lorsque les champs partagent l'espace, afin de préserver la covariance des composantes. Les contrôles locaux de réaction montrent des réductions de distance au champ cible; elles ne se traduisent pas par un avantage systématique sur le retour avec supports mobiles."
+        )
+        r.table(
+            ["T aller", "Pas", "Contrôle", "Direction", "L2 maximale", "Évolution (s)"],
+            [
+                [
+                    x["half_duration"],
+                    x["steps_per_leg"],
+                    x["check_every"],
+                    x["krylov_seed"],
+                    max(x["l2"]),
+                    x["evolution_seconds"],
+                ]
+                for x in residual
+            ],
+        )
+    incremental = [x["result"] for x in raw["increment-physical"]]
+    reanchored = [x["result"] for x in raw["increment-reanchor"]]
+    if incremental:
+        r.section(
+            "Un défaut local précis peut masquer une représentation mal conditionnée"
+        )
+        r.paragraph(
+            "Une autre variante calcule les moments de (g−1)q avec expm1, projette cet incrément et l'ajoute à l'état précédent. En arithmétique exacte, cette opération équivaut à projeter gq si l'ancien état appartient à l'espace retenu. La troncature numérique du Gram peut supprimer cette condition. Le calcul local du défaut est néanmoins très précis : sur 36 contrôles denses, jusqu'à un sous-pas de 10⁻¹², l'oracle indépendant retrouve l'énergie et le défaut de l'incrément avec une erreur relative inférieure à 2 × 10⁻¹⁴; le sous-pas nul conserve les coefficients bit à bit."
+        )
+        chosen = [
+            x
+            for x in moments + incremental + reanchored
+            if x["nfe"] in (64, 128)
+            and x["steps"] == 256
+            and x["strength"] == 100
+            and x["method"]
+            in ("ambient-moments", "increment-moments", "increment-reanchor")
+        ]
+        r.table(
+            ["FE n", "Opération", "Erreur relative", "Plancher FE"],
+            [
+                [x["nfe"], x["method"], x["relative_l2"], x["relative_fe_floor"]]
+                for x in chosen
+            ],
+        )
+        r.paragraph(
+            "La mise à jour additive échoue pourtant lors de la réaction forte répétée. Les coefficients de l'ancre FE et du détail auxiliaire restent grands alors que leur somme physique devrait presque s'annuler. Le bilan d'énergie obtenu par différence perd alors lui-même des chiffres significatifs. Une variante utilisant les mêmes moments d'incrément, mais projetant à nouveau le champ complet, retrouve le niveau d'erreur de la méthode initiale. Cette variante remet les coefficients à l'échelle du champ qui subsiste et supprime les directions rejetées par le Gram."
+        )
+        conditions = [x["result"] for x in raw["increment-conditioning"]]
+        if conditions:
+            fig, axes = plt.subplots(1, 2, figsize=(10, 3.8), layout="constrained")
+            for ax, record in zip(axes, conditions):
+                history = record["history"]
+                for key, label in (
+                    ("anchor_energy", "Norme² de l'ancre"),
+                    ("detail_energy", "Norme² du détail"),
+                    ("visible_energy", "Norme² FE observée"),
+                    ("ambient_energy", "Énergie par différence"),
+                ):
+                    ax.semilogy(
+                        [x["time"] for x in history],
+                        [x[key] if x[key] > 0 else float("nan") for x in history],
+                        label=label,
+                    )
+                ax.set(
+                    xlabel="Temps",
+                    ylabel="Norme au carré",
+                    title=(
+                        "Champ complet reprojeté"
+                        if record["reanchor"]
+                        else "Incrément ajouté"
+                    ),
+                )
+                ax.legend(fontsize=7)
+                ax.grid(alpha=0.2)
+            r.save_figure(
+                fig,
+                "night-increment-conditioning",
+                "FE n = 128, auxiliaire n = 256, κ = 100. Dans la mise à jour additive, l'ancre et le détail conservent chacun une norme au carré proche de 0,1. La formule d'énergie soustrait ces termes et ne fournit plus une mesure fiable du très petit champ physique. Seules ses valeurs positives sont tracées. La reprojection complète maintient les coefficients à l'échelle du champ restant. Ces répétitions instrumentées sont exclues des temps comparatifs.",
+            )
+        r.paragraph(
+            "Ce résultat négatif interdit d'assimiler automatiquement une formule stable pour le défaut local à une évolution robuste. L'identité de projection et la coercivité pure demandent que l'ancienne composante cachée soit retenue; la note explicite le terme supplémentaire lorsque cette hypothèse est perdue. La projection du champ complet reste la méthode de référence."
         )
     joint = [x["result"] for x in raw["joint-return"]]
     if joint:
@@ -2346,14 +2634,22 @@ def main():
         "reaction-moments-fine": 27,
         "reaction-moments-quadrature": 1,
         "reaction-projection": 90,
+        "spectral-reaction": 36,
+        "tiled-return-pilot": 1,
+        "long-return-benchmark": 15,
+        "residual-return": 12,
+        "reaction-increment-projection": 90,
+        "reaction-residual-projection": 90,
+        "increment-physical": 18,
+        "increment-reanchor": 2,
+        "increment-conditioning": 2,
         "material-minimax": 2,
         "minimax-return": 3,
         "diffusion": 20,
     }
-    r.table(
-        ["Campagne", "Enregistrés", "Prévus"],
-        [[name, len(raw[name]), count] for name, count in expected.items()],
-    )
+    counts = [[name, len(raw[name]), count] for name, count in expected.items()]
+    for first in range(0, len(counts), 25):
+        r.table(["Campagne", "Enregistrés", "Prévus"], counts[first : first + 25])
     queue = args.input / "queue-status.json"
     if queue.exists():
         jobs = json.loads(queue.read_text())
@@ -2493,6 +2789,7 @@ def main():
         "κ": r"\ensuremath{\kappa}",
         "γ": r"\ensuremath{\gamma}",
         "τ": r"\ensuremath{\tau}",
+        "σ": r"\ensuremath{\sigma}",
         "10⁻¹¹": r"\(10^{-11}\)",
         "10⁻¹⁴": r"\(10^{-14}\)",
         "10⁻¹²": r"\(10^{-12}\)",

@@ -64,7 +64,7 @@ def coordinates(state):
     return cp.concatenate((a, d))
 
 
-def validate(degree):
+def validate(degree, krylov_seed="moment"):
     space = Space(Mesh(4, jitter=0.18, seed=817), degree)
     carrier = Carrier(space, n=4)
     rng = cp.random.RandomState(131)
@@ -101,7 +101,7 @@ def validate(degree):
             assert quadrature_error < 1e-10, quadrature_error
         for shared in (False, True):
             state = copy(original)
-            diagnostic = operator.apply(state, shared=shared)
+            diagnostic = operator.apply(state, shared=shared, krylov_seed=krylov_seed)
             new = coordinates(state)
             target_energy = cp.sum(coefficient * (squared @ coefficient), axis=0)
             after = cp.sum(new * (gram @ new), axis=0)
@@ -137,6 +137,7 @@ def validate(degree):
             records.append(
                 dict(
                     degree=degree,
+                    krylov_seed=krylov_seed,
                     duration=duration,
                     amplitude=amplitude,
                     shared=shared,
@@ -159,11 +160,14 @@ def validate(degree):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--seed", choices=("moment", "increment", "residual"), default="moment"
+    )
     args = parser.parse_args()
     meta = provenance()
     results = []
     for degree in (1, 2, 4):
-        records = validate(degree)
+        records = validate(degree, args.seed)
         results.extend(records)
         print(json.dumps(records), flush=True)
         args.output.write_text(

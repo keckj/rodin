@@ -35,6 +35,8 @@ def main():
             "fe-only",
             "coercive-lift",
             "ambient-moments",
+            "increment-moments",
+            "increment-reanchor",
             "fe-projected",
             "coercive-projected",
         ),
@@ -43,6 +45,9 @@ def main():
     parser.add_argument("--iterations", type=int, default=2)
     parser.add_argument("--subdivisions", type=int, default=1)
     parser.add_argument("--fields", action="store_true")
+    parser.add_argument(
+        "--krylov-seed", choices=("moment", "increment", "residual"), default="moment"
+    )
     args = parser.parse_args()
     meta = provenance()
     with args.output.open("w") as stream:
@@ -100,6 +105,33 @@ def main():
                     )
                     cp.cuda.Stream.null.synchronize()
                     complete_setup = time.perf_counter() - start
+                    incremental, reanchored, increment_setup, reanchor_setup = (
+                        None,
+                        None,
+                        None,
+                        None,
+                    )
+                    if "increment-moments" in args.methods:
+                        start = time.perf_counter()
+                        incremental = ReactionMoments(
+                            carrier,
+                            duration,
+                            subdivisions=args.subdivisions,
+                            increment=True,
+                        )
+                        cp.cuda.Stream.null.synchronize()
+                        increment_setup = time.perf_counter() - start
+                    if "increment-reanchor" in args.methods:
+                        start = time.perf_counter()
+                        reanchored = ReactionMoments(
+                            carrier,
+                            duration,
+                            subdivisions=args.subdivisions,
+                            increment=True,
+                            reanchor=True,
+                        )
+                        cp.cuda.Stream.null.synchronize()
+                        reanchor_setup = time.perf_counter() - start
                     field_values = {}
                     for method in args.methods:
                         state = MemoryTransport(carrier, initial)
@@ -107,8 +139,25 @@ def main():
                         start = time.perf_counter()
                         for _ in range(steps):
                             for half in (0, 1):
-                                if method == "ambient-moments":
-                                    complete.apply(state, iterations=args.iterations)
+                                if method in (
+                                    "ambient-moments",
+                                    "increment-moments",
+                                    "increment-reanchor",
+                                ):
+                                    operator = (
+                                        incremental
+                                        if method == "increment-moments"
+                                        else (
+                                            reanchored
+                                            if method == "increment-reanchor"
+                                            else complete
+                                        )
+                                    )
+                                    operator.apply(
+                                        state,
+                                        iterations=args.iterations,
+                                        krylov_seed=args.krylov_seed,
+                                    )
                                 else:
                                     state.apply_physics(
                                         (
@@ -133,7 +182,11 @@ def main():
                             / (energy0[0] * cp.exp(cp.asarray(-strength * 0.25)))
                         )
                         assert ratio < 1 + 1e-8
-                        if method.startswith("coercive") or method == "ambient-moments":
+                        if (
+                            method.startswith("coercive")
+                            or method.endswith("moments")
+                            or method == "increment-reanchor"
+                        ):
                             assert bound_ratio <= 1 + 1e-7, bound_ratio
                         result = dict(
                             nfe=nfe,
@@ -143,6 +196,7 @@ def main():
                             strength=strength,
                             method=method,
                             iterations=args.iterations,
+                            krylov_seed=args.krylov_seed,
                             quadrature_subdivisions=args.subdivisions,
                             relative_l2=errors["l2"][0] / norm,
                             reference_norm=norm,
@@ -151,7 +205,17 @@ def main():
                             energy_ratio=ratio,
                             coercive_bound_ratio=bound_ratio,
                             weighted_setup_seconds=(
-                                complete_setup if method == "ambient-moments" else None
+                                reanchor_setup
+                                if method == "increment-reanchor"
+                                else (
+                                    increment_setup
+                                    if method == "increment-moments"
+                                    else (
+                                        complete_setup
+                                        if method == "ambient-moments"
+                                        else None
+                                    )
+                                )
                             ),
                             evolution_seconds=elapsed,
                             **errors
@@ -175,7 +239,7 @@ def main():
                             steps,
                             strength,
                         )
-                    del complete
+                    del complete, incremental, reanchored
                 del oracle
             del carrier, reaction
             cp.get_default_memory_pool().free_all_blocks()

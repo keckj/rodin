@@ -21,10 +21,17 @@ class ReactionMoments:
         qdegree=20,
         diagnostics=False,
         subdivisions=1,
+        increment=False,
+        builder="auto",
+        reanchor=False,
     ):
         self.coupling = coupling
         self.duration, self.amplitude = duration, amplitude
         self.diagnostics = diagnostics
+        self.increment = increment
+        self.reanchor = reanchor
+        if reanchor and not increment:
+            raise ValueError("Reanchoring here applies to increment moments")
         self.cross, self.fe, self.auxiliary = {}, {}, {}
         space = coupling.space
         q = quadrature(qdegree, subdivisions)
@@ -49,14 +56,28 @@ class ReactionMoments:
                 degree=coupling.np - 1,
                 qdegree=qdegree,
                 edges=coupling.edges if coupling.nonuniform else None,
-                reaction_weight=(power * duration, amplitude),
+                reaction_weight=(
+                    duration if increment else power * duration,
+                    amplitude,
+                ),
                 subdivisions=subdivisions,
+                reaction_form=(
+                    ("increment" if power == 1 else "increment-square")
+                    if increment
+                    else "value"
+                ),
+                builder=builder,
             )
-            weight = cp.exp(-power * duration * rates)
+            weight = (
+                cp.expm1(-duration * rates) ** power
+                if increment
+                else cp.exp(-power * duration * rates)
+            )
             self.fe[power] = cp.ascontiguousarray(
                 cp.einsum("cq,qi,qj,q->cij", weight, basis, basis, 2 * q[:, 2])
             )
-            wx = cp.exp(-power * duration * (1 + amplitude * cp.sin(2 * cp.pi * x)))
+            exponent = -duration * (1 + amplitude * cp.sin(2 * cp.pi * x))
+            wx = cp.expm1(exponent) ** power if increment else cp.exp(power * exponent)
             self.auxiliary[power] = (
                 cp.einsum("xq,qi,qj,q->xij", wx, local, local, weights)
                 / coupling.weights[None, :, None]
@@ -72,11 +93,12 @@ class ReactionMoments:
         result = cp.einsum("xij,yxfkj->yxfki", self.auxiliary[power], reshaped)
         return cp.ascontiguousarray(result.reshape(value.shape))
 
-    def apply(self, state, iterations=2, shared=True):
+    def apply(self, state, iterations=2, shared=True, krylov_seed="moment"):
         if state.coupling is not self.coupling:
             raise ValueError("The weighted reaction belongs to a fixed support")
         c = self.coupling
         before = state.energy()
+        previous = (state.value, state.anchor, state.auxiliary)
         a = state.anchor
         d = state.auxiliary - c.project(a)
         observation = self.apply_fe(a) + self.cross[1].adjoint(d)
@@ -94,6 +116,15 @@ class ReactionMoments:
             target_energy += cp.einsum(
                 "cfi,ci,cfi->f", d, mass, self.apply_auxiliary(d, 2)
             )
+        search_seed = None
+        if self.reanchor:
+            search_seed = hidden
+            if target_energy is not None:
+                inner = cp.einsum("cfi,c,cfi->f", a, c.space.mesh.areas, observation)
+                inner += cp.einsum("cfi,ci,cfi->f", d, mass, moment)
+                target_energy = before + 2 * inner + target_energy
+            observation = previous[0] + observation
+            hidden = previous[2] - c.project(previous[0]) + hidden
         result = state.project_moments(
             c,
             observation,
@@ -103,7 +134,27 @@ class ReactionMoments:
             iterations=iterations,
             shared=shared,
             gram_backend="reduction",
+            krylov_seed=krylov_seed,
+            search_seed=search_seed,
+            incoming_diagnostic=self.increment,
         )
+        if self.increment and not self.reanchor:
+            # q belongs to V + span(H*d), hence P_X(q + delta) = q + P_X(delta).
+            # The small solve acts on the physical increment. Its Pythagorean
+            # defect is O(dt^2), avoiding subtraction of O(1) state energies.
+            result["increment_energy"] = target_energy
+            if self.diagnostics:
+                result["increment_coefficients"] = tuple(
+                    x.copy() for x in (state.value, state.anchor, state.auxiliary)
+                )
+            if target_energy is not None:
+                inner = cp.einsum("cfi,c,cfi->f", a, c.space.mesh.areas, observation)
+                inner += cp.einsum("cfi,ci,cfi->f", d, mass, moment)
+                target_energy = before + 2 * inner + target_energy
+            state.value += previous[0]
+            state.anchor += previous[1]
+            state.auxiliary += previous[2]
+            result["energy"] = state.energy()
         result["target_energy"] = target_energy
         result["coercivity_excess"] = result["energy"] - self.decay_bound**2 * before
         return result

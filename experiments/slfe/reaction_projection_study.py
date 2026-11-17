@@ -21,6 +21,9 @@ from campaign import provenance
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--seed", choices=("moment", "increment", "residual"), default="moment"
+    )
     args = parser.parse_args()
     meta = provenance()
     with args.output.open("w") as stream:
@@ -55,13 +58,20 @@ def main():
                     for iterations in (0, 1, 2, 4, 8):
                         result = copy(state)
                         diagnostic = operator.apply(
-                            result, iterations=iterations, shared=shared
+                            result,
+                            iterations=iterations,
+                            shared=shared,
+                            krylov_seed=args.seed,
                         )
                         new = coordinates(result)
                         energy = cp.sum(new * (gram @ new), axis=0)
                         distance = (
                             target_energy + energy - 2 * cp.sum(new * rhs, axis=0)
                         )
+                        pythagoras_error = float(
+                            cp.max(cp.abs(distance - (target_energy - energy)))
+                        )
+                        assert pythagoras_error < 1e-9, pythagoras_error
                         excess = float(cp.max(energy - best_energy))
                         monotonic_defect = (
                             0.0
@@ -77,6 +87,8 @@ def main():
                             degree=degree,
                             duration=duration,
                             fields=4,
+                            krylov_seed=args.seed,
+                            pythagoras_error=pythagoras_error,
                             shared=shared,
                             directions_per_field=iterations + 1,
                             full_gram_rank=int(cp.sum(eigen > cutoff)),

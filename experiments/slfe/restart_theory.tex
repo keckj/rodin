@@ -4,6 +4,7 @@
 \usepackage[french]{babel}
 \usepackage{amsmath,amssymb,amsthm,geometry,hyperref}
 \geometry{margin=2.4cm}
+\setlength{\emergencystretch}{2em}
 \newtheorem{proposition}{Proposition}
 \title{Changement de support auxiliaire avec mémoire FE\\
 Transition contractante et mesure de la mémoire supprimée}
@@ -530,6 +531,81 @@ $r(x)=\kappa(1+\tfrac12\sin(2\pi x))$ et un support fixe.
 Elles ne démontrent ni un ordre temporel général, ni un avantage
 sur une méthode spécialisée d'advection--réaction.
 
+\subsection{Incréments physiques et troncature de rang}
+Pour de petits sous-pas, former $g-1$ par soustraction est évitable :
+le prototype évalue $\varphi=\operatorname{expm1}(-\tau r)$.
+Les blocs pondérés par $\varphi$ donnent les moments de
+$\delta q=(g-1)q$, et ceux pondérés par $\varphi^2$ donnent
+$\|\delta q\|^2$. Cette dernière quantité est d'ordre $\tau^2$;
+elle ne résulte pas d'une soustraction de deux énergies d'ordre un.
+La famille de directions $[d,H^*\delta q,RR^*H^*\delta q,\ldots]$
+définit un projecteur $P$ contenant $V$. Si $q\in\operatorname{im}P$,
+alors
+\[
+ q+P\delta q=P(gq),\qquad
+ \|gq-(q+P\delta q)\|^2=\|\delta q\|^2-\|P\delta q\|^2.
+\]
+Les contrôles denses GPU évaluent cette petite différence à son échelle
+jusqu'à $\tau=10^{-12}$ et vérifient l'identité exacte des coefficients
+pour $\tau=0$.
+
+La première identité peut cesser d'être vraie lorsque la troncature
+numérique du Gram écarte une composante de la direction entrante.
+Pour le projecteur effectivement retenu, posons $e=(I-P)q$. Alors
+\[
+ q+P\delta q=P(gq)+e,\qquad
+ \|q+P\delta q\|^2=\|P(gq)\|^2+\|e\|^2
+ \leq\gamma^2\|q\|^2+\|e\|^2.
+\]
+La formule du défaut $\|\delta q\|^2-\|P\delta q\|^2$ reste exacte,
+mais la coercivité pure nécessite maintenant $e=0$.
+Dans le code, la norme de la partie entrante écartée est estimée par
+les valeurs propres rejetées du petit Gram et les coordonnées des
+directions entrantes. Cette estimation dépend elle-même de la précision
+du Gram formé par différence de deux produits de masse.
+
+Une variante conserve les directions issues de l'incrément mais
+reprojette le champ cible complet : $q^+=P(gq)$. Elle retrouve la
+contraction sans condition de rétention de l'ancien état, au prix
+de la perte des composantes écartées par le seuil. Les expériences
+de réaction forte conservent les échecs de la mise à jour additive
+ainsi que cette comparaison. La robustesse locale d'une estimation
+de défaut ne suffit pas à établir la précision d'une évolution répétée.
+
+\subsection{Réaction d'un système et invariants de composition}
+Pour un système $\partial_tq=-r(x)Bq$, avec $B$ symétrique positive,
+la diagonalisation $B=U\Lambda U^T$ réduit les moments physiques
+aux multiplicateurs scalaires $g_j(x)=\exp(-\tau\lambda_jr(x))$.
+La rotation concerne uniquement les composantes, pas les degrés de
+liberté spatiaux. Le prototype réutilise les blocs pondérés pour les
+valeurs propres répétées et conserve directement les moments des
+modes de valeur propre nulle. Une unique projection spatiale partagée
+est ensuite appliquée aux moments de toutes les composantes.
+
+Dans la norme somme des énergies des composantes,
+\[
+ \|q^+\|_{L^2(\Omega;\mathbb R^s)}
+ \leq \|e^{-\tau r B}q\|_{L^2(\Omega;\mathbb R^s)}
+ \leq e^{-\tau r_{\min}\lambda_{\min}(B)}\|q\|.
+\]
+Si $c\in\ker B$ et $c^Tq=b\in V$, alors
+$c^Te^{-\tau rB}q=b$ et la projection partagée donne
+$c^Tq^+=b$. Les relations linéaires invariantes de la réaction
+sont donc conservées, sous la même hypothèse sur le second membre.
+Pour le Laplacien du cycle à quatre sommets, les valeurs propres
+sont $0,2,2,4$ et $c=(1,1,1,1)^T$ définit la fermeture du mélange.
+
+Le changement orthogonal des coordonnées des composantes transforme
+simultanément $B$, les moments et les directions. La covariance de la
+projection partagée assure la covariance de l'opération complète.
+Des projections indépendantes par composante n'ont pas cette propriété,
+même si l'observation FE immédiate reste correcte. Les contrôles GPU
+comparent cette construction aux Grams ambiants denses pondérés dans
+la base spectrale de $B$, aux degrés 1, 2 et 4. Dans le prototype,
+les valeurs propres de composantes inférieures à
+$10^{-12}\max(1,\|B\|_2)$ sont traitées comme nulles. La positivité
+ponctuelle des fractions n'est pas garantie par la projection spatiale.
+
 \subsection{Énergie et stabilité entre deux états}
 La distinction précédente admet un contre-exemple explicite, y compris
 pour la variante à trois directions. Dans $\mathbb R^6$, soient
@@ -780,6 +856,18 @@ nouveau fixé; elle ne constitue pas une optimisation de l'erreur EDP
 ni de la trajectoire future du maillage.
 
 \section{Antécédents et revendications}
+Ouardghi, El-Amrani et Seaid (2022) proposent déjà un enrichissement
+adaptatif semi-lagrangien sur maillage triangulaire, en adaptant la
+quadrature de la projection $L^2$ tout en conservant la taille et la
+structure du système FE
+\href{https://doi.org/10.1016/j.compfluid.2022.105474}{(article)}.
+Leur indicateur utilise le gradient de température dans un problème
+couplé d'écoulement et de transport. Un maillage FE fixe, une projection
+semi-lagrangienne enrichie et un coût de système inchangé ne constituent
+donc pas, pris isolément, une distinction nouvelle. La comparaison
+pertinente porte sur l'état supplémentaire effectivement conservé,
+son évolution physique et ses opérateurs de transfert.
+
 Keith, Kim, Lazarov, Mittal, Petra, Schmidt et Tomov (prépublication du
 3 novembre 2026) combinent une interpolation physique compatible GPU
 et une optimisation rétablissant les conservations globales sous

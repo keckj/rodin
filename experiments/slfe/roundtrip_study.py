@@ -39,6 +39,8 @@ def evolve(
     remap_budget=None,
     budget_allocation="uniform",
     gram_backend="einsum",
+    carrier_builder="auto",
+    krylov_seed="moment",
 ):
     if method not in ("reset", "projected", "chebyshev", "warm", "galerkin", "block"):
         raise ValueError("Unknown memory transfer")
@@ -52,6 +54,8 @@ def evolve(
         raise ValueError("Expected uniform or remaining-budget allocation")
     if gram_backend not in ("einsum", "reduction"):
         raise ValueError("Expected einsum or reduction Gram assembly")
+    if remap_budget is not None and carrier_builder != "auto":
+        raise ValueError("The budget controller currently uses the default builder")
     possible_changes = 2 * ((steps + check_every - 1) // check_every) - 1
     budget_used = 0.0
     space = Space(GradedMesh(nfe, 0.95), 4)
@@ -60,7 +64,7 @@ def evolve(
     cp.cuda.Stream.null.synchronize()
     start = time.perf_counter()
     edges, oriented = from_fe(space, initial, naux, energy_floor=energy_floor)
-    carrier = Carrier(space, n=naux, edges=edges)
+    carrier = Carrier(space, n=naux, edges=edges, builder=carrier_builder)
     state = MemoryTransport(carrier, initial)
     center = fe_center(space, initial)
     energy0 = state.energy()
@@ -134,7 +138,9 @@ def evolve(
                         budget_used += attempts[-1]["measured_distance"]
                         assert budget_used <= remap_budget * (1 + 1e-12)
                 else:
-                    target = Carrier(space, n=naux, edges=next_edges)
+                    target = Carrier(
+                        space, n=naux, edges=next_edges, builder=carrier_builder
+                    )
                     grid = TensorGrid(target, target.edges)
                     remap = lambda w: grid.remap(carrier, w)
                     if method == "reset":
@@ -151,6 +157,7 @@ def evolve(
                             iterations=2,
                             shared=method == "block",
                             gram_backend=gram_backend,
+                            krylov_seed=krylov_seed,
                         )
                         loss = diagnostic["energy_loss"]
                     else:
@@ -203,6 +210,8 @@ def evolve(
         steps_per_leg=steps,
         method=method,
         gram_backend=gram_backend,
+        carrier_builder=carrier_builder,
+        krylov_seed=krylov_seed,
         check_every=check_every,
         sample_order=sample_order,
         energy_floor=energy_floor,

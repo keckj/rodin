@@ -229,6 +229,7 @@ class MemoryTransport:
         iterations=2,
         shared=False,
         gram_backend="einsum",
+        krylov_seed="moment",
     ):
         """Project onto a small augmented hidden subspace, using CUDA Gram solves.
 
@@ -264,6 +265,7 @@ class MemoryTransport:
             iterations=iterations,
             shared=shared,
             gram_backend=gram_backend,
+            krylov_seed=krylov_seed,
         )
 
     def project_moments(
@@ -276,6 +278,9 @@ class MemoryTransport:
         iterations=2,
         shared=False,
         gram_backend="einsum",
+        krylov_seed="moment",
+        search_seed=None,
+        incoming_diagnostic=False,
     ):
         """Project ambient moments onto V plus a small hidden subspace.
 
@@ -293,10 +298,13 @@ class MemoryTransport:
             raise ValueError("A nonnegative Krylov size is required")
         if gram_backend not in ("einsum", "reduction"):
             raise ValueError("Expected einsum or reduction Gram assembly")
+        if krylov_seed not in ("moment", "increment", "residual"):
+            raise ValueError("Expected moment, increment or residual Krylov seed")
         before = target_energy
         self.value = observation
         visible = coupling.space.energy(observation)
         h, mapped = hidden_moment, incoming_direction
+        mass = cp.broadcast_to(coupling.mass, (coupling.n**2, coupling.nc))
         vectors, images = [], []
         candidate = mapped
         for index in range(iterations + 1):
@@ -306,10 +314,34 @@ class MemoryTransport:
             image = coupling.adjoint(vector)
             vectors.append(vector)
             images.append(image)
-            candidate = h if index == 0 else coupling.project(image)
+            if index == 0:
+                incoming_norm = norm
+                candidate = h if search_seed is None else search_seed
+                if krylov_seed != "moment" and iterations:
+                    scale = norm if shared else norm[None, :, None]
+                    kmapped = mapped - coupling.project(image * scale)
+                    factor = 1.0
+                    if krylov_seed == "residual":
+                        denominator = cp.sum(
+                            mapped * kmapped * mass[:, None, :], axis=(0, 2)
+                        )
+                        numerator = cp.sum(mapped * h * mass[:, None, :], axis=(0, 2))
+                        reference = energy
+                        if shared:
+                            denominator, numerator, reference = map(
+                                cp.sum, (denominator, numerator, reference)
+                            )
+                        valid = denominator > 1e-12 * reference
+                        factor = cp.where(
+                            valid, numerator / cp.where(valid, denominator, 1), 0
+                        )
+                        if not shared:
+                            factor = factor[None, :, None]
+                    candidate = h - factor * kmapped
+            else:
+                candidate = coupling.project(image)
         xbasis = cp.stack(vectors, axis=-1)
         vbasis = cp.stack(images, axis=-1)
-        mass = cp.broadcast_to(coupling.mass, (coupling.n**2, coupling.nc))
         if gram_backend == "reduction":
             from weighted_products import weighted_products
 
@@ -385,7 +417,7 @@ class MemoryTransport:
         self.coupling = coupling
         after = self.energy()
         cross = cp.einsum("cfi,ci,cfi->f", h, mass, x)
-        return dict(
+        result = dict(
             energy=after,
             energy_loss=None if before is None else before - after,
             ambient_change_squared=(
@@ -394,3 +426,13 @@ class MemoryTransport:
             gram_eigenvalues=eigen,
             retained_rank=cp.sum(keep, axis=-1),
         )
+        if incoming_diagnostic:
+            dropped = cp.where(keep, 0, cp.maximum(eigen, 0))
+            if shared:
+                loss = cp.sum(
+                    eigenvectors[: h.shape[1]] ** 2 * dropped[None, :], axis=1
+                )
+            else:
+                loss = cp.sum(eigenvectors[:, 0, :] ** 2 * dropped, axis=1)
+            result["incoming_projection_loss"] = incoming_norm**2 * loss
+        return result

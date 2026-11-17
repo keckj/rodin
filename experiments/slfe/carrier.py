@@ -24,9 +24,13 @@ class Carrier:
         edges=None,
         reaction_weight=None,
         subdivisions=1,
+        reaction_form="value",
     ):
         self.space = space
         self.reaction_weight = reaction_weight
+        self.reaction_form = reaction_form
+        if reaction_form not in ("value", "increment", "increment-square"):
+            raise ValueError("Unknown reaction weight form")
         self.n = n or space.mesh.n
         self.nonuniform = edges is not None
         self.edges = cp.ascontiguousarray(
@@ -72,10 +76,13 @@ class Carrier:
             # Weighted cross mass for reaction experiments. Such an object
             # supplies P_W g|_V and its mass adjoint, not an unweighted
             # projection coupling for MemoryTransport.
-            code += (
-                "#define CARRIER_WEIGHT(position) "
-                f"exp(-({duration:.17g})*(1+({amplitude:.17g})*sin(6.28318530717958647693*(position).x)))\n"
+            exponent = f"-({duration:.17g})*(1+({amplitude:.17g})*sin(6.28318530717958647693*(position).x))"
+            expression = (
+                f"exp({exponent})" if reaction_form == "value" else f"expm1({exponent})"
             )
+            if reaction_form == "increment-square":
+                expression = f"({expression})*({expression})"
+            code += f"#define CARRIER_WEIGHT(position) ({expression})\n"
         code += (
             (HERE / "basis.cuh").read_text()
             + (HERE / "transfer.cu").read_text()
@@ -83,15 +90,17 @@ class Carrier:
             + (HERE / "carrier.cu").read_text()
             + (HERE / "tensor_remap.cu").read_text()
         )
+        if builder == "tiled":
+            code += (HERE / "carrier_tiled.cu").read_text()
         self.module = cp.RawModule(code=code, options=("--std=c++17",))
         # Cooperative assembly pays off for the high-order blocks measured in
         # carrier_build_study.py. Keep the small scalar blocks on their kernel.
         if builder == "auto":
             builder = "warp" if space.nb * self.nc >= 32 else "scalar"
-        if builder not in ("scalar", "warp"):
-            raise ValueError("Expected scalar or warp assembly")
+        if builder not in ("scalar", "warp", "tiled"):
+            raise ValueError("Expected scalar, warp or tiled assembly")
         self.builder = self.module.get_function(
-            "carrier_blocks" if builder == "scalar" else "carrier_blocks_warp"
+            "carrier_blocks" if builder == "scalar" else "carrier_blocks_" + builder
         )
         self.projector = self.module.get_function("project_carrier")
         self.returner = self.module.get_function("adjoint_carrier")
