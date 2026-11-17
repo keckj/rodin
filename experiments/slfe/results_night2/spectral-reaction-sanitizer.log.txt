@@ -1,0 +1,5 @@
+========= COMPUTE-SANITIZER
+{"degree": 1, "controls": 6}
+{"degree": 2, "controls": 12}
+{"degree": 4, "controls": 18}
+========= ERROR SUMMARY: 0 errors

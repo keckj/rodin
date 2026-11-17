@@ -1,5 +1,5 @@
 {
-  "generated": "17/11/2026 \u00e0 03:59",
+  "generated": "17/11/2026 \u00e0 04:47",
   "matched": [
     {
       "fields": 1,
@@ -108,6 +108,15 @@
     "reaction-moments-fine": 27,
     "reaction-moments-quadrature": 1,
     "reaction-projection": 90,
+    "spectral-reaction": 36,
+    "tiled-return-pilot": 1,
+    "long-return-benchmark": 6,
+    "residual-return": 12,
+    "reaction-increment-projection": 90,
+    "reaction-residual-projection": 90,
+    "increment-physical": 18,
+    "increment-reanchor": 2,
+    "increment-conditioning": 2,
     "material-minimax": 2,
     "minimax-return": 3,
     "diffusion": 20,

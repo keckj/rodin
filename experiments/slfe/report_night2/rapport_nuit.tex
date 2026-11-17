@@ -4,9 +4,9 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : supports mobiles\\et transfert de mémoire}
-\author{Recherche GPU sur le fork keckj/rodin}\date{17/11/2026 à 03:59}
+\author{Recherche GPU sur le fork keckj/rodin}\date{17/11/2026 à 04:47}
 \begin{document}\maketitle
-Résultats disponibles le 17/11/2026 à 03:59 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test.
+Résultats disponibles le 17/11/2026 à 04:47 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test.
 
 \section{Résultat et portée}
 Un support auxiliaire mobile résout le défaut observé lorsque la bosse quitte la zone fine d'une grille fixe. Le couplage FE avec mémoire accepte désormais un changement de support contractant, et un raffinement exactement emboîté sans perte d'énergie. Les transferts polynomiaux évitent une inversion globale; la variante de Galerkin diagonalise une petite matrice par champ. Les propriétés sont établies sous les hypothèses de restart\_theory.pdf; elles n'établissent ni une nouveauté bibliographique, ni une convergence générale vers l'EDP.
@@ -332,6 +332,32 @@ Directions/champ & Espace & Initial (ms) & Réduction (ms) & Écart ambiant\\\mi
 \bottomrule\end{tabular}\end{center}
 Les contrôles indépendants comparent les produits pondérés, les rangs retenus, les coefficients et l'état ambiant. Les directions presque nulles peuvent amplifier les différences de coefficients; le fichier brut conserve également la variabilité entre répétitions du calcul initial. Le gain local doit être distingué du temps de construction des supports.
 
+\section{Évaluer la quadrature en parallèle pour reconstruire les supports}
+Le noyau précédent évaluait chaque point de quadrature avec une seule voie du warp avant de répartir les entrées de la matrice. Le nouveau noyau prépare 32 points en parallèle dans la mémoire partagée, puis accumule les mêmes produits de bases. La normalisation par les poids de masse est effectuée à la fin de l'intégration. Les intersections, quadratures et espaces polynomiaux restent identiques. L'option tiled est explicite; les campagnes précédentes utilisaient l'ancien constructeur.
+
+Les 24 contrôles comparent le constructeur au noyau scalaire indépendant : degrés 1, 2, 4, partitions uniformes ou périodiques non uniformes, intégrales ordinaires ou pondérées par la réaction, et deux subdivisions de quadrature. L'écart relatif maximal des blocs est 5.72e-15. Les applications et l'adjoint de masse sont également comparés.
+
+\begin{center}\small\begin{tabular}{llllll}\toprule
+FE n & Aux. n & Ancien (s) & Quadrature parallèle (s) & Rapport & Écart L2 après 16 transports\\\midrule
+128 & 64 & 0.2607 & 0.03543 & 7.358 & 1.872e-15\\
+256 & 128 & 0.9222 & 0.1225 & 7.529 & 1.849e-15\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-carrier-tiled.pdf}\caption{Médianes de cinq constructions après chauffe, dans un ordre alterné. La construction géométrique, la compaction des blocs et les allocations sont incluses. Les temps ne sont pas ceux d'une résolution complète.}\end{figure}
+Compute Sanitizer memcheck ne signale aucune erreur sur la validation entière. Le contrôle racecheck ciblant le nouveau noyau ne signale ni erreur ni avertissement. Le contrôle non filtré émet 48 avertissements dans le noyau de scan de CuPy utilisé par nonzero, et aucun dans le nouveau noyau. Les journaux non filtrés et ciblés sont conservés; ces avertissements de bibliothèque ne sont pas présentés comme résolus.
+
+\section{Coût complet après accélération de la reconstruction géométrique}
+Le retour long utilise FE n = 256, auxiliaire n = 128, quatre champs, deux trajets de durée 1 et 512 pas par trajet. Le coût inclut la préparation du couplage, les contrôles, les changements géométriques et l'évolution. La quadrature d'erreur finale reste hors chronométrage, comme dans la campagne initiale. Les répétitions alternent l'ordre des configurations.
+
+\begin{center}\small\begin{tabular}{llllllll}\toprule
+Construction & Transfert & N & Médiane (s) & Min. (s) & Max. (s) & L2 min. & L2 max.\\\midrule
+tiled & block & 1 & 57.76 & 57.76 & 57.76 & 0.02348 & 0.02348\\
+tiled & chebyshev & 1 & 55.83 & 55.83 & 55.83 & 0.02868 & 0.02868\\
+tiled & galerkin & 2 & 55.07 & 54.88 & 55.27 & 0.02331 & 0.02332\\
+warp & chebyshev & 1 & 255.7 & 255.7 & 255.7 & 0.02868 & 0.02868\\
+warp & galerkin & 1 & 255.5 & 255.5 & 255.5 & 0.02331 & 0.02331\\
+\bottomrule\end{tabular}\end{center}
+Les réductions atomiques et les petits Grams proches d'un défaut de rang peuvent amplifier les différences d'arrondi dans le calcul adaptatif. Les intervalles d'erreur des répétitions sont donc conservés à côté des temps; un accord à l'arrondi des blocs n'implique pas un accord à l'arrondi du champ après 255 changements non linéaires.
+
 \section{Coût du trajet complet avec la réduction CUDA}
 Le changement d'assemblage est ensuite évalué dans le contrôleur adaptatif complet. Les coûts incluent la préparation, les contrôles et toutes les reconstructions géométriques. Les espaces partagés sont comparés aux projections séparées; la métrique d'erreur reste le maximum des quatre erreurs L2 après retour exact.
 
@@ -428,10 +454,67 @@ Les 18 contrôles denses GPU aux degrés 1, 2 et 4 vérifient les Grams pondér�
 Sur l'EDP à \ensuremath{\kappa} = 100, n = 64 et 256 pas, doubler les subdivisions des intégrales pondérées change l'erreur relative de 2.91e-13 en valeur absolue.
 
 \begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-reaction-fields-64-256-100.pdf}\caption{Champs calculés et erreurs, normalisés par le maximum exact dans la fenêtre affichée. Les deux cartes supérieures utilisent la même échelle; la coupe emploie une échelle logarithmique symétrique. Les trois cartes d'erreur ont une échelle logarithmique commune. Ce calcul pour la visualisation est séparé des mesures de temps.}\end{figure}
+\section{Réaction couplée de quatre espèces}
+L'extension utilise la réaction \ensuremath{\kappa}(1 + 0,5 sin(2\(\pi\)x)) B, où B est le Laplacien d'un cycle à quatre espèces. Son spectre 0, 2, 2, 4 sépare un mode conservé et trois modes dissipatifs. Les blocs de moments pondérés sont réutilisés pour les valeurs propres répétées; une seule projection spatiale partagée traite les quatre composantes. La somme des fractions est un invariant de la réaction et du transport.
+
+Pour mesurer correctement l'approche d'un équilibre non nul, le calcul évolue les écarts à (1/4, 1/4, 1/4, 1/4). Leur somme initiale est nulle. La référence et le plancher FE sont calculés directement sur ces écarts, sans soustraction de deux références proches de 1/4. L'erreur relative utilise la norme finale de l'écart à l'équilibre. Les comparateurs traitent soit la seule observation FE, soit cette observation et un amortissement uniforme spécifique à chaque mode dissipatif.
+
+\begin{center}\small\begin{tabular}{llllll}\toprule
+\ensuremath{\kappa} & Modèle & L2 relative & Plancher relatif & Défaut de somme L2 & Évolution (s)\\\midrule
+1 & FE seule & 0.0005689 & 0.0005684 & 2.132e-16 & 0.5226\\
+1 & Mémoire amortie par mode & 0.0005687 & 0.0005684 & 2.143e-16 & 0.8855\\
+1 & Moments complets partagés & 0.0005687 & 0.0005684 & 3.28e-14 & 4.997\\
+10 & FE seule & 0.0008425 & 0.0006245 & 3.689e-17 & 0.5225\\
+10 & Mémoire amortie par mode & 0.0006304 & 0.0006245 & 3.709e-17 & 0.8853\\
+10 & Moments complets partagés & 0.0006248 & 0.0006245 & 1.018e-14 & 4.981\\
+20 & FE seule & 0.07698 & 0.0007798 & 1.828e-17 & 0.5229\\
+20 & Mémoire amortie par mode & 0.001143 & 0.0007798 & 1.852e-17 & 0.8861\\
+20 & Moments complets partagés & 0.0007801 & 0.0007798 & 1.137e-15 & 4.983\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-spectral-reaction.pdf}\caption{La réaction du champ complet reste proche du plancher FE pour ce système conservant la somme des fractions. Elle coûte ici environ dix fois plus par évolution que la réaction FE seule; les trois calculs ne représentent pas avec la même précision la physique de la mémoire.}\end{figure}
+Les 18 contrôles denses donnent un écart de covariance maximal de 2.84e-14 pour la projection partagée, contre 0.116 pour les projections séparées. Le défaut de somme dans le champ auxiliaire atteint 0.0271 avec les projections séparées, contre 2.75e-15 avec l'espace partagé. Les deux variantes ont pourtant la même observation FE immédiate à la précision des arrondis. Compute Sanitizer ne signale aucune erreur sur ces contrôles.
+
+Dans les 36 essais d'EDP, le défaut maximal de somme FE est 3.28e-14. Les fractions échantillonnées restent positives, avec un minimum de 0.222; aucune garantie générale de positivité n'en découle. Cette expérience porte sur une matrice de réaction symétrique constante multipliée par un taux spatial, et ne couvre pas un réseau chimique non linéaire général.
+
 \section{Compression des moments face à une projection ambiante complète}
 Un oracle supplémentaire résout par diagonalisation GPU le Gram conjoint complet de V et W, avec un seuil relatif de rang de \(10^{-12}\). Il est comparé aux petits espaces cachés sur des états aléatoires à quatre composantes. Ce contrôle mesure la perte de projection pour une réaction seule; il ne mesure pas une erreur d'EDP. La référence complète est elle-même soumise au seuil de rang.
 
 \begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-reaction-projection.pdf}\caption{Enrichir la projection retient davantage de mémoire sur une même entrée. Le calcul partagé réunit les directions des quatre composantes. La distance résiduelle à la projection complète quantifie la limite d'une compression de petite dimension.}\end{figure}
+\section{Choisir les directions à partir d'un résidu}
+Deux variantes remplacent le moment h servant à générer les directions par h - Kd, ou par h - \ensuremath{\sigma}Kd avec \ensuremath{\sigma} ajusté au mieux dans la direction entrante. La projection finale conserve sa définition orthogonale. Le deuxième choix utilise un seul coefficient commun lorsque les champs partagent l'espace, afin de préserver la covariance des composantes. Les contrôles locaux de réaction montrent des réductions de distance au champ cible; elles ne se traduisent pas par un avantage systématique sur le retour avec supports mobiles.
+
+\begin{center}\small\begin{tabular}{llllll}\toprule
+T aller & Pas & Contrôle & Direction & L2 maximale & Évolution (s)\\\midrule
+0.25 & 128 & 4 & moment & 0.0007912 & 4.004\\
+0.25 & 128 & 4 & increment & 0.000972 & 3.998\\
+0.25 & 128 & 4 & residual & 0.0007846 & 4\\
+0.25 & 512 & 4 & moment & 0.0007396 & 13.14\\
+0.25 & 512 & 4 & increment & 0.001022 & 13.19\\
+0.25 & 512 & 4 & residual & 0.0007609 & 13.2\\
+0.25 & 512 & 16 & moment & 0.0008139 & 4.418\\
+0.25 & 512 & 16 & increment & 0.0009851 & 4.419\\
+0.25 & 512 & 16 & residual & 0.0007956 & 4.433\\
+1 & 512 & 4 & moment & 0.02332 & 54.68\\
+1 & 512 & 4 & increment & 0.0234 & 54.87\\
+1 & 512 & 4 & residual & 0.02337 & 54.98\\
+\bottomrule\end{tabular}\end{center}
+\section{Un défaut local précis peut masquer une représentation mal conditionnée}
+Une autre variante calcule les moments de (g-1)q avec expm1, projette cet incrément et l'ajoute à l'état précédent. En arithmétique exacte, cette opération équivaut à projeter gq si l'ancien état appartient à l'espace retenu. La troncature numérique du Gram peut supprimer cette condition. Le calcul local du défaut est néanmoins très précis : sur 36 contrôles denses, jusqu'à un sous-pas de \(10^{-12}\), l'oracle indépendant retrouve l'énergie et le défaut de l'incrément avec une erreur relative inférieure à 2 \(\times\) \(10^{-14}\); le sous-pas nul conserve les coefficients bit à bit.
+
+\begin{center}\small\begin{tabular}{llll}\toprule
+FE n & Opération & Erreur relative & Plancher FE\\\midrule
+64 & ambient-moments & 0.0024 & 0.002371\\
+128 & ambient-moments & 0.0001386 & 0.0001375\\
+64 & increment-moments & 0.008973 & 0.002371\\
+128 & increment-moments & 4071 & 0.0001375\\
+64 & increment-reanchor & 0.002399 & 0.002371\\
+128 & increment-reanchor & 0.0001386 & 0.0001375\\
+\bottomrule\end{tabular}\end{center}
+La mise à jour additive échoue pourtant lors de la réaction forte répétée. Les coefficients de l'ancre FE et du détail auxiliaire restent grands alors que leur somme physique devrait presque s'annuler. Le bilan d'énergie obtenu par différence perd alors lui-même des chiffres significatifs. Une variante utilisant les mêmes moments d'incrément, mais projetant à nouveau le champ complet, retrouve le niveau d'erreur de la méthode initiale. Cette variante remet les coefficients à l'échelle du champ qui subsiste et supprime les directions rejetées par le Gram.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-increment-conditioning.pdf}\caption{FE n = 128, auxiliaire n = 256, \ensuremath{\kappa} = 100. Dans la mise à jour additive, l'ancre et le détail conservent chacun une norme au carré proche de 0,1. La formule d'énergie soustrait ces termes et ne fournit plus une mesure fiable du très petit champ physique. Seules ses valeurs positives sont tracées. La reprojection complète maintient les coefficients à l'échelle du champ restant. Ces répétitions instrumentées sont exclues des temps comparatifs.}\end{figure}
+Ce résultat négatif interdit d'assimiler automatiquement une formule stable pour le défaut local à une évolution robuste. L'identité de projection et la coercivité pure demandent que l'ancienne composante cachée soit retenue; la note explicite le terme supplémentaire lorsque cette hypothèse est perdue. La projection du champ complet reste la méthode de référence.
+
 \section{Association de la projection enrichie et de la phase minimax}
 La projection enrichie et la minimisation du déplacement périodique sont ensuite utilisées ensemble. Les essais courts reprennent les trois fréquences de contrôle. Deux essais plus longs sur FE n=256 et auxiliaire n=128 comparent la projection enrichie avec coupure fixe et avec phase minimax. Les ingrédients ont des contrôles séparés; cette campagne examine leur interaction.
 
@@ -639,6 +722,9 @@ phase-return & 3 & 3\\
 galerkin & 3 & 3\\
 budgeted-return & 4 & 4\\
 budgeted-remaining & 2 & 2\\
+\bottomrule\end{tabular}\end{center}
+\begin{center}\small\begin{tabular}{lll}\toprule
+Campagne & Enregistrés & Prévus\\\midrule
 joint-return & 5 & 5\\
 frozen-transfer & 8 & 8\\
 krylov & 16 & 16\\
@@ -655,6 +741,18 @@ reaction-moments-controls & 24 & 24\\
 reaction-moments-fine & 27 & 27\\
 reaction-moments-quadrature & 1 & 1\\
 reaction-projection & 90 & 90\\
+spectral-reaction & 36 & 36\\
+tiled-return-pilot & 1 & 1\\
+long-return-benchmark & 6 & 15\\
+residual-return & 12 & 12\\
+reaction-increment-projection & 90 & 90\\
+reaction-residual-projection & 90 & 90\\
+increment-physical & 18 & 18\\
+increment-reanchor & 2 & 2\\
+increment-conditioning & 2 & 2\\
+\bottomrule\end{tabular}\end{center}
+\begin{center}\small\begin{tabular}{lll}\toprule
+Campagne & Enregistrés & Prévus\\\midrule
 material-minimax & 2 & 2\\
 minimax-return & 3 & 3\\
 diffusion & 20 & 20\\

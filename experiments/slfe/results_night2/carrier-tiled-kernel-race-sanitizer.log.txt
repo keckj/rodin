@@ -1,0 +1,5 @@
+========= COMPUTE-SANITIZER
+{"validated_degree": 1}
+{"validated_degree": 2}
+{"validated_degree": 4}
+========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
