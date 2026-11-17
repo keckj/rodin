@@ -50,9 +50,49 @@ Dense GPU matrix oracles verify the local third-order defect in physical
 time, unitarity and inverse. A rank-one vortex reaches nodal RMS error
 3.262e-5 at 256 steps on 255² points, unchanged on 511² points. These nodal
 results are not substituted for FE quadrature errors or a cost comparison
-against a tuned spectral solver. A GPU-SVD input path and further FE tests
-are part of the ongoing campaign; general FE velocities remain outside the
+against a tuned spectral solver. The subsequent campaign tests a GPU-SVD
+input path and further FE cases; general FE velocities remain outside the
 validated scope.
+
+The subsequent SVD experiment is a negative performance result: on the
+nonseparable vortex at 255² points, Fourier/RK4 reaches nodal RMS 5.28e-7 in
+0.143 s including setup; the rank-11 PCP16 composition reaches 7.66e-6 in
+5.07 s. Its 336 shears per step are not competitive on this problem.
+
+A separate consistency defect was found in finite cold-start memory
+projection: it damps hidden state even when the support does not change.
+`warm_validation.py` reproduces this defect and tests a warm initialization
+with a radial energy limiter. This variant preserves the ambient state for
+an unchanged support and bounds its energy, but is nonlinear; no Lipschitz
+stability or systematic accuracy improvement follows. `warm_study.py`
+separates it from changes in physical adaptation frequency. With 512 steps,
+holding the check interval equal to that of 128 steps reduces return error
+from 0.00127 to 0.000870 for the cold transfer. Oversampling, monitor floors
+and FE-based monitors are tested separately in `monitor_study.py`.
+
+`compressible_study.py` extends the forward weak deposition to a separable
+compressible characteristic map, using target-edge preimages to split the
+source integration. Its exact reference includes the inverse Jacobian.
+Mass conservation and physical L2 growth are distinct checks. The ordinary
+GPU sparse path is used because CuPy 13's layout conversion inside the CSR
+product does not support CUDA graph capture.
+
+`night_queue.py` runs the remaining GPU campaigns sequentially and records
+exit codes in `queue-status.json`. The long return campaign supports
+`--resume`; completed records survive a change in research priorities.
+
+Material energy samples reproduce the large periodic-grid movements without
+any FE/DG field evolution. Shifting the periodic cut changes these movements;
+the first floating-phase policy minimizes cumulative-coordinate displacement
+but does not improve the maximum-edge-motion trigger or return accuracy.
+`material_monitor.py` and `phase_study.py` retain these controls.
+
+A further experimental transfer, `project_memory_galerkin`, projects hidden
+memory onto a small Krylov space augmented by the old transferred state.
+In exact arithmetic it preserves the FE observation and satisfies an exact
+Pythagorean remapping identity. The GPU implementation uses a small Gram
+pseudoinverse per field, with a numerical rank threshold. Its dedicated
+validation and return campaign are queued; numerical success is not assumed.
 
 ```sh
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/ambient_validation.py --output /tmp/slfe-ambient.json

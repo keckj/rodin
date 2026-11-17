@@ -1,7 +1,8 @@
-<!doctype html><html lang='fr'><meta charset='utf-8'><title>SLFE : supports mobiles et transfert de mémoire</title><style>body{max-width:1080px;margin:40px auto;padding:0 24px;font:17px/1.6 system-ui;color:#152c3a}h2{margin-top:2em}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #ccd6df;padding:8px;text-align:left}img{max-width:100%}figcaption{font-size:14px}</style><h1>SLFE : supports mobiles et transfert de mémoire</h1><p>Résultats disponibles le 17/11/2026 à 00:34 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les figures représentent les solutions calculées, avec une référence indépendante par caractéristiques.</p>
+<!doctype html><html lang='fr'><meta charset='utf-8'><title>SLFE : supports mobiles et transfert de mémoire</title><style>body{max-width:1080px;margin:40px auto;padding:0 24px;font:17px/1.6 system-ui;color:#152c3a}h2{margin-top:2em}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #ccd6df;padding:8px;text-align:left}img{max-width:100%}figcaption{font-size:14px}</style><h1>SLFE : supports mobiles et transfert de mémoire</h1><p>Résultats disponibles le 17/11/2026 à 01:24 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les figures représentent les solutions calculées, avec une référence indépendante par caractéristiques.</p>
 <h2>Résultat et portée</h2>
 <p>Un support auxiliaire mobile résout le défaut observé lorsque la bosse quitte la zone fine d&#x27;une grille fixe. Le couplage FE avec mémoire accepte désormais un changement de support contractant, et un raffinement exactement emboîté sans perte d&#x27;énergie. Les formules s&#x27;exécutent sans racine ni inversion de matrice. Ces propriétés sont démontrées dans restart_theory.pdf et vérifiées sur GPU; elles n&#x27;établissent ni une nouveauté bibliographique, ni une convergence générale vers l&#x27;EDP.</p>
 <p>Deux méthodes sont distinguées : le couplage avec mémoire maintient le champ FE à chaque changement; la référence d&#x27;advection pure transporte uniquement le champ DG auxiliaire entre une projection FE initiale et une projection FE finale. Cette seconde méthode est la plus rapide ici, mais elle n&#x27;offre pas les opérations physiques FE intermédiaires du couplage.</p>
+<p>Les contre-tests exposent deux limites importantes : un transfert itératif tronqué peut dissiper même à support inchangé, et un contrôle de maillage tous les quatre pas modifie le problème d&#x27;adaptation lorsque le pas diminue. Une variante corrige le premier défaut au prix d&#x27;une non-linéarité; une ablation à intervalle physique fixé isole le second. La composition hamiltonienne par SVD perd la comparaison de coût et de précision contre Fourier/RK4 sur le vortex résolu. Ces résultats orientent la suite de la recherche.</p>
 <figure><img src='night-fields.svg' alt='Même domaine et mêmes échelles de couleur. Champ initial, référence, supports fixe et mobile, puis erreurs absolues. Le tracé est un échantillonnage FE; l&#x27;erreur L2 est intégrée séparément sur les triangles.'><figcaption>Même domaine et mêmes échelles de couleur. Champ initial, référence, supports fixe et mobile, puis erreurs absolues. Le tracé est un échantillonnage FE; l&#x27;erreur L2 est intégrée séparément sur les triangles.</figcaption></figure>
 <h2>Problème et protocole</h2>
 <p>Le domaine est le tore unité. Une vitesse cellulaire incompressible prescrite transporte jusqu&#x27;à t=0,25 une bosse de largeur 0,01, initialement centrée en (0,35; 0,45), de norme L2 proche de 1. L&#x27;espace FE principal possède 32768 triangles DG P4, soit 491520 coefficients par champ; la graduation fixe vaut 0,95. Le support principal auxiliaire comporte 64×64 cellules Q4, soit 102400 valeurs par champ. Deux supports orientés supplémentaires servent aux cisaillements diagonaux. Les méthodes n&#x27;ont donc pas le même nombre d&#x27;inconnues.</p>
@@ -95,13 +96,124 @@
 <tr><td>0.5</td><td>projected</td><td>63</td><td>0.01545</td><td>0.01545</td></tr>
 <tr><td>0.5</td><td>chebyshev</td><td>63</td><td>0.01491</td><td>0.01491</td></tr>
 </tbody></table></div>
-<p>Campagne de déformation élargie : 10 cas sur 48 enregistrés. Les erreurs affichées portent sur le pire des quatre champs; les cas qui n&#x27;atteignent pas la tolérance restent présents.</p>
+<p>Campagne de déformation élargie : 29 cas sur 48 enregistrés. Les erreurs affichées portent sur le pire des quatre champs; les cas qui n&#x27;atteignent pas la tolérance restent présents.</p>
+<p>Le contrôle de maillage de cette campagne a lieu tous les quatre pas numériques. Réduire le pas augmente donc aussi la fréquence physique de contrôle : ces courbes seules n&#x27;isolent pas l&#x27;erreur temporelle. Certains cas à 512 pas déclenchent presque un remaillage à chaque contrôle et deviennent plus coûteux et moins précis. L&#x27;ablation suivante teste séparément ce mécanisme.</p>
 <figure><img src='night-return-0-25.svg' alt='Aller-retour de durée totale 0.5. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n&#x27;est pas encore enregistré.'><figcaption>Aller-retour de durée totale 0.5. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n&#x27;est pas encore enregistré.</figcaption></figure>
 <figure><img src='night-return-1-0.svg' alt='Aller-retour de durée totale 2.0. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n&#x27;est pas encore enregistré.'><figcaption>Aller-retour de durée totale 2.0. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n&#x27;est pas encore enregistré.</figcaption></figure>
+<h2>Diagnostic du moniteur : champ immobile et fréquence fixée</h2>
+<p>Un premier test supprime toute advection et reconstitue vingt-quatre fois le support à partir du même champ, avec projection entre supports. Il compare 5 et 12 points de Gauss par direction, ainsi qu&#x27;un plancher nul ou égal à un millionième de l&#x27;énergie marginale moyenne avant la racine quatrième. La surintégration conserve l&#x27;intégrale du carré du polynôme mais affine son histogramme spatial. Un déplacement résiduel dans ce test provient de la boucle moniteur-projection.</p>
+<figure><img src='night-monitor-stationary.svg' alt='Test de la sensibilité du moniteur à sa représentation. Les projections peuvent dissiper le champ; il ne s&#x27;agit pas d&#x27;une itération à données ponctuelles fixes.'><figcaption>Test de la sensibilité du moniteur à sa représentation. Les projections peuvent dissiper le champ; il ne s&#x27;agit pas d&#x27;une itération à données ponctuelles fixes.</figcaption></figure>
+<p>Sur les supports n=64 et n=128, le déplacement maximal dans ce test immobile vaut 0.002068, à comparer au seuil 0,01 du contrôleur. La boucle appliquée au champ initial ne reproduit donc pas à elle seule les grands mouvements observés pendant l&#x27;évolution. Ce test ne suffit pas à attribuer leur cause à la quadrature.</p>
+<p>L&#x27;aller-retour utilise ensuite 128 pas avec contrôle tous les 4 pas, ou 512 pas avec contrôle tous les 4 ou 16 pas. Les réglages (128,4) et (512,16) ont le même intervalle physique entre contrôles. Le champ FE, le support auxiliaire et les huit itérations de transfert de mémoire sont identiques.</p>
+<div class='table'><table><thead><tr><th>Pas</th><th>Intervalle</th><th>Gauss</th><th>Plancher</th><th>Changes</th><th>L2 max</th><th>Temps (s)</th></tr></thead><tbody>
+<tr><td>128</td><td>4</td><td>5</td><td>0</td><td>63</td><td>0.0008694</td><td>17.24</td></tr>
+<tr><td>128</td><td>4</td><td>12</td><td>0</td><td>63</td><td>0.0008672</td><td>17.24</td></tr>
+<tr><td>128</td><td>4</td><td>5</td><td>1e-06</td><td>62</td><td>0.00102</td><td>16.87</td></tr>
+<tr><td>128</td><td>4</td><td>12</td><td>1e-06</td><td>62</td><td>0.001009</td><td>16.94</td></tr>
+<tr><td>512</td><td>4</td><td>5</td><td>0</td><td>203</td><td>0.001269</td><td>54.89</td></tr>
+<tr><td>512</td><td>4</td><td>12</td><td>0</td><td>203</td><td>0.001266</td><td>55.3</td></tr>
+<tr><td>512</td><td>4</td><td>5</td><td>1e-06</td><td>196</td><td>0.001354</td><td>53.02</td></tr>
+<tr><td>512</td><td>4</td><td>12</td><td>1e-06</td><td>196</td><td>0.001351</td><td>53.53</td></tr>
+<tr><td>512</td><td>16</td><td>5</td><td>0</td><td>63</td><td>0.0008708</td><td>17.49</td></tr>
+<tr><td>512</td><td>16</td><td>12</td><td>0</td><td>63</td><td>0.000868</td><td>17.58</td></tr>
+<tr><td>512</td><td>16</td><td>5</td><td>1e-06</td><td>62</td><td>0.001023</td><td>17.18</td></tr>
+<tr><td>512</td><td>16</td><td>12</td><td>1e-06</td><td>62</td><td>0.001013</td><td>17.26</td></tr>
+</tbody></table></div>
+<h2>La coupure périodique du moniteur déplace les quantiles</h2>
+<p>Des poids d&#x27;énergie positifs sont portés par des points matériels suivis par les caractéristiques. L&#x27;incompressibilité conserve ces poids. Ce diagnostic n&#x27;utilise aucune évolution FE/DG ni aucun remaillage du champ. Les grands déplacements des partitions sont reproduits à 512 et 1024 points par direction. Décaler la coupure périodique réduit le mouvement des quantiles diagonaux : une part importante du phénomène est géométrique, et non une instabilité de projection.</p>
+<figure><img src='night-periodic-cut.svg' alt='Transport de poids matériels, sans transfert entre espaces. Les déplacements sont mesurés depuis le dernier changement accepté au seuil 0,01.'><figcaption>Transport de poids matériels, sans transfert entre espaces. Les déplacements sont mesurés depuis le dernier changement accepté au seuil 0,01.</figcaption></figure>
+<p>Remplacer l&#x27;énergie auxiliaire par celle du champ FE observé laisse pratiquement inchangés le nombre de changements et l&#x27;erreur de retour. Le bruit propre à la représentation auxiliaire ne suffit donc pas à expliquer le phénomène.</p>
+<div class='table'><table><thead><tr><th>Pas</th><th>Intervalle</th><th>Changements</th><th>L2 max</th></tr></thead><tbody>
+<tr><td>128</td><td>4</td><td>63</td><td>0.0008729</td></tr>
+<tr><td>512</td><td>4</td><td>202</td><td>0.001273</td></tr>
+<tr><td>512</td><td>16</td><td>63</td><td>0.0008747</td></tr>
+</tbody></table></div>
+<h2>Un transfert sans changement doit conserver la mémoire</h2>
+<p>Le filtre polynomial initial démarre de zéro. Même quand l&#x27;ancien et le nouveau support coïncident, il multiplie chaque mode de mémoire par un facteur inférieur à un : un nombre fini d&#x27;itérations introduit donc un défaut pour une opération géométriquement nulle. Ce défaut est distinct de la stabilité énergétique. Le contrôle ci-dessous utilise des états aléatoires après transport et physique, et calcule leur distance dans un espace ambiant commun.</p>
+<div class='table'><table><thead><tr><th>Degré</th><th>Transfert</th><th>Distance au carré</th><th>Perte d&#x27;énergie</th></tr></thead><tbody>
+<tr><td>1</td><td>cold</td><td>0.004596</td><td>0.02471</td></tr>
+<tr><td>1</td><td>warm</td><td>-2.22e-15</td><td>4.441e-16</td></tr>
+<tr><td>2</td><td>cold</td><td>0.02681</td><td>0.09344</td></tr>
+<tr><td>2</td><td>warm</td><td>3.553e-15</td><td>2.665e-15</td></tr>
+<tr><td>4</td><td>cold</td><td>0.07624</td><td>0.2278</td></tr>
+<tr><td>4</td><td>warm</td><td>2.487e-14</td><td>1.421e-14</td></tr>
+</tbody></table></div>
+<p>Une variante initialise l&#x27;itération avec la représentation auxiliaire précédente transférée, puis borne radialement son énergie invisible par celle de l&#x27;ancien état. Elle conserve le champ FE et son énergie augmentée, et devient l&#x27;identité ambiante à support inchangé. Le facteur dépend de l&#x27;état : cette variante est non linéaire, et aucune contraction de la distance entre deux solutions n&#x27;est déduite de son seul bilan d&#x27;énergie. La correction d&#x27;un défaut d&#x27;identité ne garantit pas une meilleure erreur physique.</p>
+<p>Un contre-exemple GPU dans un espace ambiant de dimension trois confirme cette limite : le rapport de distance entre deux états vaut 1.94528, alors que l&#x27;énergie de chaque état reste bornée. La variante n&#x27;est donc pas non expansive.</p>
+<div class='table'><table><thead><tr><th>Pas</th><th>Intervalle</th><th>Transfert</th><th>Changements</th><th>L2 max</th><th>Temps (s)</th></tr></thead><tbody>
+<tr><td>128</td><td>4</td><td>projected</td><td>63</td><td>0.0008701</td><td>16.8</td></tr>
+<tr><td>128</td><td>4</td><td>warm</td><td>63</td><td>0.001044</td><td>16.98</td></tr>
+<tr><td>512</td><td>4</td><td>projected</td><td>203</td><td>0.00127</td><td>54.56</td></tr>
+<tr><td>512</td><td>4</td><td>warm</td><td>202</td><td>0.001246</td><td>54.63</td></tr>
+<tr><td>512</td><td>16</td><td>projected</td><td>63</td><td>0.0008703</td><td>17.23</td></tr>
+<tr><td>512</td><td>16</td><td>warm</td><td>63</td><td>0.0009124</td><td>17.36</td></tr>
+</tbody></table></div>
+<h2>Apparition d&#x27;une structure par une source FE</h2>
+<p>Une nouvelle bosse centrée en (0,8; 0,75) est ajoutée par une source FE impulsionnelle à t=0,125, après un début de transport d&#x27;une autre bosse. Le maillage triangulaire est perturbé, sans graduation. L&#x27;adaptation compare l&#x27;énergie de l&#x27;état auxiliaire à celle du champ FE observé. Le second moniteur peut voir une structure créée par la physique FE avant qu&#x27;elle soit bien représentée dans l&#x27;auxiliaire. La référence transporte séparément les deux profils analytiques.</p>
+<p>La source injecte de l&#x27;énergie. Son travail est mesuré par la différence d&#x27;énergie FE, et l&#x27;identité entre ce travail et la variation de l&#x27;énergie augmentée est contrôlée. Le bilan de masse ajoute la masse de la source. Une contraction globale n&#x27;est pas revendiquée à travers cette impulsion.</p>
+<div class='table'><table><thead><tr><th>FE n</th><th>Aux. n</th><th>Largeur</th><th>Moniteur</th><th>L2</th><th>Plancher FE</th></tr></thead><tbody>
+<tr><td>128</td><td>32</td><td>0.003</td><td>auxiliary</td><td>0.0818</td><td>0.03284</td></tr>
+<tr><td>128</td><td>32</td><td>0.003</td><td>fe</td><td>0.03406</td><td>0.03284</td></tr>
+<tr><td>128</td><td>32</td><td>0.006</td><td>auxiliary</td><td>0.003358</td><td>0.001243</td></tr>
+<tr><td>128</td><td>32</td><td>0.006</td><td>fe</td><td>0.003001</td><td>0.001243</td></tr>
+<tr><td>128</td><td>64</td><td>0.003</td><td>auxiliary</td><td>0.03355</td><td>0.03284</td></tr>
+<tr><td>128</td><td>64</td><td>0.003</td><td>fe</td><td>0.03354</td><td>0.03284</td></tr>
+<tr><td>128</td><td>64</td><td>0.006</td><td>auxiliary</td><td>0.001366</td><td>0.001243</td></tr>
+<tr><td>128</td><td>64</td><td>0.006</td><td>fe</td><td>0.001362</td><td>0.001243</td></tr>
+<tr><td>256</td><td>32</td><td>0.003</td><td>auxiliary</td><td>0.0767</td><td>0.001572</td></tr>
+<tr><td>256</td><td>32</td><td>0.003</td><td>fe</td><td>0.005019</td><td>0.001572</td></tr>
+<tr><td>256</td><td>32</td><td>0.006</td><td>auxiliary</td><td>0.00337</td><td>5.457e-05</td></tr>
+<tr><td>256</td><td>32</td><td>0.006</td><td>fe</td><td>0.003038</td><td>5.457e-05</td></tr>
+<tr><td>256</td><td>64</td><td>0.003</td><td>auxiliary</td><td>0.001711</td><td>0.001572</td></tr>
+<tr><td>256</td><td>64</td><td>0.003</td><td>fe</td><td>0.001681</td><td>0.001572</td></tr>
+<tr><td>256</td><td>64</td><td>0.006</td><td>auxiliary</td><td>0.0004428</td><td>5.457e-05</td></tr>
+<tr><td>256</td><td>64</td><td>0.006</td><td>fe</td><td>0.000418</td><td>5.457e-05</td></tr>
+</tbody></table></div>
 <h2>Exploration : vitesses issues de produits de fonctions de courant</h2>
 <p>Une fonction de courant somme de produits a(y)b(x) transforme l&#x27;advection en somme de commutateurs de cisaillements. Le prototype réutilise une formule publiée de Casas, Escorihuela-Tomàs et Moreno Casares (2025), PCP16. Ses seize cisaillements Fourier sont unitaires; son ordre cinq dans la racine du pas correspond à l&#x27;ordre deux dans le temps physique, à grille fixée. Les coefficients et cette théorie de composition sont attribués aux auteurs. L&#x27;intérêt recherché ici est une extension des vitesses admissibles dans le couplage FE, dont la nouveauté et l&#x27;avantage de coût ne sont pas établis.</p>
 <p>Les tests emploient un ou deux tourbillons gaussiens périodiques, dont la fonction de courant possède de nombreux modes de Fourier mais peu de produits séparables. Un oracle matriciel GPU contrôle le commutateur, l&#x27;unitarité, les constantes, l&#x27;inverse et le défaut temporel. Une intégration indépendante de caractéristiques contrôle l&#x27;erreur physique. Une erreur nodale RMS est distinguée de l&#x27;erreur FE intégrée.</p>
 <figure><img src='night-products.svg' alt='La grille de 127 points peut imposer un plancher spatial. Les résultats nodaux exploratoires ne constituent pas un benchmark de performance FE ni une validation d&#x27;une vitesse FE arbitraire.'><figcaption>La grille de 127 points peut imposer un plancher spatial. Les résultats nodaux exploratoires ne constituent pas un benchmark de performance FE ni une validation d&#x27;une vitesse FE arbitraire.</figcaption></figure>
+<div class='table'><table><thead><tr><th>Produits</th><th>FE n</th><th>Pas</th><th>L2 FE</th><th>Plancher FE</th></tr></thead><tbody>
+<tr><td>1</td><td>32</td><td>32</td><td>0.006844</td><td>0.005715</td></tr>
+<tr><td>1</td><td>32</td><td>128</td><td>0.006403</td><td>0.005715</td></tr>
+<tr><td>1</td><td>32</td><td>512</td><td>0.006401</td><td>0.005715</td></tr>
+<tr><td>1</td><td>64</td><td>32</td><td>0.002492</td><td>0.000501</td></tr>
+<tr><td>1</td><td>64</td><td>128</td><td>0.0005395</td><td>0.000501</td></tr>
+<tr><td>1</td><td>64</td><td>512</td><td>0.0005217</td><td>0.000501</td></tr>
+<tr><td>2</td><td>32</td><td>32</td><td>0.006035</td><td>0.005561</td></tr>
+<tr><td>2</td><td>32</td><td>128</td><td>0.006008</td><td>0.005561</td></tr>
+<tr><td>2</td><td>32</td><td>512</td><td>0.006008</td><td>0.005561</td></tr>
+<tr><td>2</td><td>64</td><td>32</td><td>0.0007044</td><td>0.0003857</td></tr>
+<tr><td>2</td><td>64</td><td>128</td><td>0.0004009</td><td>0.0003857</td></tr>
+<tr><td>2</td><td>64</td><td>512</td><td>0.0003996</td><td>0.0003857</td></tr>
+</tbody></table></div>
+<h2>Fonction de courant échantillonnée et comparaison Fourier/RK4</h2>
+<p>Le vortex comporte un facteur exponentiel en cos(2π(x+y)), donc une séparation de rang fini n&#x27;est plus prescrite. Une SVD GPU de la fonction de courant sélectionne un préfixe selon l&#x27;erreur L2 de vitesse spectrale. L&#x27;orthogonalité permet de sommer exactement les énergies des termes rejetés. Ce choix ne minimise pas le rang en norme H1. Le comparateur Fourier utilise la forme antisymétrique de l&#x27;advection et RK4, avec un pas borné par la norme de son générateur. Les deux chemins utilisent des graphes CUDA et les mêmes grilles.</p>
+<figure><img src='night-svd-cost.svg' alt='Comparaison exploratoire à une répétition, référence et grille initiale exclues des temps. Une erreur de vitesse SVD ne constitue pas à elle seule une borne sur l&#x27;erreur du champ transporté.'><figcaption>Comparaison exploratoire à une répétition, référence et grille initiale exclues des temps. Une erreur de vitesse SVD ne constitue pas à elle seule une borne sur l&#x27;erreur du champ transporté.</figcaption></figure>
+<div class='table'><table><thead><tr><th>Grille</th><th>Méthode</th><th>Rang</th><th>Pas</th><th>Erreur vitesse</th><th>L2 champ</th><th>Temps (s)</th></tr></thead><tbody>
+<tr><td>127</td><td>pcp16</td><td>4</td><td>64</td><td>0.0004091</td><td>0.01354</td><td>0.3958</td></tr>
+<tr><td>127</td><td>pcp16</td><td>4</td><td>256</td><td>0.0004091</td><td>0.01338</td><td>0.8027</td></tr>
+<tr><td>127</td><td>pcp16</td><td>7</td><td>64</td><td>4.18e-06</td><td>0.003493</td><td>0.4507</td></tr>
+<tr><td>127</td><td>pcp16</td><td>7</td><td>256</td><td>4.18e-06</td><td>0.002914</td><td>1.487</td></tr>
+<tr><td>127</td><td>pcp16</td><td>11</td><td>64</td><td>2.247e-08</td><td>0.003491</td><td>0.7156</td></tr>
+<tr><td>127</td><td>pcp16</td><td>11</td><td>256</td><td>2.247e-08</td><td>0.002911</td><td>2.334</td></tr>
+<tr><td>255</td><td>pcp16</td><td>4</td><td>64</td><td>0.0004091</td><td>0.01309</td><td>0.5336</td></tr>
+<tr><td>255</td><td>pcp16</td><td>4</td><td>256</td><td>0.0004091</td><td>0.01306</td><td>1.731</td></tr>
+<tr><td>255</td><td>pcp16</td><td>7</td><td>64</td><td>4.18e-06</td><td>0.0001535</td><td>0.8715</td></tr>
+<tr><td>255</td><td>pcp16</td><td>7</td><td>256</td><td>4.18e-06</td><td>9.78e-05</td><td>3.151</td></tr>
+<tr><td>255</td><td>pcp16</td><td>11</td><td>64</td><td>2.247e-08</td><td>0.0001139</td><td>1.393</td></tr>
+<tr><td>255</td><td>pcp16</td><td>11</td><td>256</td><td>2.247e-08</td><td>7.658e-06</td><td>5.073</td></tr>
+<tr><td>127</td><td>rk4</td><td>—</td><td>101</td><td>—</td><td>0.002276</td><td>0.07404</td></tr>
+<tr><td>127</td><td>rk4</td><td>—</td><td>202</td><td>—</td><td>0.002277</td><td>0.1014</td></tr>
+<tr><td>255</td><td>rk4</td><td>—</td><td>204</td><td>—</td><td>5.284e-07</td><td>0.1428</td></tr>
+<tr><td>255</td><td>rk4</td><td>—</td><td>407</td><td>—</td><td>4.806e-07</td><td>0.2547</td></tr>
+</tbody></table></div>
+<p>Sur ce vortex résolu, Fourier/RK4 donne une erreur 5.284e-07 en 0.1428 s, contre 7.658e-06 en 5.073 s pour PCP16. Le second coûte 35.5 fois plus et reste moins précis dans cette comparaison. Les 336 cisaillements par pas rendent cette compression SVD non compétitive ici. Sa conservation d&#x27;énergie ne suffit pas à justifier sa poursuite comme voie de performance prioritaire.</p>
+<h2>Dépôt forward conservatif sous compression</h2>
+<p>Le flot exact de la vitesse (0,2 sin(2πx), 0) transporte une densité jusqu&#x27;à t=1. La référence comprend le Jacobien inverse : l&#x27;équation conservative diffère ici de l&#x27;équation advective. Les intervalles de départ sont découpés aux préimages des arêtes d&#x27;arrivée avant quadrature de Gauss. Les matrices unidimensionnelles sont construites et appliquées sur GPU. Un raffinement de quadrature 16 vers 32 contrôle cette intégration non polynomiale; un calcul de valeurs singulières vérifie la borne de croissance dans la norme de masse sur le petit cas de contrôle.</p>
+<p>Le couplage conserve le défaut FE initial tandis que le support DG évolue. Le contrôle remet la mémoire à zéro après chaque pas. La masse doit rester constante; l&#x27;énergie augmentée peut croître physiquement, avec une borne exp(2π × 0,2 × t) sur son rapport. Les maillages FE sont perturbés. Cette construction traite un flot séparable exact; une vitesse compressible FE générale n&#x27;est pas couverte.</p>
+<figure><img src='night-compressible.svg' alt='Le flot exact supprime l&#x27;erreur d&#x27;intégration temporelle des trajectoires. Le nombre de dépôts change l&#x27;accumulation des erreurs de projection, et non une erreur RK sur les caractéristiques.'><figcaption>Le flot exact supprime l&#x27;erreur d&#x27;intégration temporelle des trajectoires. Le nombre de dépôts change l&#x27;accumulation des erreurs de projection, et non une erreur RK sur les caractéristiques.</figcaption></figure>
+<p>Sur les 32 cas enregistrés, l&#x27;écart absolu maximal de masse vaut 8.47e-15; le rapport d&#x27;énergie maximal vaut 2.91183, pour une borne physique 3.51359.</p>
 <h2>Raffinement : identité validée, contrôleur insuffisant</h2>
 <div class='table'><table><thead><tr><th>Degré</th><th>Raffinement</th><th>Défaut Gram</th><th>Défaut observation</th></tr></thead><tbody>
 <tr><td>1</td><td>global</td><td>1.221e-15</td><td>6.661e-16</td></tr>
@@ -124,10 +236,36 @@
 <tr><td>memory-stress</td><td>3</td><td>3</td></tr>
 <tr><td>separated-refinement</td><td>12</td><td>12</td></tr>
 <tr><td>roundtrip-smoke</td><td>6</td><td>6</td></tr>
-<tr><td>roundtrip-long</td><td>10</td><td>48</td></tr>
-<tr><td>source-full</td><td>0</td><td>16</td></tr>
-<tr><td>products</td><td>0</td><td>32</td></tr>
+<tr><td>roundtrip-long</td><td>29</td><td>48</td></tr>
+<tr><td>source-full</td><td>16</td><td>16</td></tr>
+<tr><td>products</td><td>32</td><td>32</td></tr>
+<tr><td>monitor-stationary</td><td>12</td><td>12</td></tr>
+<tr><td>monitor-return</td><td>12</td><td>12</td></tr>
+<tr><td>svd</td><td>16</td><td>16</td></tr>
+<tr><td>compressible</td><td>32</td><td>32</td></tr>
+<tr><td>warm-return</td><td>6</td><td>6</td></tr>
+<tr><td>material-monitor</td><td>4</td><td>4</td></tr>
+<tr><td>monitor-fe</td><td>3</td><td>3</td></tr>
 </tbody></table></div>
+<div class='table'><table><thead><tr><th>Exécution séquentielle</th><th>État</th><th>Code de sortie</th></tr></thead><tbody>
+<tr><td>monitor-stationary</td><td>completed</td><td>0</td></tr>
+<tr><td>warm-return</td><td>completed</td><td>0</td></tr>
+<tr><td>remap-bound-validation</td><td>completed</td><td>0</td></tr>
+<tr><td>compressible</td><td>failed</td><td>1</td></tr>
+<tr><td>products</td><td>completed</td><td>0</td></tr>
+<tr><td>svd</td><td>completed</td><td>0</td></tr>
+<tr><td>source-smoke</td><td>completed</td><td>0</td></tr>
+<tr><td>source-full</td><td>completed</td><td>0</td></tr>
+<tr><td>monitor-return</td><td>completed</td><td>0</td></tr>
+<tr><td>roundtrip-long</td><td>running</td><td>en cours</td></tr>
+</tbody></table></div>
+<div class='table'><table><thead><tr><th>Reprise et diagnostics</th><th>État</th><th>Code de sortie</th></tr></thead><tbody>
+<tr><td>warm-validation</td><td>completed</td><td>0</td></tr>
+<tr><td>compressible</td><td>completed</td><td>0</td></tr>
+<tr><td>material-monitor</td><td>completed</td><td>0</td></tr>
+<tr><td>monitor-fe</td><td>completed</td><td>0</td></tr>
+</tbody></table></div>
+<p>Le premier lancement compressible a échoué pendant la capture CUDA du produit CSR CuPy. La reprise conserve les calculs sur GPU et utilise l&#x27;application creuse ordinaire. Les résultats réussis remplacent le fichier vide, tandis que le code de sortie initial reste dans l&#x27;historique.</p>
 <p>nested-sanitizer : ========= ERROR SUMMARY: 0 errors</p>
 <p>memory-transfer-sanitizer : ========= ERROR SUMMARY: 0 errors</p>
 <p>ambient-sanitizer : ========= ERROR SUMMARY: 0 errors</p>

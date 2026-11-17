@@ -8,10 +8,19 @@ by the shear kernels, not by this static projection.
 
 from cupyx.scipy.sparse import coo_matrix
 from gpu import cp
+from flux import gauss_interval
 
 
 class TensorProjection:
-    def __init__(self, source, target):
+    def __init__(self, source, target, maps=None, quadrature_order=None):
+        """Project through optional separable conservative characteristic maps.
+
+        Each maps entry is (forward, inverse) for a monotone interval map
+        fixing the partition endpoints. Integration is over source intervals
+        split at inverse images of target edges. With nonlinear maps this is
+        quadrature, and its accuracy requires an independent refinement test.
+        Without maps the original exact polynomial projection is retained.
+        """
         if source.np != target.np:
             raise ValueError("This projection retains the polynomial degree")
         if not bool(
@@ -22,18 +31,25 @@ class TensorProjection:
         self.matrices = []
         p = source.np
         nodes, weights = source.nodes, source.weights
+        qnodes, qweights = gauss_interval(quadrature_order or p)
         for axis in (0, 1):
             se, te = source.edges[axis], target.edges[axis]
-            lower = cp.maximum(te[:-1, None], se[None, :-1])
-            upper = cp.minimum(te[1:, None], se[None, 1:])
+            preimage = te if maps is None else maps[axis][1](te)
+            if not bool(cp.all(cp.diff(preimage) > 0)) or not bool(
+                cp.all(cp.abs(preimage[[0, -1]] - se[[0, -1]]) < 1e-13)
+            ):
+                raise ValueError("Characteristic maps must increase and fix endpoints")
+            lower = cp.maximum(preimage[:-1, None], se[None, :-1])
+            upper = cp.minimum(preimage[1:, None], se[None, 1:])
             target_cells, source_cells = cp.nonzero(upper > lower)
             lo, length = (
                 lower[target_cells, source_cells],
                 (upper - lower)[target_cells, source_cells],
             )
             ht, hs = cp.diff(te)[target_cells], cp.diff(se)[source_cells]
-            points = lo[:, None] + length[:, None] * nodes
-            tx = (points - te[target_cells, None]) / ht[:, None]
+            points = lo[:, None] + length[:, None] * qnodes
+            mapped = points if maps is None else maps[axis][0](points)
+            tx = (mapped - te[target_cells, None]) / ht[:, None]
             sx = (points - se[source_cells, None]) / hs[:, None]
             bt, bs = cp.ones((*points.shape, p)), cp.ones((*points.shape, p))
             for i in range(p):
@@ -42,7 +58,7 @@ class TensorProjection:
                         bt[..., i] *= (tx - nodes[j]) / (nodes[i] - nodes[j])
                         bs[..., i] *= (sx - nodes[j]) / (nodes[i] - nodes[j])
             blocks = (
-                cp.einsum("q,pqi,pqj,p->pij", weights, bt, bs, length / ht)
+                cp.einsum("q,pqi,pqj,p->pij", qweights, bt, bs, length / ht)
                 / weights[None, :, None]
             )
             rows = cp.broadcast_to(

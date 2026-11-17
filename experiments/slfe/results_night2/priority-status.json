@@ -1,0 +1,60 @@
+[
+  {
+    "name": "warm-validation",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/warm_validation.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/warm-validation.json"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:10:14.863391+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:10:16.477944+01:00"
+  },
+  {
+    "name": "compressible",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/compressible_study.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/compressible.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:10:16.478170+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:10:21.605438+01:00"
+  },
+  {
+    "name": "material-monitor",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/material_monitor.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/material-monitor.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:10:21.605761+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:10:23.459791+01:00"
+  },
+  {
+    "name": "monitor-fe",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/monitor_study.py",
+      "--suite",
+      "fe",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/monitor-fe.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:10:23.460254+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:11:57.138581+01:00"
+  }
+]

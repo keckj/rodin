@@ -1,0 +1,151 @@
+[
+  {
+    "name": "monitor-stationary",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/monitor_study.py",
+      "--suite",
+      "stationary",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/monitor-stationary.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T00:57:33.946793+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T00:57:42.229571+01:00"
+  },
+  {
+    "name": "warm-return",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/warm_study.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/warm-return.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T00:57:42.230154+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:00:45.503707+01:00"
+  },
+  {
+    "name": "remap-bound-validation",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/ambient_validation.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/remap-bound-validation.json"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:00:45.504198+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:00:47.234690+01:00"
+  },
+  {
+    "name": "compressible",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/compressible_study.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/compressible.jsonl"
+    ],
+    "status": "failed",
+    "started": "2026-11-17T01:00:47.241726+01:00",
+    "returncode": 1,
+    "finished": "2026-11-17T01:00:48.739615+01:00"
+  },
+  {
+    "name": "products",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/product_study.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/products.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:00:48.740065+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:01:25.394430+01:00"
+  },
+  {
+    "name": "svd",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/svd_study.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/svd.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:01:25.394801+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:01:46.443138+01:00"
+  },
+  {
+    "name": "source-smoke",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/source_study.py",
+      "--suite",
+      "smoke",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/source-smoke.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:01:46.443636+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:02:12.524437+01:00"
+  },
+  {
+    "name": "source-full",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/source_study.py",
+      "--suite",
+      "full",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/source-full.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:02:12.524879+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:11:57.141396+01:00"
+  },
+  {
+    "name": "monitor-return",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/monitor_study.py",
+      "--suite",
+      "return",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/monitor-return.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:11:57.141788+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:19:46.670914+01:00"
+  },
+  {
+    "name": "roundtrip-long",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/roundtrip_study.py",
+      "--suite",
+      "long",
+      "--resume",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/roundtrip-long.jsonl"
+    ],
+    "status": "running",
+    "started": "2026-11-17T01:19:46.671423+01:00"
+  }
+]

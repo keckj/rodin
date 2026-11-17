@@ -1,0 +1,31 @@
+[
+  {
+    "name": "material-phase",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/material_monitor.py",
+      "--floating-phase",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/material-phase.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:17:58.910818+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:18:00.316232+01:00"
+  },
+  {
+    "name": "phase-return",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/phase_study.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/phase-return.jsonl"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T01:18:00.316549+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T01:19:46.668016+01:00"
+  }
+]

@@ -73,7 +73,9 @@ def stationary(naux=64, sample_order=5, energy_floor=0.0, iterations=24):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--suite", choices=("stationary", "return"), required=True)
+    parser.add_argument(
+        "--suite", choices=("stationary", "return", "fe"), required=True
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.suite == "stationary":
@@ -82,6 +84,11 @@ def main():
             for n in (32, 64, 128)
             for q in (5, 12)
             for f in (0.0, 1e-6)
+        ]
+    elif args.suite == "fe":
+        cases = [
+            dict(steps=steps, check_every=interval, monitor_source="fe")
+            for steps, interval in ((128, 4), (512, 4), (512, 16))
         ]
     else:
         cases = [

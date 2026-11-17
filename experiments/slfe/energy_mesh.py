@@ -10,7 +10,15 @@ from flux import gauss_interval
 
 
 def partitions(
-    points, weights, n, bins=2048, smoothing=0.005, background=0.25, energy_floor=0.0
+    points,
+    weights,
+    n,
+    bins=2048,
+    smoothing=0.005,
+    background=0.25,
+    energy_floor=0.0,
+    origins=None,
+    previous_edges=None,
 ):
     if not 0 < background <= 1 or smoothing <= 0:
         raise ValueError("A positive background and smoothing length are required")
@@ -20,12 +28,17 @@ def partitions(
         raise ValueError("The relative energy floor must be nonnegative")
     x, y = points[..., 0].ravel(), points[..., 1].ravel()
     weights = weights.ravel()
+    origins = cp.zeros(4) if origins is None else cp.asarray(origins)
+    if origins.shape != (4,):
+        raise ValueError("Expected one periodic cut per monitored coordinate")
+    if previous_edges is not None and previous_edges.shape != (4, n + 1):
+        raise ValueError("Phase alignment requires the four previous partitions")
     frequency = cp.fft.rfftfreq(bins, d=1 / bins)
     smoother = cp.exp(-2 * (cp.pi * smoothing * frequency) ** 2)
     edges = []
-    for coordinate in (x, y, x + y, x - y):
+    for axis, (coordinate, origin) in enumerate(zip((x, y, x + y, x - y), origins)):
         indices = cp.minimum(
-            cp.floor((coordinate % 1) * bins).astype(cp.int64), bins - 1
+            cp.floor(((coordinate - origin) % 1) * bins).astype(cp.int64), bins - 1
         )
         histogram = cp.bincount(indices, weights=weights, minlength=bins)
         smoothed = cp.maximum(
@@ -38,9 +51,23 @@ def partitions(
         density = background + (1 - background) * monitor
         cumulative = cp.concatenate((cp.zeros(1), cp.cumsum(density)))
         cumulative /= cumulative[-1]
-        edges.append(
-            cp.interp(cp.linspace(0, 1, n + 1), cumulative, cp.linspace(0, 1, bins + 1))
-        )
+        levels = cp.linspace(0, 1, n + 1)
+        coordinate_grid = cp.linspace(0, 1, bins + 1)
+        if previous_edges is not None:
+            old = previous_edges[axis, :-1] - origin
+            probability = cp.floor(old) + cp.interp(
+                old % 1, coordinate_grid, cumulative
+            )
+            # Least-squares alignment in cumulative-monitor coordinates.
+            # A floating periodic phase avoids pinning one quantile at x=0.
+            levels += cp.mean(probability - levels[:-1])
+            edges.append(
+                origin
+                + cp.floor(levels)
+                + cp.interp(levels % 1, cumulative, coordinate_grid)
+            )
+        else:
+            edges.append(origin + cp.interp(levels, cumulative, coordinate_grid))
     result = cp.stack(edges)
     assert bool(cp.all(cp.diff(result, axis=1) > 0))
     return cp.ascontiguousarray(result[:2]), cp.ascontiguousarray(result[2:])

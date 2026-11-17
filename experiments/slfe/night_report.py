@@ -44,6 +44,16 @@ def main():
             "source-full",
             "product-pilot",
             "products",
+            "monitor-stationary",
+            "monitor-return",
+            "svd",
+            "compressible",
+            "warm-return",
+            "material-monitor",
+            "material-phase",
+            "monitor-fe",
+            "phase-return",
+            "galerkin",
             "moving-resolution",
             "moving-fields",
         )
@@ -59,6 +69,9 @@ def main():
     )
     r.paragraph(
         "Deux méthodes sont distinguées : le couplage avec mémoire maintient le champ FE à chaque changement; la référence d'advection pure transporte uniquement le champ DG auxiliaire entre une projection FE initiale et une projection FE finale. Cette seconde méthode est la plus rapide ici, mais elle n'offre pas les opérations physiques FE intermédiaires du couplage."
+    )
+    r.paragraph(
+        "Les contre-tests exposent deux limites importantes : un transfert itératif tronqué peut dissiper même à support inchangé, et un contrôle de maillage tous les quatre pas modifie le problème d'adaptation lorsque le pas diminue. Une variante corrige le premier défaut au prix d'une non-linéarité; une ablation à intervalle physique fixé isole le second. La composition hamiltonienne par SVD perd la comparaison de coût et de précision contre Fourier/RK4 sur le vortex résolu. Ces résultats orientent la suite de la recherche."
     )
     for path in (args.input / "figures").glob("*"):
         if path.suffix in (".svg", ".pdf", ".png", ".json"):
@@ -510,6 +523,9 @@ def main():
         r.paragraph(
             f"Campagne de déformation élargie : {len(extended)} cas sur 48 enregistrés. Les erreurs affichées portent sur le pire des quatre champs; les cas qui n'atteignent pas la tolérance restent présents."
         )
+        r.paragraph(
+            "Le contrôle de maillage de cette campagne a lieu tous les quatre pas numériques. Réduire le pas augmente donc aussi la fréquence physique de contrôle : ces courbes seules n'isolent pas l'erreur temporelle. Certains cas à 512 pas déclenchent presque un remaillage à chaque contrôle et deviennent plus coûteux et moins précis. L'ablation suivante teste séparément ce mécanisme."
+        )
         for duration in (0.25, 1.0):
             fig, axes = plt.subplots(2, 2, figsize=(10, 7))
             for ax, (nfe, naux) in zip(
@@ -553,6 +569,227 @@ def main():
                 "night-return-" + str(duration).replace(".", "-"),
                 f"Aller-retour de durée totale {2*duration}. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n'est pas encore enregistré.",
             )
+    stationary = [x["result"] for x in raw["monitor-stationary"]]
+    if stationary:
+        r.section("Diagnostic du moniteur : champ immobile et fréquence fixée")
+        r.paragraph(
+            "Un premier test supprime toute advection et reconstitue vingt-quatre fois le support à partir du même champ, avec projection entre supports. Il compare 5 et 12 points de Gauss par direction, ainsi qu'un plancher nul ou égal à un millionième de l'énergie marginale moyenne avant la racine quatrième. La surintégration conserve l'intégrale du carré du polynôme mais affine son histogramme spatial. Un déplacement résiduel dans ce test provient de la boucle moniteur-projection."
+        )
+        fig, axes = plt.subplots(1, 3, figsize=(11, 3.8))
+        for n, ax in zip((32, 64, 128), axes):
+            for x in stationary:
+                if x["naux"] != n:
+                    continue
+                ax.semilogy(
+                    [h["iteration"] for h in x["history"]],
+                    [max(h["displacement"], 1e-16) for h in x["history"]],
+                    label=f"Gauss {x['sample_order']}, plancher {x['energy_floor']:g}",
+                )
+            ax.axhline(0.01, color="black", linestyle="--", label="Seuil de changement")
+            ax.set(
+                title=f"Auxiliaire n={n}",
+                xlabel="Reconstruction sans advection",
+                ylabel="Déplacement maximal des arêtes",
+            )
+            ax.legend(fontsize=7)
+            ax.grid(alpha=0.2)
+        r.save_figure(
+            fig,
+            "night-monitor-stationary",
+            "Test de la sensibilité du moniteur à sa représentation. Les projections peuvent dissiper le champ; il ne s'agit pas d'une itération à données ponctuelles fixes.",
+        )
+        initial_controls = [x for x in stationary if x["naux"] >= 64]
+        if initial_controls:
+            maximum = max(
+                h["displacement"] for x in initial_controls for h in x["history"]
+            )
+            r.paragraph(
+                f"Sur les supports n=64 et n=128, le déplacement maximal dans ce test immobile vaut {maximum:.4g}, à comparer au seuil 0,01 du contrôleur. La boucle appliquée au champ initial ne reproduit donc pas à elle seule les grands mouvements observés pendant l'évolution. Ce test ne suffit pas à attribuer leur cause à la quadrature."
+            )
+    monitor = [x["result"] for x in raw["monitor-return"]]
+    if monitor:
+        r.paragraph(
+            "L'aller-retour utilise ensuite 128 pas avec contrôle tous les 4 pas, ou 512 pas avec contrôle tous les 4 ou 16 pas. Les réglages (128,4) et (512,16) ont le même intervalle physique entre contrôles. Le champ FE, le support auxiliaire et les huit itérations de transfert de mémoire sont identiques."
+        )
+        r.table(
+            [
+                "Pas",
+                "Intervalle",
+                "Gauss",
+                "Plancher",
+                "Changes",
+                "L2 max",
+                "Temps (s)",
+            ],
+            [
+                [
+                    x["steps_per_leg"],
+                    x["check_every"],
+                    x["sample_order"],
+                    x["energy_floor"],
+                    x["changes"],
+                    max(x["l2"]),
+                    x["setup_seconds"] + x["evolution_seconds"],
+                ]
+                for x in monitor
+            ],
+        )
+    material = [x["result"] for x in raw["material-monitor"] + raw["material-phase"]]
+    if material:
+        r.section("La coupure périodique du moniteur déplace les quantiles")
+        r.paragraph(
+            "Des poids d'énergie positifs sont portés par des points matériels suivis par les caractéristiques. L'incompressibilité conserve ces poids. Ce diagnostic n'utilise aucune évolution FE/DG ni aucun remaillage du champ. Les grands déplacements des partitions sont reproduits à 512 et 1024 points par direction. Décaler la coupure périodique réduit le mouvement des quantiles diagonaux : une part importante du phénomène est géométrique, et non une instabilité de projection."
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        for axis, ax in zip((2, 3), axes):
+            for x in material:
+                label = (
+                    "Phase ajustée"
+                    if x.get("floating_phase")
+                    else ("Coupe décalée" if x["shifted"] else "Coupe fixe en zéro")
+                )
+                ax.plot(
+                    [h["time"] for h in x["history"]],
+                    [h["axis_displacement"][axis] for h in x["history"]],
+                    "--" if x["samples"] == 512 else "-",
+                    label=f"{label}, {x['samples']}",
+                )
+            ax.axhline(0.01, color="black", linestyle=":")
+            ax.set(
+                title="Coordonnée x+y" if axis == 2 else "Coordonnée x−y",
+                xlabel="Temps physique",
+                ylabel="Déplacement maximal des arêtes",
+            )
+            ax.legend(fontsize=7)
+            ax.grid(alpha=0.2)
+        r.save_figure(
+            fig,
+            "night-periodic-cut",
+            "Transport de poids matériels, sans transfert entre espaces. Les déplacements sont mesurés depuis le dernier changement accepté au seuil 0,01.",
+        )
+    fe_monitor = [x["result"] for x in raw["monitor-fe"]]
+    if fe_monitor:
+        r.paragraph(
+            "Remplacer l'énergie auxiliaire par celle du champ FE observé laisse pratiquement inchangés le nombre de changements et l'erreur de retour. Le bruit propre à la représentation auxiliaire ne suffit donc pas à expliquer le phénomène."
+        )
+        r.table(
+            ["Pas", "Intervalle", "Changements", "L2 max"],
+            [
+                [x["steps_per_leg"], x["check_every"], x["changes"], max(x["l2"])]
+                for x in fe_monitor
+            ],
+        )
+    phased = [x["result"] for x in raw["phase-return"]]
+    if phased:
+        r.paragraph(
+            "Un alignement de phase par moindres carrés dans les coordonnées cumulées du moniteur supprime la dépendance à une coupure fixe. Il ne minimise toutefois pas le déplacement maximal des arêtes, qui déclenche ici les changements. Cette première variante ne réduit pas le nombre de remaillages ni l'erreur de retour; elle reste un résultat négatif du contrôleur."
+        )
+        r.table(
+            ["Pas", "Intervalle", "Changements", "L2 max"],
+            [
+                [x["steps_per_leg"], x["check_every"], x["changes"], max(x["l2"])]
+                for x in phased
+            ],
+        )
+    warm_validation = args.input / "warm-validation.json"
+    if warm_validation.exists():
+        controls = json.loads(warm_validation.read_text())["results"]
+        r.section("Un transfert sans changement doit conserver la mémoire")
+        r.paragraph(
+            "Le filtre polynomial initial démarre de zéro. Même quand l'ancien et le nouveau support coïncident, il multiplie chaque mode de mémoire par un facteur inférieur à un : un nombre fini d'itérations introduit donc un défaut pour une opération géométriquement nulle. Ce défaut est distinct de la stabilité énergétique. Le contrôle ci-dessous utilise des états aléatoires après transport et physique, et calcule leur distance dans un espace ambiant commun."
+        )
+        r.table(
+            ["Degré", "Transfert", "Distance au carré", "Perte d'énergie"],
+            [
+                [
+                    x["degree"],
+                    z["method"],
+                    max(z["ambient_change_squared"]),
+                    max(z["energy_loss"]),
+                ]
+                for x in controls
+                for z in x["records"]
+                if z["motion"] == 0
+            ],
+        )
+        r.paragraph(
+            "Une variante initialise l'itération avec la représentation auxiliaire précédente transférée, puis borne radialement son énergie invisible par celle de l'ancien état. Elle conserve le champ FE et son énergie augmentée, et devient l'identité ambiante à support inchangé. Le facteur dépend de l'état : cette variante est non linéaire, et aucune contraction de la distance entre deux solutions n'est déduite de son seul bilan d'énergie. La correction d'un défaut d'identité ne garantit pas une meilleure erreur physique."
+        )
+        counterexample = json.loads(warm_validation.read_text()).get(
+            "limiter_counterexample"
+        )
+        if counterexample:
+            r.paragraph(
+                f"Un contre-exemple GPU dans un espace ambiant de dimension trois confirme cette limite : le rapport de distance entre deux états vaut {counterexample['pair_distance_gain']:.6g}, alors que l'énergie de chaque état reste bornée. La variante n'est donc pas non expansive."
+            )
+        warm = [x["result"] for x in raw["warm-return"]]
+        if warm:
+            r.table(
+                [
+                    "Pas",
+                    "Intervalle",
+                    "Transfert",
+                    "Changements",
+                    "L2 max",
+                    "Temps (s)",
+                ],
+                [
+                    [
+                        x["steps_per_leg"],
+                        x["check_every"],
+                        x["method"],
+                        x["changes"],
+                        max(x["l2"]),
+                        x["evolution_seconds"],
+                    ]
+                    for x in warm
+                ],
+            )
+    galerkin_file = args.input / "galerkin.validation.json"
+    if galerkin_file.exists():
+        controls = json.loads(galerkin_file.read_text())["results"]
+        r.section("Projection de mémoire dans un petit espace augmenté")
+        r.paragraph(
+            "L'état précédent transféré est ajouté à un petit espace de Krylov. La projection orthogonale de la mémoire sur son image orthogonale au champ FE se calcule avec une petite matrice de Gram GPU. Elle conserve le champ FE et vérifie une identité de Pythagore : perte d'énergie égale carré du déplacement ambiant. L'espace contient la mémoire entrante lorsque le support est inchangé. Un seuil de rang 10⁻¹² limite ces propriétés en arithmétique flottante. L'augmentation de Krylov est classique; cette réalisation est évaluée ici dans le transfert FE."
+        )
+        r.table(
+            [
+                "Degré",
+                "Défaut observation max",
+                "Défaut oracle max",
+                "Défaut Pythagore max",
+            ],
+            [
+                [
+                    x["degree"],
+                    max(z["observation_error"] for z in x["records"]),
+                    max(z["oracle_error"] for z in x["records"]),
+                    max(
+                        abs(a - b)
+                        for z in x["records"]
+                        for a, b in zip(z["energy_loss"], z["ambient_change_squared"])
+                    ),
+                ]
+                for x in controls
+            ],
+        )
+        tested = [x["result"] for x in raw["galerkin"]]
+        r.table(
+            ["Pas", "Intervalle", "Changements", "L2 max", "Temps (s)"],
+            [
+                [
+                    x["steps_per_leg"],
+                    x["check_every"],
+                    x["changes"],
+                    max(x["l2"]),
+                    x["evolution_seconds"],
+                ]
+                for x in tested
+            ],
+        )
+        r.paragraph(
+            "Le sous-espace est construit à partir de chaque champ : le transfert est non linéaire. L'identité de Pythagore ne démontre pas une contraction de la distance entre deux solutions, ni un gain d'erreur pour l'EDP. Les tests de retour servent à examiner ce second point."
+        )
     sources = [x["result"] for x in raw["source-full"] or raw["source-smoke"]]
     if sources:
         r.section("Apparition d'une structure par une source FE")
@@ -635,6 +872,142 @@ def main():
                     for x in fe_products
                 ],
             )
+    svd = [x["result"] for x in raw["svd"]]
+    if svd:
+        r.section("Fonction de courant échantillonnée et comparaison Fourier/RK4")
+        r.paragraph(
+            "Le vortex comporte un facteur exponentiel en cos(2π(x+y)), donc une séparation de rang fini n'est plus prescrite. Une SVD GPU de la fonction de courant sélectionne un préfixe selon l'erreur L2 de vitesse spectrale. L'orthogonalité permet de sommer exactement les énergies des termes rejetés. Ce choix ne minimise pas le rang en norme H1. Le comparateur Fourier utilise la forme antisymétrique de l'advection et RK4, avec un pas borné par la norme de son générateur. Les deux chemins utilisent des graphes CUDA et les mêmes grilles."
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        for n, ax in zip((127, 255), axes):
+            for label, method, tol in (
+                ("RK4", "rk4", None),
+                ("PCP16, tol. 0,01", "pcp16", 1e-2),
+                ("PCP16, tol. 0,0001", "pcp16", 1e-4),
+                ("PCP16, tol. 0,000001", "pcp16", 1e-6),
+            ):
+                selected = sorted(
+                    [
+                        x
+                        for x in svd
+                        if x["n"] == n
+                        and x["method"] == method
+                        and (tol is None or x["tolerance"] == tol)
+                    ],
+                    key=lambda x: x["evolution_seconds"],
+                )
+                if selected:
+                    ax.loglog(
+                        [x["setup_seconds"] + x["evolution_seconds"] for x in selected],
+                        [max(x["l2"]) for x in selected],
+                        "o-",
+                        label=label,
+                    )
+            ax.set(
+                title=f"Grille {n} × {n}",
+                xlabel="Préparation + évolution (s)",
+                ylabel="Erreur RMS nodale",
+            )
+            ax.legend(fontsize=7)
+            ax.grid(alpha=0.2)
+        r.save_figure(
+            fig,
+            "night-svd-cost",
+            "Comparaison exploratoire à une répétition, référence et grille initiale exclues des temps. Une erreur de vitesse SVD ne constitue pas à elle seule une borne sur l'erreur du champ transporté.",
+        )
+        r.table(
+            [
+                "Grille",
+                "Méthode",
+                "Rang",
+                "Pas",
+                "Erreur vitesse",
+                "L2 champ",
+                "Temps (s)",
+            ],
+            [
+                [
+                    x["n"],
+                    x["method"],
+                    (x["approximation"] or {}).get("rank", "—"),
+                    x["steps"],
+                    (x["approximation"] or {}).get("velocity_error_l2", "—"),
+                    max(x["l2"]),
+                    x["setup_seconds"] + x["evolution_seconds"],
+                ]
+                for x in svd
+            ],
+        )
+        comparison_rk = [
+            x
+            for x in svd
+            if x["n"] == 255 and x["method"] == "rk4" and x["rk_scale"] == 1
+        ]
+        comparison_pc = [
+            x
+            for x in svd
+            if x["n"] == 255
+            and x["method"] == "pcp16"
+            and x["tolerance"] == 1e-6
+            and x["steps"] == 256
+        ]
+        if comparison_rk and comparison_pc:
+            a, b = comparison_rk[0], comparison_pc[0]
+            ta, tb = (
+                a["setup_seconds"] + a["evolution_seconds"],
+                b["setup_seconds"] + b["evolution_seconds"],
+            )
+            r.paragraph(
+                f"Sur ce vortex résolu, Fourier/RK4 donne une erreur {max(a['l2']):.4g} en {ta:.4g} s, contre {max(b['l2']):.4g} en {tb:.4g} s pour PCP16. Le second coûte {tb/ta:.3g} fois plus et reste moins précis dans cette comparaison. Les {b['shears_per_step']} cisaillements par pas rendent cette compression SVD non compétitive ici. Sa conservation d'énergie ne suffit pas à justifier sa poursuite comme voie de performance prioritaire."
+            )
+    compressible = [x["result"] for x in raw["compressible"]]
+    if compressible:
+        r.section("Dépôt forward conservatif sous compression")
+        r.paragraph(
+            "Le flot exact de la vitesse (0,2 sin(2πx), 0) transporte une densité jusqu'à t=1. La référence comprend le Jacobien inverse : l'équation conservative diffère ici de l'équation advective. Les intervalles de départ sont découpés aux préimages des arêtes d'arrivée avant quadrature de Gauss. Les matrices unidimensionnelles sont construites et appliquées sur GPU. Un raffinement de quadrature 16 vers 32 contrôle cette intégration non polynomiale; un calcul de valeurs singulières vérifie la borne de croissance dans la norme de masse sur le petit cas de contrôle."
+        )
+        r.paragraph(
+            "Le couplage conserve le défaut FE initial tandis que le support DG évolue. Le contrôle remet la mémoire à zéro après chaque pas. La masse doit rester constante; l'énergie augmentée peut croître physiquement, avec une borne exp(2π × 0,2 × t) sur son rapport. Les maillages FE sont perturbés. Cette construction traite un flot séparable exact; une vitesse compressible FE générale n'est pas couverte."
+        )
+        fig, axes = plt.subplots(2, 2, figsize=(10, 7))
+        for ax, (nfe, naux) in zip(
+            axes.ravel(), ((32, 32), (32, 64), (64, 32), (64, 64))
+        ):
+            entries = [x for x in compressible if x["nfe"] == nfe and x["naux"] == naux]
+            for method in ("memory", "reset"):
+                selected = sorted(
+                    [x for x in entries if x["method"] == method],
+                    key=lambda x: x["steps"],
+                )
+                if selected:
+                    ax.loglog(
+                        [x["steps"] for x in selected],
+                        [max(x["l2"]) for x in selected],
+                        "o-",
+                        label=method,
+                    )
+            if entries:
+                ax.axhline(
+                    max(entries[0]["best_fe_l2"]),
+                    color="black",
+                    linestyle="--",
+                    label="Projection FE",
+                )
+                ax.legend(fontsize=8)
+            ax.set(
+                title=f"FE n={nfe} · auxiliaire n={naux}",
+                xlabel="Nombre de dépôts",
+                ylabel="Erreur L2 FE",
+            )
+            ax.grid(alpha=0.2)
+        r.save_figure(
+            fig,
+            "night-compressible",
+            "Le flot exact supprime l'erreur d'intégration temporelle des trajectoires. Le nombre de dépôts change l'accumulation des erreurs de projection, et non une erreur RK sur les caractéristiques.",
+        )
+        r.paragraph(
+            f"Sur les {len(compressible)} cas enregistrés, l'écart absolu maximal de masse vaut {max(x['mass_error'] for x in compressible):.3g}; le rapport d'énergie maximal vaut {max(x['energy_ratio'] for x in compressible):.6g}, pour une borne physique {compressible[0]['physical_energy_bound']:.6g}."
+        )
     r.section("Raffinement : identité validée, contrôleur insuffisant")
     nested = json.loads((args.input / "nested-validation.json").read_text())["results"]
     r.table(
@@ -701,17 +1074,47 @@ def main():
         "roundtrip-long": 48,
         "source-full": 16,
         "products": 32,
+        "monitor-stationary": 12,
+        "monitor-return": 12,
+        "svd": 16,
+        "compressible": 32,
+        "warm-return": 6,
+        "material-monitor": 4,
+        "monitor-fe": 3,
+        "material-phase": 2,
+        "phase-return": 3,
+        "galerkin": 3,
     }
     r.table(
         ["Campagne", "Enregistrés", "Prévus"],
         [[name, len(raw[name]), count] for name, count in expected.items()],
     )
+    queue = args.input / "queue-status.json"
+    if queue.exists():
+        jobs = json.loads(queue.read_text())
+        r.table(
+            ["Exécution séquentielle", "État", "Code de sortie"],
+            [[x["name"], x["status"], x.get("returncode", "en cours")] for x in jobs],
+        )
+    priority = args.input / "priority-status.json"
+    if priority.exists():
+        r.table(
+            ["Reprise et diagnostics", "État", "Code de sortie"],
+            [
+                [x["name"], x["status"], x.get("returncode", "en cours")]
+                for x in json.loads(priority.read_text())
+            ],
+        )
+        r.paragraph(
+            "Le premier lancement compressible a échoué pendant la capture CUDA du produit CSR CuPy. La reprise conserve les calculs sur GPU et utilise l'application creuse ordinaire. Les résultats réussis remplacent le fichier vide, tandis que le code de sortie initial reste dans l'historique."
+        )
     for name in (
         "nested-sanitizer",
         "memory-transfer-sanitizer",
         "ambient-sanitizer",
         "chebyshev-sanitizer",
         "energy-mesh-sanitizer",
+        "late-sanitizer",
     ):
         path = args.input / (name + ".log")
         if path.exists():
@@ -732,6 +1135,14 @@ def main():
         "La piste d'article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d'énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture."
     )
     references = [
+        (
+            "Gaul, Gutknecht, Liesen et Nabben (2013), espaces de Krylov augmentés",
+            "https://people.math.ethz.ch/~mhg/pub/defl-GGLN1-SIMAX.pdf",
+        ),
+        (
+            "Codina, Principe, Guasch et Badia (2007), sous-échelles dynamiques",
+            "https://doi.org/10.1016/j.cma.2007.01.002",
+        ),
         (
             "Casas, Escorihuela-Tomàs et Moreno Casares (2025), formules de commutateurs",
             "https://doi.org/10.1007/s11128-025-04659-z",
@@ -791,6 +1202,7 @@ def main():
     )
     tex = preamble + "\n".join(r.tex) + r"\end{document}"
     for char, replacement in {
+        "10⁻¹²": r"\(10^{-12}\)",
         "π": r"\(\pi\)",
         "≤": r"\(\leq\)",
         "−": "-",

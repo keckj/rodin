@@ -232,6 +232,39 @@ donne une erreur $0{,}0037331$, proche de $0{,}0037330$ avec 16 itérations
 simples, pour 7 produits au lieu de 15. Le choix $s=0{,}01,m=4$ donne
 $0{,}00466$, ce qui interdit de présenter le réglage comme universel.
 
+\subsection{Défaut de remaillage mesurable}
+Dans le cadre ambiant précédent, les deux filtres sont des opérateurs
+autoadjoints positifs de spectre contenu dans $[0,1]$. La perte d'énergie
+$\Delta E=\|q\|^2-\|q^+\|^2$ borne donc le déplacement de l'état :
+\[
+ \|q^+-q\|^2\leq\Delta E.
+\]
+En effet, sur chaque composante spectrale de facteur $g\in[0,1]$,
+$(1-g)^2\leq1-g^2$. Cette propriété inclut les composantes supprimées
+avec $g=0$ et la partie FE conservée avec $g=1$.
+L'identité $q^+=v+Hx$ donne aussi la valeur exacte, sans construire
+l'espace ambiant :
+\[
+ \|q^+-q\|^2=E+E^+-2\|v\|^2-2\langle h,x\rangle_{W_1}.
+\]
+Le produit scalaire est accessible par polarisation de la masse auxiliaire.
+Le code retourne les deux diagnostics sur demande; leur contrôle par le
+Gram ambiant est inclus dans la campagne dédiée.
+
+Pour une suite fixée d'opérateurs ambiants contractants $F_j$, comparer
+$q_{j+1}=F_j B_jq_j$ et $\widetilde q_{j+1}=F_j\widetilde q_j$ donne
+\[
+ \|q_N-\widetilde q_N\|
+ \leq\sum_{j=0}^{N-1}\|B_jq_j-q_j\|
+ \leq\sum_{j=0}^{N-1}\sqrt{\Delta E_j},
+ \qquad q_0=\widetilde q_0.
+\]
+Cette comparaison fige la suite de supports décidée par le calcul.
+Elle mesure uniquement le défaut des filtres sur cette suite; les
+erreurs de transport et les changements de décisions d'un contrôleur
+adaptatif restent hors de cette borne. Une tolérance sur cette somme
+pourrait guider un budget de remaillage. Son efficacité n'est pas établie.
+
 \subsection{Adaptation des partitions}
 Le premier contrôleur utilise le centre circulaire de l'énergie du champ,
 calculé aux points de Gauss. Il déplace le minimum de taille des cellules
@@ -248,6 +281,81 @@ deux directions préservent masse et contraction. Cette variante peut
 éviter les reconstructions FE intermédiaires pour l'advection pure, au
 prix de l'abandon du défaut FE initial. La comparaison distingue ce
 choix du couplage avec mémoire et physique FE.
+
+\subsection{Défaut d'identité et initialisation par l'état précédent}
+Une limite du filtre démarrant de zéro apparaît même si $W_1=W_0$.
+Les facteurs $g_k(\lambda)<1$ dissipent une mémoire qui pourrait être
+conservée exactement. À $k$ fixé, cette erreur ne tend pas vers zéro
+avec le déplacement du support. La stabilité seule ne garantit donc
+pas la consistance d'un changement de support infinitésimal.
+
+Une variante expérimentale utilise $d_0=w_0-R_0a_0$, puis
+\[
+ x_0=Cd_0,\qquad h=Cd_0+R_1(a_0-v),\qquad
+ x_{j+1}=h+R_1R_1^*x_j.
+\]
+Posons $\beta=E-\|v\|^2$ et
+$\gamma=\|x_k\|^2-\|R_1^*x_k\|^2=\|Hx_k\|^2$.
+Si $\gamma>0$, on choisit
+$\alpha=\min(1,\sqrt{\beta/\gamma})$; si $\gamma=0$, la valeur
+de $\alpha$ n'affecte pas l'état ambiant. On pose enfin
+\[
+ a^+=v-\alpha R_1^*x_k,\qquad w^+=R_1a^++\alpha x_k.
+\]
+Alors $P_Vq^+=v$ et
+$\|q^+\|^2=\|v\|^2+\alpha^2\gamma\leq E$.
+Si les espaces coïncident, $h=Kd_0$ et $x_j=d_0$ pour tout $j$.
+L'état ambiant est donc conservé exactement, y compris à zéro correction.
+Les identités sont contrôlées pour les degrés 1, 2 et 4 et des
+déplacements de support allant de zéro à $0{,}1$.
+
+Le facteur radial dépend de l'état. Cette construction est non linéaire
+et la borne d'énergie par rapport à zéro n'établit pas une contraction
+des différences entre deux états. Elle ne bénéficie donc pas de la
+borne d'erreur linéaire de la section suivante. Les premières expériences
+de retour ne montrent pas un gain systématique d'erreur; l'identité au
+déplacement nul est une propriété distincte de la précision du transport.
+Un contre-exemple GPU dans un espace ambiant de dimension trois donne
+un gain de distance de $1{,}9453$ entre deux états, bien que leurs énergies
+individuelles restent bornées. La non-expansivité est donc effectivement
+fausse pour cette variante, et pas seulement non démontrée.
+
+\subsection{Projection dans un sous-espace augmenté}
+Une autre réalisation peut supprimer le limiteur radial en remplaçant
+le polynôme fixé par une projection de Galerkin de petite dimension.
+Pour $d_0=w_0-R_0a_0$, soit $X$ la famille de directions dans $W_1$
+engendrée par $Cd_0,h,R_1R_1^*h,\ldots$.
+Posons
+\[
+ G=X^*KX=(HX)^*(HX),\qquad b=X^*h,
+ \qquad x=XG^\dagger b.
+\]
+Le nouvel état $q^+=v+Hx$ est la projection orthogonale de $q$ sur
+$V\oplus\operatorname{im}(HX)$. En arithmétique exacte, on obtient
+simultanément
+\[
+ P_Vq^+=v,\qquad
+ \|q\|^2-\|q^+\|^2=\|q-q^+\|^2\geq0.
+\]
+L'ajout de directions ne peut qu'augmenter l'énergie retenue. Si
+$W_1=W_0$, la direction $d_0$ suffit à contenir la mémoire entrante,
+donc la projection est l'identité ambiante. Le sous-espace dépend
+de l'état et ne définit pas en général un opérateur linéaire unique.
+La propriété de Pythagore est une propriété de chaque projection ainsi
+construite; elle ne démontre pas une borne de distance entre deux états.
+
+Le prototype normalise les directions dans la masse auxiliaire, forme
+$G$ et $b$ par réductions GPU et diagonalise les petites matrices de Gram
+sur GPU, une par champ. Les valeurs propres inférieures à
+$10^{-12}\max(1,\lambda_{\max})$ sont écartées. L'identité au support
+inchangé est donc soumise à ce seuil numérique de rang. Les contrôles
+et expériences sont enregistrés séparément dans la campagne Galerkin;
+aucun résultat n'est anticipé avant son exécution.
+L'augmentation des espaces de Krylov est classique, notamment dans
+Gaul, Gutknecht, Liesen et Nabben (2013),
+\href{https://people.math.ethz.ch/~mhg/pub/defl-GGLN1-SIMAX.pdf}{\emph{A framework for deflated and augmented Krylov subspace methods}}.
+L'intérêt à examiner porte ici sur sa réalisation dans la mémoire
+orthogonale au champ FE, et non sur une nouvelle méthode d'algèbre linéaire.
 
 \section{Borne d'erreur avec changements de support}
 La stabilité du changement de support peut être séparée de la
@@ -359,6 +467,16 @@ ne justifie pas son insertion dans la projection ambiante à support
 variable sans vérifier les hypothèses plus fortes de cette dernière.
 
 \section{Antécédents et revendications}
+La décomposition entre champ FE et sous-échelles orthogonales dynamiques
+est antérieure à cette étude. Codina, Principe, Guasch et Badia (2007)
+analysent des sous-échelles dépendant du temps dans une formulation
+stabilisée des écoulements incompressibles
+\href{https://doi.org/10.1016/j.cma.2007.01.002}{(article)}.
+La présence d'une mémoire orthogonale ne constitue donc pas, à elle
+seule, une nouveauté. Le modèle d'évolution des sous-échelles et le
+transfert entre supports auxiliaires doivent être comparés précisément
+aux formulations multéchelles établies.
+
 L'itération de projection et son interprétation par les angles entre
 sous-espaces appartiennent à une théorie classique; l'itération de
 Richardson ci-dessus n'est pas revendiquée comme un nouvel algorithme
@@ -367,9 +485,17 @@ alternées \href{https://cmps-people.ok.ubc.ca/bauschke/Research/01.pdf}{(articl
 Adams, Finn, Knepley et Pusztay étudient déjà le rééchantillonnage de
 particules par projection FE et pseudo-inverse, avec conservation des
 moments représentables
-\href{https://arxiv.org/abs/2501.13681}{(prépublication 2025, publication 2026)}.
-La question à comparer précisément est ici le maintien du champ FE et
-de sa mémoire augmentée à chaque troncature de l'itération.
+\href{https://arxiv.org/html/2501.13681v9}{(version 9, sections 2 et 3)}.
+Leur rééchantillonnage $\overline w=\overline M_p^\dagger M_pw$
+préserve déjà le champ FE lorsque le pseudo-inverse est résolu.
+Le maintien du champ FE seul ne constitue donc pas une revendication
+distinctive. Leur projection porte sur les poids particulaires et une
+norme euclidienne; le présent état est une fonction de $V+W$ avec sa
+norme $L^2$. La comparaison à approfondir concerne la conservation
+d'une mémoire invisible au champ FE, la contraction et l'observation
+exacte à chaque troncature, ainsi que le coût face à un pseudo-inverse
+préconditionné. Ces différences de formulation ne suffisent pas à
+établir une nouveauté algorithmique.
 
 L'adaptation SL-DG est établie, notamment par Besse, Deriaz et Madaule,
 \emph{Adaptive multiresolution semi-Lagrangian discontinuous Galerkin

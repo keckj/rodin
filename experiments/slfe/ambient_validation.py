@@ -79,7 +79,8 @@ def validate(p):
         state = MemoryTransport(c0, original.value)
         state.anchor = original.anchor.copy()
         state.auxiliary = original.auxiliary.copy()
-        loss = state.project_memory(c1, remap, count, scale)
+        diagnostics = {}
+        loss = state.project_memory(c1, remap, count, scale, diagnostics)
         qnew = w1 @ vector_w(c1, state.auxiliary) + (v - w1 @ r1) @ vector_v(
             state.anchor
         )
@@ -105,6 +106,12 @@ def validate(p):
             cp.max(cp.abs(state.energy() - cp.sum(qnew * qnew, axis=0)))
         )
         minimum_gain = float(cp.min(state.energy() - previous))
+        distance = cp.sum((qnew - q) ** 2, axis=0)
+        distance_error = float(
+            cp.max(cp.abs(diagnostics["ambient_change_squared"] - distance))
+        )
+        assert distance_error < 2e-9, distance_error
+        assert float(cp.max(distance - loss)) < 2e-9
         assert bool(cp.array_equal(state.value, original.value))
         assert max(state_error, observation_error, energy_error) < 2e-9
         assert float(cp.min(loss)) > -2e-9
@@ -121,6 +128,8 @@ def validate(p):
                 state_error=state_error,
                 observation_error=observation_error,
                 energy_error=energy_error,
+                ambient_distance_error=distance_error,
+                ambient_change_squared=distance.tolist(),
                 retained_hidden_energy=(
                     state.energy() - space.energy(state.value)
                 ).tolist(),

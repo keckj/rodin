@@ -33,11 +33,15 @@ def evolve(
     check_every=4,
     sample_order=None,
     energy_floor=0.0,
+    monitor_source="auxiliary",
+    floating_phase=False,
 ):
-    if method not in ("reset", "projected", "chebyshev"):
+    if method not in ("reset", "projected", "chebyshev", "warm", "galerkin"):
         raise ValueError("Unknown memory transfer")
     if check_every < 1:
         raise ValueError("A positive adaptation interval is required")
+    if monitor_source not in ("auxiliary", "fe"):
+        raise ValueError("Expected an auxiliary or FE energy monitor")
     space = Space(GradedMesh(nfe, 0.95), 4)
     profile = profile_family(0.01, fields, spread=0.15)
     initial = space.project(profile, degree=20)
@@ -66,12 +70,25 @@ def evolve(
             count = min(check_every, steps - first)
             for _ in range(count):
                 state.advect(flow.apply_carrier)
-            next_edges, next_oriented = from_tensor(
-                carrier,
-                state.auxiliary,
-                sample_order=sample_order,
-                energy_floor=energy_floor,
+            previous = (
+                cp.concatenate((carrier.edges, oriented)) if floating_phase else None
             )
+            if monitor_source == "fe":
+                next_edges, next_oriented = from_fe(
+                    space,
+                    state.value,
+                    naux,
+                    energy_floor=energy_floor,
+                    previous_edges=previous,
+                )
+            else:
+                next_edges, next_oriented = from_tensor(
+                    carrier,
+                    state.auxiliary,
+                    sample_order=sample_order,
+                    energy_floor=energy_floor,
+                    previous_edges=previous,
+                )
             displacement = max(
                 float(cp.max(cp.abs(next_edges - carrier.edges))),
                 float(cp.max(cp.abs(next_oriented - oriented))),
@@ -86,6 +103,14 @@ def evolve(
                 remap = lambda w: grid.remap(carrier, w)
                 if method == "reset":
                     loss = state.restart(target)
+                elif method == "warm":
+                    diagnostic = state.project_memory_warm(target, remap, iterations=8)
+                    loss = diagnostic["energy_loss"]
+                elif method == "galerkin":
+                    diagnostic = state.project_memory_galerkin(
+                        target, remap, iterations=2
+                    )
+                    loss = diagnostic["energy_loss"]
                 else:
                     loss = state.project_memory(
                         target,
@@ -134,6 +159,8 @@ def evolve(
         check_every=check_every,
         sample_order=sample_order,
         energy_floor=energy_floor,
+        monitor_source=monitor_source,
+        floating_phase=floating_phase,
         changes=changes,
         setup_seconds=setup,
         evolution_seconds=elapsed,
@@ -149,6 +176,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--suite", choices=("smoke", "long"), default="smoke")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     if args.suite == "smoke":
         cases = [
@@ -166,8 +194,24 @@ def main():
             for m in ("reset", "projected", "chebyshev")
         ]
     meta = provenance()
-    with args.output.open("w") as stream:
+    keys = ("nfe", "naux", "half_duration", "steps_per_leg", "method")
+    completed = set()
+    if args.resume and args.output.exists():
+        completed = {
+            tuple(json.loads(line)["result"][k] for k in keys)
+            for line in args.output.read_text().splitlines()
+        }
+    with args.output.open("a" if args.resume else "w") as stream:
         for case in cases:
+            key = (
+                case["nfe"],
+                case["naux"],
+                case["half_duration"],
+                case["steps"],
+                case["method"],
+            )
+            if key in completed:
+                continue
             print(json.dumps(case), flush=True)
             record = evolve(**case)
             stream.write(json.dumps(dict(result=record, provenance=meta)) + "\n")

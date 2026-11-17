@@ -87,7 +87,12 @@ class MemoryTransport:
         return before - self.energy()
 
     def project_memory(
-        self, coupling, cross_projection, iterations=1, filter_scale=None
+        self,
+        coupling,
+        cross_projection,
+        iterations=1,
+        filter_scale=None,
+        diagnostics=None,
     ):
         """Project ambient hidden memory by a contractive polynomial filter.
 
@@ -104,6 +109,9 @@ class MemoryTransport:
         This is contractive for EVERY lambda in [0,1], including below s;
         s is a target scale, not an assumed spectral lower bound. Its degree
         is 2*iterations and costs 2*iterations-1 applications of Rnew Rnew*.
+        If supplied, diagnostics receives per-field squared ambient change
+        and energy loss. For these positive contractive filters the former
+        is bounded by the latter. This bounds remapping, not full PDE error.
         """
         if coupling.space is not self.coupling.space:
             raise ValueError("Memory projection requires the same FE space")
@@ -146,4 +154,114 @@ class MemoryTransport:
         self.anchor = self.value - coupling.adjoint(x)
         self.auxiliary = coupling.project(self.anchor) + x
         self.coupling = coupling
-        return before - self.energy()
+        after = self.energy()
+        loss = before - after
+        if diagnostics is not None:
+            # <h,x> by polarization in Wnew, independent of its mass layout.
+            cross = (coupling.energy(h + x) - coupling.energy(h - x)) / 4
+            diagnostics.update(
+                energy_loss=loss,
+                ambient_change_squared=(
+                    before + after - 2 * coupling.space.energy(self.value) - 2 * cross
+                ),
+            )
+        return loss
+
+    def project_memory_warm(self, coupling, cross_projection, iterations=1):
+        """Experimental identity-consistent transfer with an energy limiter.
+
+        Exact common-ambient projections and DG layout (cell, field, node)
+        are required. Transport the old auxiliary representative as a warm
+        start, correct its normal-equation residual, then project the new
+        hidden state radially into the old hidden-energy ball. This preserves
+        v and its energy bound and is the identity when the spaces coincide.
+        The state-dependent limiter makes this transfer nonlinear; an energy
+        bound does not imply pairwise nonexpansiveness or an error estimate.
+        """
+        if coupling.space is not self.coupling.space:
+            raise ValueError("Memory projection requires the same FE space")
+        if not isinstance(iterations, int) or iterations < 0:
+            raise ValueError("A nonnegative integer correction count is required")
+        before = self.energy()
+        visible = coupling.space.energy(self.value)
+        old_hidden = (before - visible).clip(0)
+        d = self.auxiliary - self.coupling.project(self.anchor)
+        x = cross_projection(d)
+        h = x + coupling.project(self.anchor - self.value)
+        for _ in range(iterations):
+            x = h + coupling.project(coupling.adjoint(x))
+        b = coupling.adjoint(x)
+        proposed_hidden = (coupling.energy(x) - coupling.space.energy(b)).clip(0)
+        scale = (old_hidden / proposed_hidden.clip(1e-300)).clip(0, 1) ** 0.5
+        x = x * scale[None, :, None]
+        self.anchor = self.value - b * scale[None, :, None]
+        self.auxiliary = coupling.project(self.anchor) + x
+        self.coupling = coupling
+        after = self.energy()
+        cross = (coupling.energy(h + x) - coupling.energy(h - x)) / 4
+        return dict(
+            energy_loss=before - after,
+            ambient_change_squared=before + after - 2 * visible - 2 * cross,
+            limiter=scale,
+        )
+
+    def project_memory_galerkin(self, coupling, cross_projection, iterations=2):
+        """Project onto a small augmented hidden subspace, using CUDA Gram solves.
+
+        This experimental DG-only path augments a Krylov subspace by the
+        transferred old representative. Orthogonal projection in its ambient
+        image preserves the FE field and bounds energy at every subspace
+        size. With an unchanged support, the warm direction already spans
+        the old hidden state, subject to the numerical rank threshold. The
+        subspace depends on the field, so this is nonlinear. Tiny Gram
+        eigenvalues are discarded at a stated tolerance.
+        """
+        from gpu import cp
+
+        if coupling.space is not self.coupling.space:
+            raise ValueError("Memory projection requires the same FE space")
+        if not isinstance(iterations, int) or iterations < 0:
+            raise ValueError("A nonnegative Krylov size is required")
+        before = self.energy()
+        visible = coupling.space.energy(self.value)
+        d = self.auxiliary - self.coupling.project(self.anchor)
+        mapped = cross_projection(d)
+        h = mapped + coupling.project(self.anchor - self.value)
+        vectors, images = [], []
+        candidate = mapped
+        for index in range(iterations + 1):
+            norm = cp.sqrt(coupling.energy(candidate)).clip(1e-150)
+            vector = candidate / norm[None, :, None]
+            image = coupling.adjoint(vector)
+            vectors.append(vector)
+            images.append(image)
+            candidate = h if index == 0 else coupling.project(image)
+        xbasis = cp.stack(vectors, axis=-1)
+        vbasis = cp.stack(images, axis=-1)
+        mass = cp.broadcast_to(coupling.mass, (coupling.n**2, coupling.nc))
+        gram = cp.einsum("cfik,ci,cfil->fkl", xbasis, mass, xbasis)
+        gram -= cp.einsum("cfik,c,cfil->fkl", vbasis, coupling.space.mesh.areas, vbasis)
+        gram = (gram + gram.transpose(0, 2, 1)) / 2
+        rhs = cp.einsum("cfi,ci,cfik->fk", h, mass, xbasis)
+        eigen, eigenvectors = cp.linalg.eigh(gram)
+        assert float(eigen.min()) > -1e-8, float(eigen.min())
+        # Mass-normalized directions make an absolute cutoff meaningful.
+        # The relative part protects nearly dependent augmented directions.
+        cutoff = 1e-12 * cp.maximum(eigen[:, -1:], 1.0)
+        keep = eigen > cutoff
+        inverse = cp.where(keep, 1 / cp.maximum(eigen, cutoff), 0)
+        coordinates = cp.einsum("fij,fi->fj", eigenvectors, rhs)
+        coefficients = cp.einsum("fij,fj->fi", eigenvectors, inverse * coordinates)
+        x = cp.einsum("cfik,fk->cfi", xbasis, coefficients)
+        b = cp.einsum("cfik,fk->cfi", vbasis, coefficients)
+        self.anchor = self.value - b
+        self.auxiliary = coupling.project(self.anchor) + x
+        self.coupling = coupling
+        after = self.energy()
+        cross = cp.einsum("cfi,ci,cfi->f", h, mass, x)
+        return dict(
+            energy_loss=before - after,
+            ambient_change_squared=before + after - 2 * visible - 2 * cross,
+            gram_eigenvalues=eigen,
+            retained_rank=cp.sum(keep, axis=1),
+        )

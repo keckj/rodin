@@ -18,16 +18,21 @@ from gpu_graph import EvolutionGraph
 
 
 class SpectralTransport:
-    def __init__(self, n):
+    def __init__(self, n, velocity=None):
         self.n = n
         grid = cp.arange(n, dtype=cp.float64) / n
         x, y = cp.meshgrid(grid, grid, indexing="xy")
         self.points = cp.stack((x, y), axis=-1)
         self.ux = cp.sin(cp.pi * x) ** 2 * cp.sin(2 * cp.pi * y)
         self.uy = -cp.sin(cp.pi * y) ** 2 * cp.sin(2 * cp.pi * x)
+        if velocity is not None:
+            if velocity.shape != (n, n, 2):
+                raise ValueError("Expected a sampled two-dimensional velocity")
+            self.ux, self.uy = velocity[..., 0], velocity[..., 1]
         frequency = 2 * cp.pi * cp.fft.fftfreq(n, d=1 / n)
         # The real even-grid Nyquist derivative must vanish for skew symmetry.
-        frequency[n // 2] = 0
+        if n % 2 == 0:
+            frequency[n // 2] = 0
         self.kx = 1j * frequency[None, :]
         self.ky = 1j * frequency[:, None]
 
