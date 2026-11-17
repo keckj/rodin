@@ -165,6 +165,21 @@ def validate(p, methods=("cold", "warm")):
                     limiter=scale,
                 )
             )
+    for motion in (0.0, 1e-6, 1e-4, 1e-2, 0.1):
+        augmented = sorted(
+            [
+                z
+                for z in records
+                if z["motion"] == motion and z["method"].startswith("galerkin")
+            ],
+            key=lambda z: int(z["method"].removeprefix("galerkin")),
+        )
+        for old, new in zip(augmented, augmented[1:]):
+            # More directions span a larger ambient projection space.
+            assert (
+                max(b - a for a, b in zip(old["energy_loss"], new["energy_loss"]))
+                < 2e-9
+            )
     return dict(degree=p, initial_energy=before.tolist(), records=records)
 
 

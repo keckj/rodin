@@ -6,6 +6,7 @@ Publication stages only generated artifacts; source changes remain untouched.
 
 import argparse
 from datetime import datetime
+import fcntl
 import hashlib
 import json
 from pathlib import Path
@@ -28,6 +29,14 @@ def main():
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--publish", action="store_true")
     args = parser.parse_args()
+    # A deadline delivery can coincide with the end of a numerical campaign.
+    # Keep snapshot, rendering and publication within one exclusive build.
+    with (args.input / "night-report.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        finalize(args)
+
+
+def finalize(args):
     if git("branch", "--show-current") != "SLFE":
         raise RuntimeError("Expected branch SLFE")
     if args.publish and git("remote", "get-url", "--push", "--all", "fork") != ALLOWED:

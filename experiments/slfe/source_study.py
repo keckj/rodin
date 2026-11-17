@@ -15,6 +15,7 @@ import time
 from gpu import cp, Mesh, Space
 from carrier import Carrier
 from tensor_grid import TensorGrid
+from tensor_projection import TensorProjection
 from tensor_cellular import TensorCellular
 from memory_transport import MemoryTransport
 from energy_mesh import from_fe, from_tensor
@@ -22,9 +23,20 @@ from day_study import reference_feet
 from campaign import provenance
 
 
-def evolve(nfe=128, naux=32, width=0.006, monitor="fe", steps=128, with_fields=False):
+def evolve(
+    nfe=128,
+    naux=32,
+    width=0.006,
+    monitor="fe",
+    steps=128,
+    with_fields=False,
+    source_tolerance=None,
+    maximum=128,
+):
     if steps % 8:
         raise ValueError("The midpoint impulse must coincide with a four-step check")
+    if source_tolerance is not None and (source_tolerance <= 0 or maximum < naux):
+        raise ValueError("Expected a positive source tolerance and a sufficient budget")
     space = Space(Mesh(nfe, jitter=0.18, seed=817), 4)
 
     def bump(points, center, sigma):
@@ -55,6 +67,7 @@ def evolve(nfe=128, naux=32, width=0.006, monitor="fe", steps=128, with_fields=F
     history = []
     work_error = None
     missed_source_energy = None
+    source_resolution = []
     cp.cuda.Stream.null.synchronize()
     setup = time.perf_counter() - start
     start = time.perf_counter()
@@ -75,7 +88,7 @@ def evolve(nfe=128, naux=32, width=0.006, monitor="fe", steps=128, with_fields=F
             energy_budget += work
             mass_budget += space.mass(source)
         if monitor == "fe":
-            next_edges, next_oriented = from_fe(space, state.value, naux)
+            next_edges, next_oriented = from_fe(space, state.value, carrier.n)
         elif monitor == "auxiliary":
             next_edges, next_oriented = from_tensor(carrier, state.auxiliary)
         else:
@@ -87,10 +100,50 @@ def evolve(nfe=128, naux=32, width=0.006, monitor="fe", steps=128, with_fields=F
         change = first + count < steps and (injected or motion > 0.01)
         loss = None
         if change:
-            target = Carrier(space, n=naux, edges=next_edges)
+            target = Carrier(space, n=carrier.n, edges=next_edges)
             grid = TensorGrid(target, target.edges)
             loss = state.project_memory(target, lambda w: grid.remap(carrier, w), 8)
             carrier, oriented = target, next_oriented
+        if injected and source_tolerance is not None:
+            source_energy = space.energy(source)
+            while True:
+                unresolved = float(
+                    cp.sqrt(
+                        cp.maximum(
+                            cp.max(
+                                source_energy - carrier.energy(carrier.project(source))
+                            ),
+                            0,
+                        )
+                    )
+                )
+                source_resolution.append(
+                    dict(
+                        n=carrier.n,
+                        unresolved_l2=unresolved,
+                        tolerance_met=unresolved <= source_tolerance,
+                    )
+                )
+                if unresolved <= source_tolerance or 2 * carrier.n > maximum:
+                    break
+
+                def bisect(edges):
+                    return cp.sort(
+                        cp.concatenate(
+                            (edges, (edges[:, :-1] + edges[:, 1:]) / 2), axis=1
+                        ),
+                        axis=1,
+                    )
+
+                target = Carrier(space, n=2 * carrier.n, edges=bisect(carrier.edges))
+                injection = TensorProjection(carrier, target)
+                refinement_loss = state.refine(target, injection.apply_carrier)
+                assert float(cp.max(cp.abs(refinement_loss))) < 5e-9
+                source_resolution[-1][
+                    "refinement_energy_loss"
+                ] = refinement_loss.tolist()
+                carrier, oriented = target, bisect(oriented)
+        if change:
             flow = TensorCellular(carrier, end / steps, oriented_edges=oriented)
         mass_error = float(cp.max(cp.abs(space.mass(state.value) - mass_budget)))
         energy_excess = float(cp.max(state.energy() - energy_budget))
@@ -103,6 +156,7 @@ def evolve(nfe=128, naux=32, width=0.006, monitor="fe", steps=128, with_fields=F
                 mass_error=mass_error,
                 energy_excess=energy_excess,
                 memory_loss=None if loss is None else loss.tolist(),
+                naux=carrier.n,
             )
         )
     cp.cuda.Stream.null.synchronize()
@@ -124,6 +178,10 @@ def evolve(nfe=128, naux=32, width=0.006, monitor="fe", steps=128, with_fields=F
         best_fe_l2=floor,
         source_work_error=work_error,
         unresolved_source_energy=missed_source_energy,
+        source_tolerance=source_tolerance,
+        maximum_auxiliary=maximum,
+        final_naux=carrier.n,
+        source_resolution=source_resolution,
         history=history,
         **errors
     )

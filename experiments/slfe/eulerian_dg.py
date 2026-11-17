@@ -9,6 +9,25 @@ from flux import gauss_interval
 from flows import cellular_velocity
 
 
+def periodic_mates(mesh):
+    """Pair periodic faces using this benchmark mesh's lattice ancestry, on GPU."""
+    if hasattr(mesh, "vertex_ids"):
+        ids = mesh.vertex_ids
+    else:
+        vertex = cp.rint(mesh.triangles * mesh.n).astype(cp.int64) % mesh.n
+        ids = vertex[:, :, 1] * mesh.n + vertex[:, :, 0]
+    following = cp.roll(ids, -1, axis=1)
+    keys = cp.minimum(ids, following) * mesh.n**2 + cp.maximum(ids, following)
+    order = cp.argsort(keys.ravel())
+    paired = keys.ravel()[order]
+    assert bool(cp.all(paired[::2] == paired[1::2]))
+    assert bool(cp.all(paired[1:-1:2] != paired[2::2]))
+    mates = cp.empty(mesh.cells * 3, dtype=cp.int32)
+    mates[order[::2]] = order[1::2].astype(cp.int32)
+    mates[order[1::2]] = order[::2].astype(cp.int32)
+    return mates
+
+
 class EulerianDG:
     def __init__(self, space, degree=18, face_order=12, flux="central"):
         if flux not in ("central", "upwind"):
@@ -38,20 +57,7 @@ class EulerianDG:
         volume = cp.einsum("cqi,qj,q->cij", directional, b, 2 * q[:, 2])
         # Recover periodic vertex IDs from this benchmark mesh's lattice
         # ancestry. All topology and sorting work stays on the GPU.
-        if hasattr(mesh, "vertex_ids"):
-            ids = mesh.vertex_ids
-        else:
-            vertex = cp.rint(mesh.triangles * mesh.n).astype(cp.int64) % mesh.n
-            ids = vertex[:, :, 1] * mesh.n + vertex[:, :, 0]
-        following = cp.roll(ids, -1, axis=1)
-        keys = cp.minimum(ids, following) * mesh.n**2 + cp.maximum(ids, following)
-        order = cp.argsort(keys.ravel())
-        paired = keys.ravel()[order]
-        assert bool(cp.all(paired[::2] == paired[1::2]))
-        assert bool(cp.all(paired[1:-1:2] != paired[2::2]))
-        mates = cp.empty(mesh.cells * 3, dtype=cp.int32)
-        mates[order[::2]] = order[1::2].astype(cp.int32)
-        mates[order[1::2]] = order[::2].astype(cp.int32)
+        mates = periodic_mates(mesh)
         self.neighbor = cp.ascontiguousarray((mates // 3).reshape(mesh.cells, 3))
         nodes, weights = gauss_interval(face_order)
         corners = cp.asarray([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])

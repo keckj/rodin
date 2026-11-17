@@ -19,6 +19,7 @@ def partitions(
     energy_floor=0.0,
     origins=None,
     previous_edges=None,
+    phase_metric="probability",
 ):
     if not 0 < background <= 1 or smoothing <= 0:
         raise ValueError("A positive background and smoothing length are required")
@@ -33,6 +34,8 @@ def partitions(
         raise ValueError("Expected one periodic cut per monitored coordinate")
     if previous_edges is not None and previous_edges.shape != (4, n + 1):
         raise ValueError("Phase alignment requires the four previous partitions")
+    if phase_metric not in ("probability", "maximum-displacement"):
+        raise ValueError("Unknown periodic phase metric")
     frequency = cp.fft.rfftfreq(bins, d=1 / bins)
     smoother = cp.exp(-2 * (cp.pi * smoothing * frequency) ** 2)
     edges = []
@@ -60,7 +63,27 @@ def partitions(
             )
             # Least-squares alignment in cumulative-monitor coordinates.
             # A floating periodic phase avoids pinning one quantile at x=0.
-            levels += cp.mean(probability - levels[:-1])
+            offset = probability - levels[:-1]
+            phase = cp.mean(offset)
+            if phase_metric == "maximum-displacement":
+                # Quantiles increase with phase. The minimax solution balances
+                # the largest positive and negative physical displacements.
+                lower, upper = cp.min(offset), cp.max(offset)
+                # Forty bisections resolve a unit-period phase bracket below
+                # 1e-12; the positive density floor bounds inverse sensitivity.
+                for _ in range(40):
+                    phase = (lower + upper) / 2
+                    trial = levels[:-1] + phase
+                    positions = cp.floor(trial) + cp.interp(
+                        trial % 1, cumulative, coordinate_grid
+                    )
+                    displacement = positions - old
+                    positive = cp.max(displacement) + cp.min(displacement) > 0
+                    lower, upper = cp.where(positive, lower, phase), cp.where(
+                        positive, phase, upper
+                    )
+                phase = (lower + upper) / 2
+            levels += phase
             edges.append(
                 origin
                 + cp.floor(levels)

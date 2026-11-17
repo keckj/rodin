@@ -35,6 +35,9 @@ def evolve(
     energy_floor=0.0,
     monitor_source="auxiliary",
     floating_phase=False,
+    phase_metric="probability",
+    remap_budget=None,
+    budget_allocation="uniform",
 ):
     if method not in ("reset", "projected", "chebyshev", "warm", "galerkin"):
         raise ValueError("Unknown memory transfer")
@@ -42,6 +45,12 @@ def evolve(
         raise ValueError("A positive adaptation interval is required")
     if monitor_source not in ("auxiliary", "fe"):
         raise ValueError("Expected an auxiliary or FE energy monitor")
+    if remap_budget is not None and (remap_budget <= 0 or method != "galerkin"):
+        raise ValueError("A positive remapping budget requires the Galerkin transfer")
+    if budget_allocation not in ("uniform", "remaining"):
+        raise ValueError("Expected uniform or remaining-budget allocation")
+    possible_changes = 2 * ((steps + check_every - 1) // check_every) - 1
+    budget_used = 0.0
     space = Space(GradedMesh(nfe, 0.95), 4)
     profile = profile_family(0.01, fields, spread=0.15)
     initial = space.project(profile, degree=20)
@@ -80,6 +89,7 @@ def evolve(
                     naux,
                     energy_floor=energy_floor,
                     previous_edges=previous,
+                    phase_metric=phase_metric,
                 )
             else:
                 next_edges, next_oriented = from_tensor(
@@ -88,44 +98,70 @@ def evolve(
                     sample_order=sample_order,
                     energy_floor=energy_floor,
                     previous_edges=previous,
+                    phase_metric=phase_metric,
                 )
             displacement = max(
                 float(cp.max(cp.abs(next_edges - carrier.edges))),
                 float(cp.max(cp.abs(next_oriented - oriented))),
             )
             loss = None
+            attempts = []
+            fraction = None
             change = displacement > 0.01 and not (leg == 1 and first + count == steps)
             if change:
                 cp.cuda.Stream.null.synchronize()
                 before = time.perf_counter()
-                target = Carrier(space, n=naux, edges=next_edges)
-                grid = TensorGrid(target, target.edges)
-                remap = lambda w: grid.remap(carrier, w)
-                if method == "reset":
-                    loss = state.restart(target)
-                elif method == "warm":
-                    diagnostic = state.project_memory_warm(target, remap, iterations=8)
-                    loss = diagnostic["energy_loss"]
-                elif method == "galerkin":
-                    diagnostic = state.project_memory_galerkin(
-                        target, remap, iterations=2
+                if remap_budget is not None:
+                    from remap_controller import budgeted_move
+
+                    state, fraction, diagnostic, attempts = budgeted_move(
+                        state,
+                        next_edges,
+                        (
+                            remap_budget / possible_changes
+                            if budget_allocation == "uniform"
+                            else max(remap_budget - budget_used, 1e-300)
+                        ),
                     )
-                    loss = diagnostic["energy_loss"]
+                    change = fraction > 0
+                    target = state.coupling
+                    next_oriented = oriented + fraction * (next_oriented - oriented)
+                    if change:
+                        loss = diagnostic["energy_loss"]
+                        budget_used += attempts[-1]["measured_distance"]
+                        assert budget_used <= remap_budget * (1 + 1e-12)
                 else:
-                    loss = state.project_memory(
-                        target,
-                        remap,
-                        iterations=8 if method == "projected" else 4,
-                        filter_scale=None if method == "projected" else 0.1,
+                    target = Carrier(space, n=naux, edges=next_edges)
+                    grid = TensorGrid(target, target.edges)
+                    remap = lambda w: grid.remap(carrier, w)
+                    if method == "reset":
+                        loss = state.restart(target)
+                    elif method == "warm":
+                        diagnostic = state.project_memory_warm(
+                            target, remap, iterations=8
+                        )
+                        loss = diagnostic["energy_loss"]
+                    elif method == "galerkin":
+                        diagnostic = state.project_memory_galerkin(
+                            target, remap, iterations=2
+                        )
+                        loss = diagnostic["energy_loss"]
+                    else:
+                        loss = state.project_memory(
+                            target,
+                            remap,
+                            iterations=8 if method == "projected" else 4,
+                            filter_scale=None if method == "projected" else 0.1,
+                        )
+                if change:
+                    carrier, oriented = target, next_oriented
+                    flow = TensorCellular(
+                        carrier,
+                        direction * half_duration / steps,
+                        center=center,
+                        oriented_edges=oriented,
                     )
-                carrier, oriented = target, next_oriented
-                flow = TensorCellular(
-                    carrier,
-                    direction * half_duration / steps,
-                    center=center,
-                    oriented_edges=oriented,
-                )
-                changes += 1
+                    changes += 1
                 cp.cuda.Stream.null.synchronize()
                 rebuild += time.perf_counter() - before
             energy_ratio = float(cp.max(state.energy() / energy0))
@@ -143,6 +179,9 @@ def evolve(
                     energy_ratio=energy_ratio,
                     mass_error=mass_error,
                     memory_loss=None if loss is None else loss.tolist(),
+                    transfer_fraction=fraction,
+                    transfer_attempts=attempts,
+                    remap_budget_used=budget_used,
                 )
             )
     cp.cuda.Stream.null.synchronize()
@@ -161,6 +200,10 @@ def evolve(
         energy_floor=energy_floor,
         monitor_source=monitor_source,
         floating_phase=floating_phase,
+        phase_metric=phase_metric,
+        remap_budget=remap_budget,
+        budget_allocation=budget_allocation,
+        remap_budget_used=budget_used,
         changes=changes,
         setup_seconds=setup,
         evolution_seconds=elapsed,

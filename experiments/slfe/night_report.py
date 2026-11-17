@@ -40,8 +40,10 @@ def main():
             "separated-refinement",
             "roundtrip-smoke",
             "roundtrip-long",
+            "auxiliary-return",
             "source-smoke",
             "source-full",
+            "source-refinement",
             "product-pilot",
             "products",
             "monitor-stationary",
@@ -54,6 +56,14 @@ def main():
             "monitor-fe",
             "phase-return",
             "galerkin",
+            "budgeted-return",
+            "budgeted-remaining",
+            "joint-return",
+            "frozen-transfer",
+            "krylov",
+            "material-minimax",
+            "minimax-return",
+            "diffusion",
             "moving-resolution",
             "moving-fields",
         )
@@ -61,11 +71,11 @@ def main():
     r.paragraph(
         "Résultats disponibles le "
         + stamp
-        + " (Europe/Paris). Calculs en double précision sur une RTX 5090. Les figures représentent les solutions calculées, avec une référence indépendante par caractéristiques."
+        + " (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test."
     )
     r.section("Résultat et portée")
     r.paragraph(
-        "Un support auxiliaire mobile résout le défaut observé lorsque la bosse quitte la zone fine d'une grille fixe. Le couplage FE avec mémoire accepte désormais un changement de support contractant, et un raffinement exactement emboîté sans perte d'énergie. Les formules s'exécutent sans racine ni inversion de matrice. Ces propriétés sont démontrées dans restart_theory.pdf et vérifiées sur GPU; elles n'établissent ni une nouveauté bibliographique, ni une convergence générale vers l'EDP."
+        "Un support auxiliaire mobile résout le défaut observé lorsque la bosse quitte la zone fine d'une grille fixe. Le couplage FE avec mémoire accepte désormais un changement de support contractant, et un raffinement exactement emboîté sans perte d'énergie. Les transferts polynomiaux évitent une inversion globale; la variante de Galerkin diagonalise une petite matrice par champ. Les propriétés sont établies sous les hypothèses de restart_theory.pdf; elles n'établissent ni une nouveauté bibliographique, ni une convergence générale vers l'EDP."
     )
     r.paragraph(
         "Deux méthodes sont distinguées : le couplage avec mémoire maintient le champ FE à chaque changement; la référence d'advection pure transporte uniquement le champ DG auxiliaire entre une projection FE initiale et une projection FE finale. Cette seconde méthode est la plus rapide ici, mais elle n'offre pas les opérations physiques FE intermédiaires du couplage."
@@ -76,6 +86,95 @@ def main():
     for path in (args.input / "figures").glob("*"):
         if path.suffix in (".svg", ".pdf", ".png", ".json"):
             shutil.copy2(path, args.output / path.name)
+    r.section("Construction étudiée")
+    r.paragraph(
+        "Le maillage triangulaire FE reste fixe et porte les opérations de physique. Un second maillage transporte le champ par cisaillements semi-lagrangiens. Après ce transport, le champ FE reçoit l'incrément projeté; l'état auxiliaire est conservé pour le pas suivant. Cette mémoire évite de reconstruire entièrement le champ transporté à chaque pas. Le problème étudié cette nuit est de modifier le support auxiliaire en préservant le champ FE, la masse et un bilan d'énergie contrôlé."
+    )
+    from matplotlib.patches import FancyBboxPatch
+
+    fig, ax = plt.subplots(figsize=(10, 3.5))
+    ax.set(xlim=(0, 10), ylim=(0, 3.5))
+    ax.axis("off")
+    boxes = (
+        (
+            0.1,
+            1.6,
+            3.0,
+            1.5,
+            "Physique sur les triangles FE",
+            r"$v^+=G(v)$" + "\nDiffusion, réaction ou source",
+        ),
+        (
+            6.9,
+            1.6,
+            3.0,
+            1.5,
+            "Transport et mémoire auxiliaire",
+            r"$w^+=S(w)$" + "\nÉtat conservé entre les pas",
+        ),
+        (
+            2.5,
+            0.05,
+            5.0,
+            0.8,
+            "Changement du support auxiliaire",
+            "Préserver le champ FE et contrôler la mémoire transférée",
+        ),
+    )
+    for x, y, width, height, title, body in boxes:
+        ax.add_patch(
+            FancyBboxPatch(
+                (x, y),
+                width,
+                height,
+                boxstyle="round,pad=0.04",
+                facecolor="#eef3f6",
+                edgecolor="#52728b",
+            )
+        )
+        ax.text(
+            x + width / 2,
+            y + height - 0.25,
+            title,
+            ha="center",
+            va="center",
+            fontsize=10,
+            fontweight="bold",
+        )
+        ax.text(
+            x + width / 2,
+            y + height / 2 - 0.15,
+            body,
+            ha="center",
+            va="center",
+            fontsize=10,
+        )
+    ax.annotate(
+        "",
+        xy=(6.85, 2.6),
+        xytext=(3.15, 2.6),
+        arrowprops=dict(arrowstyle="->", color="#52728b", linewidth=1.5),
+    )
+    ax.text(5, 2.75, r"$w\leftarrow w+R\,(v^+-v)$", ha="center", fontsize=12)
+    ax.annotate(
+        "",
+        xy=(3.15, 1.95),
+        xytext=(6.85, 1.95),
+        arrowprops=dict(arrowstyle="->", color="#52728b", linewidth=1.5),
+    )
+    ax.text(5, 2.1, r"$v\leftarrow v+R^*(w^+-w)$", ha="center", fontsize=12)
+    ax.text(
+        5,
+        1.2,
+        "R : projection FE vers auxiliaire · R* : adjoint dans les masses",
+        ha="center",
+        fontsize=10,
+    )
+    r.save_figure(
+        fig,
+        "night-coupling",
+        "Schéma des deux mises à jour. Les flèches correspondent à des sous-pas successifs. L'ancre FE supplémentaire conserve la relation entre les états quand le support et son opérateur de projection changent.",
+    )
     r.figure(
         "night-fields",
         "Même domaine et mêmes échelles de couleur. Champ initial, référence, supports fixe et mobile, puis erreurs absolues. Le tracé est un échantillonnage FE; l'erreur L2 est intégrée séparément sur les triangles.",
@@ -218,6 +317,84 @@ def main():
     r.paragraph(
         "Le pas DG retenu passe un contrôle de croissance sur champs aléatoires et la tolérance finale. Le réglage plus agressif (échelle 12) est rejeté : le contrôle aléatoire révèle une croissance d'énergie supérieure au seuil. Ce contrôle fini n'est pas un certificat spectral de stabilité. La variante mobile à 16 pas échoue à la tolérance; le benchmark utilise 64 pas."
     )
+    krylov = [x["result"] for x in raw["krylov"]]
+    if krylov:
+        r.section("Comparateur DG à intégration exponentielle")
+        r.paragraph(
+            "Le même opérateur DG triangulaire est aussi intégré par projection d'Arnoldi de l'action exponentielle, avec flux central ou amont. Deux passages d'orthogonalisation et l'exponentielle de la petite matrice sont calculés sur GPU. Le mode constant est conservé explicitement. Cette construction classique, étudiée notamment par Saad (1992), fournit un comparateur à grands pas; la dimension de Krylov et le nombre de pas restent des paramètres de précision."
+        )
+        r.paragraph(
+            "Le maillage, le champ initial et la tolérance L2 de 0,001 sont ceux du benchmark à un champ. La référence par caractéristiques et la quadrature indépendante sont construites une seule fois, hors chronométrage. Chaque coût inclut l'assemblage DG, un pas de chauffe et l'évolution; aucun graphe CUDA n'est employé pour Arnoldi. Le résidu final de Krylov est enregistré comme indicateur, tandis que l'acceptation repose sur l'erreur physique intégrée."
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        for flux in ("central", "upwind"):
+            for dimension in (48, 96):
+                selected = sorted(
+                    [
+                        x
+                        for x in krylov
+                        if x["flux"] == flux and x["dimension"] == dimension
+                    ],
+                    key=lambda x: x["steps"],
+                )
+                if selected:
+                    label = f"{flux}, dimension {dimension}"
+                    axes[0].loglog(
+                        [x["steps"] for x in selected],
+                        [max(x["l2"]) for x in selected],
+                        "o-",
+                        label=label,
+                    )
+                    axes[1].loglog(
+                        [x["setup_seconds"] + x["evolution_seconds"] for x in selected],
+                        [max(x["l2"]) for x in selected],
+                        "o-",
+                        label=label,
+                    )
+        for ax in axes:
+            ax.axhline(0.001, color="black", linestyle="--", label="Tolérance")
+            ax.axhline(
+                max(krylov[0]["best_fe_l2"]),
+                color="#888888",
+                linestyle=":",
+                label="Plancher FE",
+            )
+            ax.set_ylabel("Erreur L2")
+            ax.grid(alpha=0.2)
+            ax.legend(fontsize=7)
+        axes[0].set_xlabel("Nombre de pas exponentiels")
+        axes[1].set_xlabel("Préparation et évolution (s)")
+        r.save_figure(
+            fig,
+            "night-krylov",
+            "Exploration de deux dimensions de Krylov et quatre nombres de pas. La stabilité de l'exponentielle projetée ne suffit pas à garantir sa précision; les configurations rejetées restent affichées.",
+        )
+        r.table(
+            ["Flux", "Dimension", "Pas", "L2", "Accepté", "Temps (s)"],
+            [
+                [
+                    x["flux"],
+                    x["dimension"],
+                    x["steps"],
+                    max(x["l2"]),
+                    "oui" if x["accepted"] else "non",
+                    x["setup_seconds"] + x["evolution_seconds"],
+                ]
+                for x in krylov
+            ],
+        )
+        accepted = [x for x in krylov if x["accepted"]]
+        if accepted:
+            fastest = min(
+                accepted, key=lambda x: x["setup_seconds"] + x["evolution_seconds"]
+            )
+            r.paragraph(
+                f"Le meilleur coût accepté dans cette exploration vaut {fastest['setup_seconds'] + fastest['evolution_seconds']:.4g} s, pour une erreur {max(fastest['l2']):.4g}. Une seule mesure par configuration est disponible ici; la sélection et les répétitions de chronométrage sont distinctes."
+            )
+        else:
+            r.paragraph(
+                "Aucune configuration exponentielle enregistrée n'atteint encore la tolérance. L'absence d'instabilité ne remplace pas la résolution suffisante de l'action exponentielle."
+            )
     r.section("Mémoire : changement d'espace sans changer le champ FE")
     r.paragraph(
         "L'état est représenté par trois tableaux (v,w,a), avec v=R*w+(I−R*R)a. Son énergie est ||w||²+||a||²−||Ra||². La remise à zéro conserve v mais perd toute la mémoire invisible dans ce champ. Le transfert contractant conserve une partie de cette mémoire. En cas de raffinement exactement emboîté, l'injection corrige w par les nouveaux modes de a et préserve toute l'énergie augmentée."
@@ -503,7 +680,7 @@ def main():
     if roundtrip:
         r.section("Déformer puis revenir : erreur accumulée sans référence numérique")
         r.paragraph(
-            "Le flot autonome est suivi pendant une durée T, puis sa vitesse est inversée pendant la même durée. La solution exacte finale est le profil initial : aucune intégration de caractéristiques n'est nécessaire pour cette référence. Les partitions restent adaptées au champ calculé pendant les deux trajets. La dissipation et les pertes de mémoire ne s'annulent pas lors du retour."
+            "Le flot autonome est suivi pendant une durée T, puis sa vitesse est inversée pendant la même durée. La solution exacte finale est le profil initial : aucune intégration de caractéristiques n'est nécessaire pour cette référence. Les partitions restent adaptées au champ calculé pendant les deux trajets. La dissipation et les pertes de mémoire ne s'annulent pas lors du retour. Une erreur de phase réversible peut toutefois s'annuler : ce test complète les références aller simple sans les remplacer."
         )
         r.table(
             ["Durée aller", "Transfert", "Changements", "L2 max", "Retour FE max"],
@@ -569,6 +746,76 @@ def main():
                 "night-return-" + str(duration).replace(".", "-"),
                 f"Aller-retour de durée totale {2*duration}. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n'est pas encore enregistré.",
             )
+    auxiliary_return = [x["result"] for x in raw["auxiliary-return"]]
+    if auxiliary_return:
+        r.paragraph(
+            "Une ablation retire ensuite les observations FE intermédiaires et les transferts de mémoire. Le champ DG auxiliaire est transporté et remaillé directement, avec seulement une projection FE au départ et au retour. Elle isole les erreurs du transport auxiliaire et de son adaptation. Le nombre de cellules par direction vaut 128 ou 256; des grilles uniformes fixes servent de second contrôle. Cette version ne fournit pas de physique FE intermédiaire."
+        )
+        r.table(
+            ["Aux. n", "Pas", "Intervalle", "Uniforme", "Changements", "L2 max"],
+            [
+                [
+                    x["naux"],
+                    x["steps_per_leg"],
+                    x["check_every"],
+                    "oui" if x["uniform"] else "non",
+                    x["changes"],
+                    max(x["l2"]),
+                ]
+                for x in auxiliary_return
+            ],
+        )
+        fig, ax = plt.subplots(figsize=(7, 4))
+        for n in (128, 256):
+            for uniform in (False, True):
+                selected = [
+                    x
+                    for x in auxiliary_return
+                    if x["naux"] == n and x["uniform"] == uniform
+                ]
+                positions = [
+                    (
+                        0
+                        if x["steps_per_leg"] == 128
+                        else (1 if x["check_every"] == 4 else 2)
+                    )
+                    for x in selected
+                ]
+                ax.semilogy(
+                    positions,
+                    [max(x["l2"]) for x in selected],
+                    "o-",
+                    label=f"Aux. {n}, "
+                    + ("uniforme fixe" if uniform else "adaptation"),
+                )
+        memory = [
+            x
+            for x in extended
+            if x["nfe"] == 256
+            and x["naux"] == 128
+            and x["half_duration"] == 1.0
+            and x["method"] == "projected"
+        ]
+        if memory:
+            ax.semilogy(
+                [0 if x["steps_per_leg"] == 128 else 1 for x in memory],
+                [max(x["l2"]) for x in memory],
+                "s--",
+                color="black",
+                label="Couplage FE avec mémoire, aux. 128",
+            )
+        ax.set_xticks([0, 1, 2], ["128 / 4", "512 / 4", "512 / 16"])
+        ax.set(
+            xlabel="Pas par trajet / intervalle de contrôle",
+            ylabel="Erreur L2 maximale au retour",
+        )
+        ax.grid(alpha=0.2)
+        ax.legend(fontsize=8)
+        r.save_figure(
+            fig,
+            "night-auxiliary-return",
+            "Déformation et retour de durée totale deux. Les grilles adaptées sont décidées par leurs champs respectifs. Les points uniformes fixes apparaissent uniquement à 512 pas; le raffinement auxiliaire est distinct du raffinement temporel.",
+        )
     stationary = [x["result"] for x in raw["monitor-stationary"]]
     if stationary:
         r.section("Diagnostic du moniteur : champ immobile et fréquence fixée")
@@ -634,17 +881,26 @@ def main():
                 for x in monitor
             ],
         )
-    material = [x["result"] for x in raw["material-monitor"] + raw["material-phase"]]
+    material = [
+        x["result"]
+        for x in raw["material-monitor"]
+        + raw["material-phase"]
+        + raw["material-minimax"]
+    ]
     if material:
         r.section("La coupure périodique du moniteur déplace les quantiles")
         r.paragraph(
             "Des poids d'énergie positifs sont portés par des points matériels suivis par les caractéristiques. L'incompressibilité conserve ces poids. Ce diagnostic n'utilise aucune évolution FE/DG ni aucun remaillage du champ. Les grands déplacements des partitions sont reproduits à 512 et 1024 points par direction. Décaler la coupure périodique réduit le mouvement des quantiles diagonaux : une part importante du phénomène est géométrique, et non une instabilité de projection."
         )
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-        for axis, ax in zip((2, 3), axes):
+        fig, axes = plt.subplots(2, 2, figsize=(10, 7))
+        for axis, ax in enumerate(axes.ravel()):
             for x in material:
                 label = (
-                    "Phase ajustée"
+                    (
+                        "Phase minimax"
+                        if x.get("phase_metric") == "maximum-displacement"
+                        else "Phase probabiliste"
+                    )
                     if x.get("floating_phase")
                     else ("Coupe décalée" if x["shifted"] else "Coupe fixe en zéro")
                 )
@@ -652,15 +908,21 @@ def main():
                     [h["time"] for h in x["history"]],
                     [h["axis_displacement"][axis] for h in x["history"]],
                     "--" if x["samples"] == 512 else "-",
+                    color={
+                        "Coupe fixe en zéro": "#2166ac",
+                        "Coupe décalée": "#d95f02",
+                        "Phase probabiliste": "#7570b3",
+                        "Phase minimax": "#1b9e77",
+                    }[label],
                     label=f"{label}, {x['samples']}",
                 )
             ax.axhline(0.01, color="black", linestyle=":")
             ax.set(
-                title="Coordonnée x+y" if axis == 2 else "Coordonnée x−y",
+                title="Coordonnée " + ("x", "y", "x+y", "x−y")[axis],
                 xlabel="Temps physique",
                 ylabel="Déplacement maximal des arêtes",
             )
-            ax.legend(fontsize=7)
+            ax.legend(fontsize=7, ncol=2)
             ax.grid(alpha=0.2)
         r.save_figure(
             fig,
@@ -690,6 +952,62 @@ def main():
                 [x["steps_per_leg"], x["check_every"], x["changes"], max(x["l2"])]
                 for x in phased
             ],
+        )
+    minimax = [x["result"] for x in raw["minimax-return"]]
+    if minimax:
+        r.paragraph(
+            "Une seconde phase minimise directement le plus grand déplacement physique des quantiles pour le nouveau moniteur fixé. La monotonie des quantiles permet de trouver par dichotomie le point où les déplacements extrêmes positifs et négatifs s'équilibrent. Cette optimalité locale ne minimise ni l'erreur du champ ni le nombre futur de changements."
+        )
+        r.table(
+            ["Pas", "Intervalle", "Changements minimax", "L2 max", "Temps (s)"],
+            [
+                [
+                    x["steps_per_leg"],
+                    x["check_every"],
+                    x["changes"],
+                    max(x["l2"]),
+                    x["evolution_seconds"],
+                ]
+                for x in minimax
+            ],
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        for rows, label in (
+            (
+                [
+                    x["result"]
+                    for x in raw["warm-return"]
+                    if x["result"]["method"] == "projected"
+                ],
+                "Coupe fixe",
+            ),
+            (phased, "Phase probabiliste"),
+            (minimax, "Phase minimax"),
+        ):
+            positions, counts, errors = [], [], []
+            for i, (steps, interval) in enumerate(((128, 4), (512, 4), (512, 16))):
+                selected = [
+                    x
+                    for x in rows
+                    if x["steps_per_leg"] == steps and x["check_every"] == interval
+                ]
+                if selected:
+                    positions.append(i)
+                    counts.append(selected[0]["changes"])
+                    errors.append(max(selected[0]["l2"]))
+            axes[0].plot(positions, counts, "o-", label=label)
+            axes[1].semilogy(positions, errors, "o-", label=label)
+        for ax in axes:
+            ax.set_xticks([0, 1, 2], ["128 / 4", "512 / 4", "512 / 16"])
+            ax.set_xlabel("Pas par trajet / intervalle de contrôle")
+            ax.legend(fontsize=8)
+            ax.grid(alpha=0.2)
+        axes[0].set_ylabel("Nombre de changements")
+        axes[1].set_ylabel("Erreur L2 maximale au retour")
+        r.save_figure(
+            fig,
+            "night-phase-comparison",
+            "Même transfert de mémoire tronqué, trois choix de coupure périodique. La troisième configuration conserve l'intervalle physique de contrôle de la première.",
         )
     warm_validation = args.input / "warm-validation.json"
     if warm_validation.exists():
@@ -774,6 +1092,40 @@ def main():
             ],
         )
         tested = [x["result"] for x in raw["galerkin"]]
+        if tested:
+            fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+            transfer_cases = [x["result"] for x in raw["warm-return"]] + tested
+            for method, label in (
+                ("projected", "Filtre tronqué"),
+                ("warm", "Initialisation chaude"),
+                ("galerkin", "Projection augmentée"),
+            ):
+                selected = [x for x in transfer_cases if x["method"] == method]
+                positions, errors, costs = [], [], []
+                for i, (steps, interval) in enumerate(((128, 4), (512, 4), (512, 16))):
+                    group = [
+                        x
+                        for x in selected
+                        if x["steps_per_leg"] == steps and x["check_every"] == interval
+                    ]
+                    if group:
+                        positions.append(i)
+                        errors.append(max(group[0]["l2"]))
+                        costs.append(group[0]["evolution_seconds"])
+                axes[0].semilogy(positions, errors, "o-", label=label)
+                axes[1].plot(positions, costs, "o-", label=label)
+            for ax in axes:
+                ax.set_xticks([0, 1, 2], ["128 / 4", "512 / 4", "512 / 16"])
+                ax.set_xlabel("Pas par trajet / intervalle de contrôle")
+                ax.grid(alpha=0.2)
+                ax.legend(fontsize=8)
+            axes[0].set_ylabel("Erreur L2 maximale au retour")
+            axes[1].set_ylabel("Temps d'évolution (s)")
+            r.save_figure(
+                fig,
+                "night-galerkin",
+                "Trois réalisations du transfert de mémoire avec le même contrôleur de maillage. Les trajectoires de supports peuvent différer parce que le contrôleur dépend du champ calculé. Une exécution par configuration.",
+            )
         r.table(
             ["Pas", "Intervalle", "Changements", "L2 max", "Temps (s)"],
             [
@@ -789,6 +1141,204 @@ def main():
         )
         r.paragraph(
             "Le sous-espace est construit à partir de chaque champ : le transfert est non linéaire. L'identité de Pythagore ne démontre pas une contraction de la distance entre deux solutions, ni un gain d'erreur pour l'EDP. Les tests de retour servent à examiner ce second point."
+        )
+    frozen = [x["result"] for x in raw["frozen-transfer"]]
+    if frozen:
+        r.section("Comparaison des transferts à géométrie identique")
+        r.paragraph(
+            "Des points matériels transportent les poids d'énergie de la solution initiale et définissent à l'avance les partitions. Les huit méthodes suivent exactement cette même succession de 63 changements, puis les mêmes opérateurs auxiliaires. Les matrices FE–auxiliaire et les projections entre supports sont construites une seule fois et partagées. La rétroaction du champ calculé sur le maillage est ainsi supprimée de cette comparaison."
+        )
+        r.paragraph(
+            "À chaque changement, trois mesures partent du même état, après une application de chauffe. Leur médiane inclut le transfert et ses diagnostics. La somme de ces médianes isole le coût des transferts; elle exclut la construction géométrique commune et n'est pas un temps complet de résolution. Les états des méthodes peuvent différer parce que leurs erreurs se sont accumulées."
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+        labels = [
+            x["method"]
+            .replace("galerkin0", "Galerkin 1 dir.")
+            .replace("galerkin1", "Galerkin 2 dir.")
+            .replace("galerkin2", "Galerkin 3 dir.")
+            .replace("galerkin4", "Galerkin 5 dir.")
+            for x in frozen
+        ]
+        axes[0].bar(range(len(frozen)), [max(x["l2"]) for x in frozen])
+        axes[0].set_yscale("log")
+        axes[0].axhline(
+            max(frozen[0]["best_fe_l2"]),
+            color="black",
+            linestyle="--",
+            label="Plancher FE",
+        )
+        axes[0].legend(fontsize=8)
+        axes[0].set_ylabel("Erreur L2 maximale au retour")
+        axes[1].bar(range(len(frozen)), [x["transfer_seconds"] for x in frozen])
+        axes[1].set_ylabel("Somme des temps de transfert (s)")
+        for ax in axes:
+            ax.set_xticks(range(len(frozen)), labels, rotation=35, ha="right")
+            ax.grid(axis="y", alpha=0.2)
+        r.save_figure(
+            fig,
+            "night-frozen-transfer",
+            "Même suite de supports et mêmes transports. Les variantes de Galerkin utilisent une, deux, trois ou cinq directions; la matrice de Gram peut avoir un rang numérique plus faible. La seconde colonne mesure uniquement les transferts avec diagnostics.",
+        )
+        r.paragraph(
+            f"Construction initiale commune : {frozen[0]['common_setup_seconds']:.3g} s; constructions géométriques communes pendant l'évolution : {frozen[0]['common_rebuild_seconds']:.3g} s. Ces coûts restent à payer pour une exécution indépendante."
+        )
+    joint = [x["result"] for x in raw["joint-return"]]
+    if joint:
+        r.section("Association de la projection enrichie et de la phase minimax")
+        r.paragraph(
+            "La projection enrichie et la minimisation du déplacement périodique sont ensuite utilisées ensemble. Les essais courts reprennent les trois fréquences de contrôle. Deux essais plus longs sur FE n=256 et auxiliaire n=128 comparent la projection enrichie avec coupure fixe et avec phase minimax. Les ingrédients ont des contrôles séparés; cette campagne examine leur interaction."
+        )
+        r.table(
+            [
+                "T aller",
+                "FE n",
+                "Phase",
+                "Pas / contrôle",
+                "Changements",
+                "L2 max",
+                "Temps (s)",
+            ],
+            [
+                [
+                    x["half_duration"],
+                    x["nfe"],
+                    "minimax" if x["floating_phase"] else "fixe",
+                    f"{x['steps_per_leg']} / {x['check_every']}",
+                    x["changes"],
+                    max(x["l2"]),
+                    x["setup_seconds"] + x["evolution_seconds"],
+                ]
+                for x in joint
+            ],
+        )
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+        for rows, label in (
+            (
+                [
+                    x["result"]
+                    for x in raw["warm-return"]
+                    if x["result"]["method"] == "projected"
+                ],
+                "Filtre, coupe fixe",
+            ),
+            (minimax, "Filtre, phase minimax"),
+            (
+                [
+                    x
+                    for x in extended
+                    if x["nfe"] == 128
+                    and x["naux"] == 64
+                    and x["half_duration"] == 0.25
+                    and x["method"] == "chebyshev"
+                ],
+                "Chebyshev, coupe fixe",
+            ),
+            ([x["result"] for x in raw["galerkin"]], "Galerkin, coupe fixe"),
+            (
+                [x for x in joint if x["half_duration"] == 0.25],
+                "Galerkin, phase minimax",
+            ),
+        ):
+            if rows:
+                ax.scatter(
+                    [x["setup_seconds"] + x["evolution_seconds"] for x in rows],
+                    [max(x["l2"]) for x in rows],
+                    label=label,
+                )
+        ax.set(
+            xscale="log",
+            yscale="log",
+            xlabel="Temps de préparation et d'évolution (s)",
+            ylabel="Erreur L2 maximale au retour",
+        )
+        ax.grid(alpha=0.2)
+        ax.legend(fontsize=8)
+        r.save_figure(
+            fig,
+            "night-joint",
+            "Comparaison exploratoire des configurations courtes, à trois fréquences de contrôle. Chaque point correspond à une exécution; les trajectoires de supports sont propres à chaque méthode. Cette figure ne remplace pas la comparaison à géométrie identique.",
+        )
+        r.paragraph(
+            "Le gain obtenu par Galerkin face au filtre tronqué à 512 pas ne suffit pas à établir un avantage de coût : Chebyshev à 128 pas donne déjà une erreur proche avec beaucoup moins de contrôles. Les paramètres de transport et d'adaptation doivent être optimisés ensemble avant une comparaison à précision imposée."
+        )
+    budgeted = [x["result"] for x in raw["budgeted-return"] + raw["budgeted-remaining"]]
+    if budgeted:
+        r.section("Contrôle du déplacement par un budget de transfert")
+        r.paragraph(
+            "Le contrôleur propose les mêmes partitions d'énergie, puis réduit leur déplacement par facteurs de deux jusqu'à respecter un budget de distance de mémoire. La projection augmentée relie cette distance à la perte d'énergie. Le budget total est réparti entre les occasions de changement; neuf essais au plus sont autorisés, après quoi l'ancien support est conservé. Une marge empirique pour les arrondis accompagne le diagnostic."
+        )
+        r.paragraph(
+            "Dans le modèle ambiant exact, la somme des distances de compression borne leur effet cumulé pour la même suite d'opérateurs de transport figée. Ce budget ne borne pas l'erreur totale vis-à-vis de l'EDP. En particulier, ralentir le maillage peut augmenter l'erreur du transport; les courbes examinent ce compromis."
+        )
+        r.paragraph(
+            "L'allocation uniforme échoue dans ces essais : elle peut empêcher tous les changements et laisser un budget inutilisé, avec une erreur physique finale élevée. Le contrôle du défaut de compression seul ne sélectionne donc pas un support adapté à l'advection."
+        )
+        if raw["budgeted-remaining"]:
+            r.paragraph(
+                "Une ablation autorise chaque changement à utiliser toute la fraction encore disponible du budget total. Elle isole le rôle de l'allocation uniforme; le même suivi de la somme des distances est conservé."
+            )
+        r.table(
+            [
+                "Allocation",
+                "Pas / contrôle",
+                "Budget",
+                "Dépensé",
+                "Changements",
+                "Essais",
+                "L2 max",
+                "Temps (s)",
+            ],
+            [
+                [
+                    x.get("budget_allocation", "uniform"),
+                    f"{x['steps_per_leg']} / {x['check_every']}",
+                    x["remap_budget"],
+                    x["remap_budget_used"],
+                    x["changes"],
+                    sum(len(h["transfer_attempts"]) for h in x["history"]),
+                    max(x["l2"]),
+                    x["evolution_seconds"],
+                ]
+                for x in budgeted
+            ],
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        for x in budgeted:
+            label = f"{x.get('budget_allocation', 'uniform')}, B={x['remap_budget']}, {x['steps_per_leg']} pas"
+            times = [
+                (h["leg"] + h["step"] / x["steps_per_leg"]) * x["half_duration"]
+                for h in x["history"]
+            ]
+            axes[0].plot(
+                times, [h["remap_budget_used"] for h in x["history"]], label=label
+            )
+            selected = [h for h in x["history"] if h["transfer_fraction"] is not None]
+            axes[1].plot(
+                [
+                    (h["leg"] + h["step"] / x["steps_per_leg"]) * x["half_duration"]
+                    for h in selected
+                ],
+                [h["transfer_fraction"] for h in selected],
+                ".",
+                label=label,
+            )
+        axes[0].set(
+            xlabel="Temps du parcours aller-retour",
+            ylabel="Somme des distances de transfert",
+        )
+        axes[1].set(
+            xlabel="Temps du parcours aller-retour",
+            ylabel="Fraction acceptée du déplacement proposé",
+            ylim=(-0.03, 1.03),
+        )
+        for ax in axes:
+            ax.grid(alpha=0.2)
+            ax.legend(fontsize=8)
+        r.save_figure(
+            fig,
+            "night-remap-budget",
+            "La colonne de droite expose les réductions et rejets du déplacement. Le respect du budget porte sur la mesure de compression; l'erreur L2 physique est présentée séparément dans le tableau.",
         )
     sources = [x["result"] for x in raw["source-full"] or raw["source-smoke"]]
     if sources:
@@ -813,6 +1363,179 @@ def main():
                 for x in sources
             ],
         )
+        if (args.output / "night-source-fields.pdf").exists():
+            r.figure(
+                "night-source-fields",
+                "Structure ajoutée par la source FE, observée à la fin du transport. Même maillage FE n=256 et même moniteur FE; seule la résolution auxiliaire passe de 32 à 64. Les erreurs ponctuelles partagent une échelle logarithmique. Le panneau de projection mesure la limite FE locale.",
+            )
+    source_refinement = [x["result"] for x in raw["source-refinement"]]
+    if source_refinement:
+        r.paragraph(
+            "Un raffinement emboîté peut être déclenché par la part de la source FE absente de l'auxiliaire. Après le changement de partition à l'injection, le diagnostic est la racine de la différence entre l'énergie FE de la source et l'énergie de sa projection auxiliaire. Les intervalles sont bisectés jusqu'à satisfaction du seuil ou épuisement du budget n=128. La mémoire est transférée par l'injection emboîtée, dont la perte d'énergie est contrôlée. Ce seuil porte sur la source projetée à cet instant; il ne borne pas l'erreur EDP finale."
+        )
+        r.table(
+            [
+                "Largeur",
+                "Aux. initial",
+                "Aux. final",
+                "Seuil",
+                "Atteint",
+                "L2 max",
+                "Temps (s)",
+            ],
+            [
+                [
+                    x["width"],
+                    x["naux"],
+                    x["final_naux"],
+                    x["source_tolerance"],
+                    (
+                        (
+                            "oui"
+                            if x["source_resolution"][-1]["tolerance_met"]
+                            else "non"
+                        )
+                        if x["source_resolution"]
+                        else "fixe"
+                    ),
+                    max(x["l2"]),
+                    x["setup_seconds"] + x["evolution_seconds"],
+                ]
+                for x in source_refinement
+            ],
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        for ax, width in zip(axes, (0.003, 0.006)):
+            controls = [
+                x
+                for x in sources
+                if x["nfe"] == 256 and x["monitor"] == "fe" and x["width"] == width
+            ]
+            controls += [
+                x
+                for x in source_refinement
+                if x["width"] == width and x["source_tolerance"] is None
+            ]
+            ax.loglog(
+                [x["setup_seconds"] + x["evolution_seconds"] for x in controls],
+                [max(x["l2"]) for x in controls],
+                "o",
+                label="Résolution auxiliaire fixe",
+            )
+            for x in controls:
+                ax.annotate(
+                    str(x["naux"]),
+                    (x["setup_seconds"] + x["evolution_seconds"], max(x["l2"])),
+                    xytext=(4, 4),
+                    textcoords="offset points",
+                    fontsize=8,
+                )
+            adaptive = [
+                x
+                for x in source_refinement
+                if x["width"] == width and x["source_tolerance"] is not None
+            ]
+            ax.loglog(
+                [x["setup_seconds"] + x["evolution_seconds"] for x in adaptive],
+                [max(x["l2"]) for x in adaptive],
+                "s",
+                label="Raffinement à l'injection",
+            )
+            if controls:
+                ax.axhline(
+                    max(controls[0]["best_fe_l2"]),
+                    color="black",
+                    linestyle="--",
+                    label="Plancher FE",
+                )
+            ax.set(
+                title=f"Largeur de source {width}",
+                xlabel="Temps complet (s)",
+                ylabel="Erreur L2",
+            )
+            ax.grid(alpha=0.2)
+            ax.legend(fontsize=8)
+        r.save_figure(
+            fig,
+            "night-source-refinement",
+            "Coût de préparation et d'évolution. Les simulations à résolution fixe gardent un nombre de cellules constant mais leurs partitions se déplacent. Chaque point représente une exécution; aucun gain robuste de performance n'est conclu de cette seule mesure.",
+        )
+    diffusion = [x["result"] for x in raw["diffusion"]]
+    if diffusion:
+        r.section("Diffusion implicite dans l'espace FE")
+        r.paragraph(
+            "Une diffusion SIPG est assemblée sur les triangles perturbés DG P4. Chaque demi-pas Crank–Nicolson est résolu par gradient conjugué préconditionné sur GPU; les blocs de raideur et le préconditionneur diagonal sont réutilisés. Le transport intermédiaire est une translation périodique de vitesse (1; 0,37). Une solution analytique de l'équation advection–chaleur fournit la référence à t=0,23, avec diffusivité 0,002. Le contrôle efface la mémoire après chaque transport."
+        )
+        r.paragraph(
+            "L'opérateur symétrique, son noyau constant, son spectre et la résolution CN sont contrôlés sur de petits maillages par diagonalisation GPU indépendante du solveur itératif. La pénalité vaut huit fois (p+1) au carré, multiplié par l'inverse de la plus petite hauteur adjacente. Ces contrôles ne constituent pas une preuve de coercivité pour des maillages arbitraires. L'ordre deux de CN ne suffit pas à établir celui du couplage avec projections."
+        )
+        control_file = args.input / "diffusion.validation.json"
+        if control_file.exists():
+            heat_controls = json.loads(control_file.read_text()).get("heat_only", [])
+            r.paragraph(
+                "Un contrôle sans advection vérifie aussi la décroissance analytique du mode cos(2πx) sin(2πy), jusqu'à t=0,2 avec 32 pas CN. Ce test contrôle le signe et la normalisation de la diffusion indépendamment du transfert semi-lagrangien."
+            )
+            r.table(
+                ["FE n", "Erreur L2 chaleur seule", "Plancher FE"],
+                [[x["nfe"], max(x["l2"]), max(x["best_fe_l2"])] for x in heat_controls],
+            )
+        fig, axes = plt.subplots(1, 3, figsize=(11, 3.8))
+        for ax, nfe in zip(axes, (8, 16, 32)):
+            selected = [x for x in diffusion if x["nfe"] == nfe and x["fields"] == 1]
+            for method in ("memory", "reset"):
+                group = sorted(
+                    [x for x in selected if x["method"] == method],
+                    key=lambda x: x["steps"],
+                )
+                if group:
+                    ax.loglog(
+                        [x["steps"] for x in group],
+                        [max(x["l2"]) for x in group],
+                        "o-",
+                        label=method,
+                    )
+            if selected:
+                ax.axhline(
+                    max(selected[0]["best_fe_l2"]),
+                    color="black",
+                    linestyle="--",
+                    label="Plancher FE",
+                )
+            ax.set(
+                title=f"FE {nfe}, auxiliaire {2*nfe}",
+                xlabel="Nombre de pas",
+                ylabel="Erreur L2",
+            )
+            ax.grid(alpha=0.2)
+            ax.legend(fontsize=8)
+        r.save_figure(
+            fig,
+            "night-diffusion",
+            "Diffusion FE implicite entre transports auxiliaires. La solution analytique intègre simultanément translation et élargissement du profil; le plancher FE est calculé par projection indépendante.",
+        )
+        r.table(
+            ["FE n", "Champs", "Pas", "Méthode", "L2 max", "CG max", "Temps (s)"],
+            [
+                [
+                    x["nfe"],
+                    x["fields"],
+                    x["steps"],
+                    x["method"],
+                    max(x["l2"]),
+                    x["cg_iterations_max"],
+                    x["setup_seconds"] + x["evolution_seconds"],
+                ]
+                for x in diffusion
+            ],
+        )
+        r.paragraph(
+            f"Résidu relatif maximal des résolutions : {max(x['cg_residual_max'] for x in diffusion):.3g}. Écart absolu maximal de masse : {max(h['mass_error'] for x in diffusion for h in x['history']):.3g}. Le maximum du rapport d'énergie augmentée observé après un pas vaut {max(h['energy_ratio'] for x in diffusion for h in x['history']):.6g}. Les temps comprennent un assemblage par cas; aucun graphe CUDA ni solveur multi-second-membre n'est employé pour CG."
+        )
+        if (args.output / "night-diffusion-fields.pdf").exists():
+            r.figure(
+                "night-diffusion-fields",
+                "Champ FE après translation et diffusion, avec et sans mémoire. Maillage perturbé n=16, auxiliaire n=32 et 64 pas. Les erreurs locales sont affichées à échelle commune; leurs valeurs L2 sont intégrées indépendamment sur tout le domaine.",
+            )
     products = [x["result"] for x in raw["products"] or raw["product-pilot"]]
     if products:
         r.section("Exploration : vitesses issues de produits de fonctions de courant")
@@ -1072,7 +1795,9 @@ def main():
         "separated-refinement": 12,
         "roundtrip-smoke": 6,
         "roundtrip-long": 48,
+        "auxiliary-return": 8,
         "source-full": 16,
+        "source-refinement": 6,
         "products": 32,
         "monitor-stationary": 12,
         "monitor-return": 12,
@@ -1084,6 +1809,14 @@ def main():
         "material-phase": 2,
         "phase-return": 3,
         "galerkin": 3,
+        "budgeted-return": 4,
+        "budgeted-remaining": 2,
+        "joint-return": 5,
+        "frozen-transfer": 8,
+        "krylov": 16,
+        "material-minimax": 2,
+        "minimax-return": 3,
+        "diffusion": 20,
     }
     r.table(
         ["Campagne", "Enregistrés", "Prévus"],
@@ -1115,6 +1848,7 @@ def main():
         "chebyshev-sanitizer",
         "energy-mesh-sanitizer",
         "late-sanitizer",
+        "coupled-sanitizer",
     ):
         path = args.input / (name + ".log")
         if path.exists():
@@ -1135,6 +1869,18 @@ def main():
         "La piste d'article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d'énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture."
     )
     references = [
+        (
+            "Saad (1992), approximation de l'action exponentielle par Krylov",
+            "https://epubs.siam.org/doi/10.1137/0729014",
+        ),
+        (
+            "Simon et Behrens (2021), reconstruction semi-lagrangienne des sous-échelles",
+            "https://doi.org/10.1007/s10915-021-01451-w",
+        ),
+        (
+            "Arnold, Brezzi, Cockburn et Marini (2002), méthodes DG elliptiques",
+            "https://www-users.cse.umn.edu/~arnold/papers/dgerr.pdf",
+        ),
         (
             "Gaul, Gutknecht, Liesen et Nabben (2013), espaces de Krylov augmentés",
             "https://people.math.ethz.ch/~mhg/pub/defl-GGLN1-SIMAX.pdf",

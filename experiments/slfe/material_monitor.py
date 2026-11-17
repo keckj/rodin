@@ -16,7 +16,9 @@ from day_study import reference_feet
 from campaign import provenance
 
 
-def evolve(samples=512, shifted=False, floating_phase=False):
+def evolve(
+    samples=512, shifted=False, floating_phase=False, phase_metric="probability"
+):
     coordinate = (cp.arange(samples) + 0.5) / samples
     yy, xx = cp.meshgrid(coordinate, coordinate, indexing="ij")
     points = cp.stack((xx, yy), axis=-1)
@@ -31,7 +33,12 @@ def evolve(samples=512, shifted=False, floating_phase=False):
         points = reference_feet(points, 0.25 / 32, 16)
         previous = cp.concatenate((edges, oriented)) if floating_phase else None
         next_edges, next_oriented = partitions(
-            points, weights, 64, origins=origins, previous_edges=previous
+            points,
+            weights,
+            64,
+            origins=origins,
+            previous_edges=previous,
+            phase_metric=phase_metric,
         )
         displacement = cp.max(
             cp.abs(cp.concatenate((next_edges - edges, next_oriented - oriented))),
@@ -53,6 +60,7 @@ def evolve(samples=512, shifted=False, floating_phase=False):
         samples=samples,
         shifted=shifted,
         floating_phase=floating_phase,
+        phase_metric=phase_metric,
         origins=origins.tolist(),
         changes=sum(x["changed"] for x in history),
         history=history,
@@ -63,12 +71,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--floating-phase", action="store_true")
+    parser.add_argument(
+        "--phase-metric",
+        default="probability",
+        choices=("probability", "maximum-displacement"),
+    )
     args = parser.parse_args()
     meta = provenance()
     with args.output.open("w") as stream:
         for n in (512, 1024):
             for shifted in (False,) if args.floating_phase else (False, True):
-                result = evolve(n, shifted, args.floating_phase)
+                result = evolve(n, shifted, args.floating_phase, args.phase_metric)
                 stream.write(json.dumps(dict(result=result, provenance=meta)) + "\n")
                 stream.flush()
                 print(n, shifted, result["changes"], flush=True)

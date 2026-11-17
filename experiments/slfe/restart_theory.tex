@@ -8,7 +8,7 @@
 \title{Changement de support auxiliaire avec mémoire FE\\
 Transition contractante et mesure de la mémoire supprimée}
 \author{Étude GPU SLFE, fork keckj/rodin}
-\date{16 novembre 2026}
+\date{17 novembre 2026}
 \begin{document}
 \maketitle
 
@@ -289,6 +289,21 @@ conservée exactement. À $k$ fixé, cette erreur ne tend pas vers zéro
 avec le déplacement du support. La stabilité seule ne garantit donc
 pas la consistance d'un changement de support infinitésimal.
 
+Cette difficulté ne dépend pas du choix particulier de Richardson.
+Pour un départ nul $x=p(K)h$ avec $p$ polynomial de degré fixé,
+le support inchangé donne $h=Kd_0$ et le multiplicateur de mémoire
+$g(\lambda)=\lambda p(\lambda)$. Considérons dans $\mathbb R^2$
+$V=\operatorname{span}(e_1)$ et
+$W=\operatorname{span}(\cos\theta\,e_1+\sin\theta\,e_2)$.
+Alors $K=\sin^2\theta$ sur $W$. Une identité exacte pour tous les
+angles non nuls exigerait $\lambda p(\lambda)=1$ pour tout
+$\lambda\in(0,1)$, ce qui est impossible puisque ce polynôme vaut
+zéro en zéro. Un filtre polynomial fixe à départ nul ne peut donc
+assurer une identité uniforme pour tous les couples d'espaces.
+Cette obstruction motive soit une dépendance à l'état entrant,
+soit une résolution dont la précision tient compte des angles entre
+les espaces.
+
 Une variante expérimentale utilise $d_0=w_0-R_0a_0$, puis
 \[
  x_0=Cd_0,\qquad h=Cd_0+R_1(a_0-v),\qquad
@@ -349,13 +364,63 @@ $G$ et $b$ par réductions GPU et diagonalise les petites matrices de Gram
 sur GPU, une par champ. Les valeurs propres inférieures à
 $10^{-12}\max(1,\lambda_{\max})$ sont écartées. L'identité au support
 inchangé est donc soumise à ce seuil numérique de rang. Les contrôles
-et expériences sont enregistrés séparément dans la campagne Galerkin;
-aucun résultat n'est anticipé avant son exécution.
+indépendants aux degrés 1, 2 et 4 donnent un défaut maximal d'observation
+de $1{,}8\,10^{-15}$, un écart à l'oracle ambiant de
+$1{,}4\,10^{-14}$ et un défaut de Pythagore de $6{,}4\,10^{-14}$.
+La monotonie de l'énergie retenue avec l'enrichissement est également
+contrôlée. Les expériences de retour améliorent certains résultats
+du transfert froid; elles n'établissent pas un avantage de coût
+sur le filtre de Chebyshev. Les mesures complètes figurent dans le
+rapport expérimental.
 L'augmentation des espaces de Krylov est classique, notamment dans
 Gaul, Gutknecht, Liesen et Nabben (2013),
 \href{https://people.math.ethz.ch/~mhg/pub/defl-GGLN1-SIMAX.pdf}{\emph{A framework for deflated and augmented Krylov subspace methods}}.
 L'intérêt à examiner porte ici sur sa réalisation dans la mémoire
 orthogonale au champ FE, et non sur une nouvelle méthode d'algèbre linéaire.
+
+\subsection{Budget de transfert et réduction du mouvement}
+L'identité précédente permet de mesurer le défaut de chaque compression
+par $\eta_j=\sqrt{E_j^--E_j^+}$. Soient $F_j$ des évolutions
+non expansives sur un espace ambiant commun, et
+\[
+ q_{j+1}=F_j(q_j)+r_j,\qquad
+ \widetilde q_{j+1}=F_j(\widetilde q_j),\qquad
+ q_0=\widetilde q_0.
+\]
+L'inégalité triangulaire donne par récurrence
+$\|q_N-\widetilde q_N\|\leq\sum_j\|r_j\|$.
+Pour les projections augmentées, $\|r_j\|=\eta_j$.
+Le choix de tolérances $\varepsilon_j$ telles que
+$\eta_j\leq\varepsilon_j$ et $\sum_j\varepsilon_j\leq B$
+borne donc l'effet cumulé de ces compressions par $B$.
+Cette preuve ne requiert pas la linéarité des projections construites
+à partir de l'état.
+
+Les opérateurs $F_j$ sont ceux de la trajectoire de supports effectivement
+réalisée. La comparaison conserve cette même trajectoire, même lorsque
+les décisions initiales dépendent de $q_j$. Elle ne compare pas deux
+contrôleurs adaptatifs indépendants, et ne borne ni l'erreur des
+opérateurs $F_j$ vis-à-vis de l'EDP, ni celle des supports orientés
+utilisés dans les sous-pas futurs.
+
+Le prototype propose une partition par le moniteur, puis réduit son
+déplacement par facteurs de deux jusqu'à respecter une tolérance
+de transfert. La combinaison convexe des anciennes et nouvelles arêtes
+reste strictement croissante. En arithmétique exacte, pour une famille
+de supports dont les projections varient continûment, l'inclusion de
+la direction de mémoire entrante garantit que le défaut tend vers zéro
+avec le déplacement. En effet, cette direction tend vers l'ancienne
+mémoire; l'erreur de sa projection orthogonale est au plus celle de
+cette approximation admissible. Une tolérance strictement positive
+peut donc être atteinte par une réduction suffisante du mouvement.
+
+La réalisation limite le nombre d'essais à neuf et utilise un seuil de
+rang dans les matrices de Gram. Un essai qui ne satisfait pas le budget
+est rejeté, et l'ancien support est conservé. Une marge empirique
+$10^{-12}\max(1,E)$ est ajoutée au carré de distance calculé;
+cette marge ne constitue pas une certification en arithmétique
+d'intervalles. L'efficacité physique du contrôleur reste à mesurer,
+car limiter le mouvement peut laisser un support inadapté au transport.
 
 \section{Borne d'erreur avec changements de support}
 La stabilité du changement de support peut être séparée de la
@@ -466,7 +531,74 @@ FE--DG--Fourier. Sa contraction suffit au couplage à support fixé, mais
 ne justifie pas son insertion dans la projection ambiante à support
 variable sans vérifier les hypothèses plus fortes de cette dernière.
 
+\section{Diffusion FE et bilan de l'état augmenté}
+Soit $M$ la matrice de masse FE et $A$ une raideur symétrique positive
+semi-définie, avec $Ac=0$ pour les coefficients $c$ de la fonction
+constante sur le tore. La diffusion de coefficient
+$\nu\geq0$ est réalisée par le pas Crank--Nicolson
+\[
+ G_\tau=(M+\tfrac12\tau\nu A)^{-1}
+              (M-\tfrac12\tau\nu A).
+\]
+En coordonnées pondérées par $M^{1/2}$, chaque valeur propre
+$\lambda\geq0$ de $M^{-1/2}AM^{-1/2}$ est multipliée par
+$(1-\tau\nu\lambda/2)/(1+\tau\nu\lambda/2)$, de module au plus un.
+Ainsi $G_\tau$ contracte la norme de masse et conserve la masse totale.
+En injectant $\delta v=G_\tau v-v$ dans l'état augmenté par
+$(w,a)\mapsto(w+R\delta v,a+\delta v)$, on obtient
+\[
+ E^+-E=\|G_\tau v\|_M^2-\|v\|_M^2\leq0.
+\]
+La composition avec les transports auxiliaires contractants est donc
+stable en énergie, sous ces hypothèses sur $A$ et pour des résolutions
+exactes. Les résolutions itératives du prototype sont contrôlées par
+leur résidu et leur bilan effectif. La diffusion agit sur l'observation
+FE; cette preuve ne démontre pas la consistance de la dynamique des
+composantes invisibles avec l'équation d'advection--diffusion.
+
+L'assemblage SIPG et Crank--Nicolson sont classiques. Le contexte des
+pénalités intérieures est décrit par Arnold, Brezzi, Cockburn et Marini
+(2002),
+\href{https://www-users.cse.umn.edu/~arnold/papers/dgerr.pdf}{\emph{Unified analysis of discontinuous Galerkin methods for elliptic problems}}.
+Les expériences contrôlent séparément l'assemblage, la résolution
+et l'erreur du couplage face à une solution analytique de la chaleur
+transportée.
+
+\section{Alignement périodique du moniteur}
+Une densité périodique strictement positive définit une primitive
+$F$ telle que $F(x+1)=F(x)+1$. Pour un moniteur fixé, les partitions
+équidistribuées s'écrivent
+$x_j(\theta)=F^{-1}(j/n+\theta)$, $j=0,\ldots,n-1$.
+Soient $y_j$ les anciennes arêtes relevées sur la droite réelle dans
+le même ordre. Les déplacements $d_j(\theta)=x_j(\theta)-y_j$
+sont continus et strictement croissants. Posons
+$a(\theta)=\max_j d_j(\theta)$ et $b(\theta)=\min_j d_j(\theta)$.
+La phase qui vérifie $a(\theta)+b(\theta)=0$ minimise
+$\max_j|d_j(\theta)|=\max(a(\theta),-b(\theta))$.
+En effet, avant cette phase la seconde branche décroissante domine,
+et après elle la première branche croissante domine.
+Les valeurs
+\[
+ \theta_- = \min_j(F(y_j)-j/n),\qquad
+ \theta_+ = \max_j(F(y_j)-j/n)
+\]
+encadrent une racine, car tous les déplacements sont non positifs au
+premier bord et non négatifs au second. Le prototype effectue quarante
+dichotomies GPU sur la primitive interpolée du moniteur.
+Cette optimisation concerne une partition périodique avec un moniteur
+nouveau fixé; elle ne constitue pas une optimisation de l'erreur EDP
+ni de la trajectoire future du maillage.
+
 \section{Antécédents et revendications}
+Simon et Behrens (2021) reconstruisent une base multiéchelle dans les
+cellules de départ, puis la propagent pour obtenir un problème global
+eulérien. Leur méthode traite déjà des équations d'advection--diffusion
+avec coefficients hétérogènes
+\href{https://doi.org/10.1007/s10915-021-01451-w}{(article)}.
+Le présent prototype conserve une base FE fixe et un état auxiliaire
+distinct; la simple association de sous-échelles semi-lagrangiennes et
+d'une physique FE ne suffit donc pas à établir une contribution nouvelle.
+
 La décomposition entre champ FE et sous-échelles orthogonales dynamiques
 est antérieure à cette étude. Codina, Principe, Guasch et Badia (2007)
 analysent des sous-échelles dépendant du temps dans une formulation

@@ -92,12 +92,48 @@ memory onto a small Krylov space augmented by the old transferred state.
 In exact arithmetic it preserves the FE observation and satisfies an exact
 Pythagorean remapping identity. The GPU implementation uses a small Gram
 pseudoinverse per field, with a numerical rank threshold. Its dedicated
-validation and return campaign are queued; numerical success is not assumed.
+validation passes independent ambient-space oracles for degrees 1, 2 and 4,
+including the Pythagorean identity and monotonic energy retention as directions
+are added. On the four-field return test with 512 steps and checks every four
+steps, its maximum L2 error is 0.000742 versus 0.001270 for eight cold iterations.
+This is not an established cost improvement: a shorter Chebyshev run reaches
+0.000778 in 17.2 s, versus 77.9 s for that Galerkin run. The unchanged-support
+identity addresses a distinct consistency defect.
+
+Further controls separate the transfer from the carrier resolution and from
+physical FE operations. A minimax periodic phase reduces material-monitor
+changes from 32 to 23, but does not systematically improve return accuracy.
+Pure auxiliary return tests show strong dependence on auxiliary resolution:
+at duration one per leg and 512 steps, increasing n from 128 to 256 reduces
+the maximum error from 0.0232 to 0.00270. These tests omit intermediate FE
+operations and cannot establish the accuracy of the coupled method.
+
+`fe_diffusion.py` implements matrix-free SIPG diffusion and Crank--Nicolson
+with preconditioned CG on CUDA. Dense GPU matrix and eigenvalue controls,
+manufactured heat convergence and translated Gaussian tests check the
+implementation. The coupled diffusion campaign retains 20 cases; preserving
+memory gives only a modest benefit in some regimes. `physics_fields.py`
+provides independently checked field and error maps for diffusion and sources.
+Source-triggered nested refinement preserves the ambient state, but cannot
+undo errors accumulated before refinement.
+
+`remap_controller.py` uses the Galerkin Pythagorean identity to budget actual
+compression distances. Uniformly dividing the budget among future checks
+severely restricts mesh motion and worsens transport accuracy in the tested
+cases. The bound concerns compression along the realized evolution operators;
+it does not bound their PDE approximation error. A remaining-budget policy is
+tested separately. `frozen_transfer_study.py` compares transfers on a shared
+material-driven geometry schedule. `krylov_study.py` adds a classical GPU
+Arnoldi exponential-DG competitor, with an independent dense-matrix oracle.
+Results of these further campaigns are included only after execution.
 
 ```sh
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/ambient_validation.py --output /tmp/slfe-ambient.json
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/adaptive_study.py --suite physics --output /tmp/slfe-physics.jsonl
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/matched_benchmark.py --output /tmp/slfe-matched.jsonl
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/diffusion_study.py --output /tmp/slfe-diffusion.jsonl
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/frozen_transfer_study.py --output /tmp/slfe-frozen.jsonl
+CUDA_PATH=/usr/local/cuda python3 experiments/slfe/krylov_study.py --output /tmp/slfe-krylov.jsonl
 python3 experiments/slfe/night_finalize.py --input /home/keckj/Documents/slfe-results-night2
 ```
 
