@@ -17,6 +17,7 @@ class TensorTransfer:
         c = carrier
         if source_edges is not None and len(stages) != 1:
             raise ValueError("A change of partition requires exactly one shear")
+        compact = not c.nonuniform and source_edges is None
         for axis, dt, velocity in stages:
             if axis not in (0, 1) or velocity.shape != (c.n * c.np,):
                 raise ValueError("Expected axis 0/1 and one velocity per Gauss row")
@@ -32,13 +33,13 @@ class TensorTransfer:
             ):
                 raise ValueError("Transverse partitions must coincide for a row remap")
             duration = cp.asarray(dt, dtype=cp.float64)
-            rows_count = c.n**2 * c.np
+            rows_count = (c.n if compact else c.n**2) * c.np
             starts = cp.empty(rows_count, dtype=cp.int32)
             counts = cp.empty(rows_count, dtype=cp.int64)
             launch(
                 c.module.get_function("tensor_counts"),
                 rows_count,
-                (edges, source, c.n, velocity, duration, starts, counts),
+                (edges, source, c.n, int(compact), velocity, duration, starts, counts),
             )
             offsets = cp.concatenate((cp.zeros(1, dtype=cp.int64), cp.cumsum(counts)))
             pairs = int(offsets[-1])
@@ -53,6 +54,7 @@ class TensorTransfer:
                     edges,
                     source,
                     c.n,
+                    int(compact),
                     velocity,
                     duration,
                     starts,
@@ -64,11 +66,11 @@ class TensorTransfer:
                     blocks,
                 ),
             )
-            self.operators.append((axis, starts, offsets, blocks))
+            self.operators.append((axis, compact, starts, offsets, blocks))
 
     def apply_carrier(self, coefficients):
         c = self.carrier
-        for axis, starts, offsets, blocks in self.operators:
+        for axis, compact, starts, offsets, blocks in self.operators:
             output = cp.empty_like(coefficients)
             launch(
                 self.kernel,
@@ -79,6 +81,7 @@ class TensorTransfer:
                     c.n,
                     output.shape[1],
                     axis,
+                    int(compact),
                     starts,
                     offsets,
                     blocks,

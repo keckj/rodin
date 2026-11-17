@@ -14,7 +14,11 @@ import time
 
 from gpu import cp, HERE, Mesh, Space, launch
 from carrier import Carrier
-from tensor_hamiltonian import TensorHamiltonian, streamfunction_modes
+from tensor_hamiltonian import (
+    TensorHamiltonian,
+    ComposedHamiltonian,
+    streamfunction_modes,
+)
 from memory_transport import MemoryTransport
 from graph_memory import GraphMemory
 from residual_energy import ResidualEnergy
@@ -56,6 +60,11 @@ def main():
     )
     parser.add_argument("--velocity-source", choices=("fe", "analytic"), default="fe")
     parser.add_argument("--fields", action="store_true")
+    parser.add_argument(
+        "--scheme",
+        choices=("strang", "triple4", "suzuki4", "yoshida6"),
+        default="strang",
+    )
     args = parser.parse_args()
     meta = provenance()
     waves = cp.asarray(WAVES, dtype=cp.float64)
@@ -123,7 +132,13 @@ def main():
             for steps in args.steps:
                 cp.cuda.Stream.null.synchronize()
                 begin = time.perf_counter()
-                flow = TensorHamiltonian(carrier, WAVES, coefficients, duration / steps)
+                flow = (
+                    TensorHamiltonian(carrier, WAVES, coefficients, duration / steps)
+                    if args.scheme == "strang"
+                    else ComposedHamiltonian(
+                        carrier, WAVES, coefficients, duration / steps, args.scheme
+                    )
+                )
                 flow.apply_carrier(carrier.project(initial))
                 cp.cuda.Stream.null.synchronize()
                 setup = time.perf_counter() - begin
@@ -162,6 +177,7 @@ def main():
                         steps=steps,
                         end=duration,
                         method=method,
+                        scheme=args.scheme,
                         velocity_source=args.velocity_source,
                         wavevectors=WAVES,
                         streamfunction_coefficients=coefficients.tolist(),
@@ -191,13 +207,19 @@ def main():
                         fields[method] = state.value.copy()
                 if fields:
                     render_fields(
-                        args.output.parent / "figures", space, exact, fields, n, steps
+                        args.output.parent / "figures",
+                        space,
+                        exact,
+                        fields,
+                        n,
+                        steps,
+                        args.scheme,
                     )
             del oracle, space, carrier
             cp.get_default_memory_pool().free_all_blocks()
 
 
-def render_fields(output, space, exact, values, n, steps):
+def render_fields(output, space, exact, values, n, steps, scheme):
     from field_report import sample, save
     from report import plt, apply_style
     from matplotlib.colors import LogNorm
@@ -215,7 +237,7 @@ def render_fields(output, space, exact, values, n, steps):
         grading=0.0,
     )
     error = cp.abs(sampled - reference[..., None])
-    name = f"night-hamiltonian-fields-{n}-{steps}"
+    name = f"night-hamiltonian-fields-{scheme}-{n}-{steps}"
     cp.savez_compressed(
         str(output / (name + "-data.npz")),
         reference=reference,
@@ -232,10 +254,13 @@ def render_fields(output, space, exact, values, n, steps):
     )
     fig.colorbar(artist, ax=axes[0], shrink=0.7)
     axes[0].set(title="Référence par caractéristiques", xlabel="x", ylabel="y")
-    norm = LogNorm(1e-8, max(1e-5, float(error.max())))
+    maximum = max(float(error.max()), 1e-300)
+    norm = LogNorm(maximum * 1e-6, maximum)
     labels = {
         "reset": "Reconstruction FE",
         "memory": "Mémoire physique",
+        "full": "Moments complets",
+        "fe-only": "Réaction FE seule",
         "graph": "Réflexion orthogonale",
     }
     for i, method in enumerate(methods):

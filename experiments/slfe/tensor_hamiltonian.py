@@ -93,7 +93,9 @@ def streamfunction_modes(space, value, wavevectors, subdivisions=1):
 
 
 class TensorHamiltonian:
-    def __init__(self, carrier, wavevectors, coefficients, duration):
+    def __init__(
+        self, carrier, wavevectors, coefficients, duration, coordinate_maps=None
+    ):
         if carrier.nonuniform:
             raise ValueError(
                 "Integer coordinate permutations require uniform tensor supports"
@@ -123,21 +125,26 @@ class TensorHamiltonian:
             )
             groups[k, l] = groups.get((k, l), 0) + speed
         self.charts, self.matrices = [], []
+        coordinate_maps = {} if coordinate_maps is None else coordinate_maps
         for index, ((k, l), speed) in enumerate(groups.items()):
-            setup, matrix = integer_chart(k, l)
-            self.matrices.append(matrix)
-            operators = []
-            for kind, value in setup:
-                if kind == "rotation":
-                    operators.append((kind, value, (-value) % 4))
-                else:
-                    operators.append(
-                        (
-                            kind,
-                            TensorTransfer(c, [(0, 1.0, value * coordinate)]),
-                            TensorTransfer(c, [(0, 1.0, -value * coordinate)]),
+            key = (id(c), k, l)
+            if key not in coordinate_maps:
+                setup, matrix = integer_chart(k, l)
+                operators = []
+                for kind, value in setup:
+                    if kind == "rotation":
+                        operators.append((kind, value, (-value) % 4))
+                    else:
+                        operators.append(
+                            (
+                                kind,
+                                TensorTransfer(c, [(0, 1.0, value * coordinate)]),
+                                TensorTransfer(c, [(0, 1.0, -value * coordinate)]),
+                            )
                         )
-                    )
+                coordinate_maps[key] = (operators, matrix)
+            operators, matrix = coordinate_maps[key]
+            self.matrices.append(matrix)
             fraction = 1.0 if index == len(groups) - 1 else 0.5
             shear = TensorTransfer(c, [(1, duration * fraction, speed)])
             self.charts.append((operators, shear))
@@ -171,4 +178,45 @@ class TensorHamiltonian:
                 mapped = self.transform(value, operators)
                 increment = shear.apply_carrier(mapped) - mapped
                 value = value + self.transform(increment, operators, adjoint=True)
+        return value
+
+
+class ComposedHamiltonian:
+    """Classical higher-order composition candidates with contractive stages.
+
+    The continuous shear composition is symmetric. Its discrete projections
+    are not reversible, so the formal continuous order is a hypothesis to
+    test after spatial discretization. Each signed-duration stage remains
+    mass preserving and contractive; this stability does not imply the order.
+    """
+
+    def __init__(self, carrier, wavevectors, coefficients, duration, scheme):
+        if scheme == "triple4":
+            positive = 1 / (2 - 2 ** (1 / 3))
+            weights = [positive, 1 - 2 * positive, positive]
+        elif scheme == "suzuki4":
+            positive = 1 / (4 - 4 ** (1 / 3))
+            weights = [positive, positive, 1 - 4 * positive, positive, positive]
+        elif scheme == "yoshida6":
+            # Yoshida (1990), Table 1, solution A; equation (5.1).
+            w1, w2, w3 = -1.177679984178870, 0.235573213359357, 0.784513610477560
+            w0 = 1 - 2 * (w1 + w2 + w3)
+            weights = [w3, w2, w1, w0, w1, w2, w3]
+        else:
+            raise ValueError("Expected triple4, suzuki4 or yoshida6 composition")
+        self.weights = tuple(weights)
+        # Coordinate projections do not depend on the signed substep. Share
+        # their assembled blocks across stages without altering arithmetic.
+        coordinate_maps = {}
+        flows = {
+            weight: TensorHamiltonian(
+                carrier, wavevectors, coefficients, duration * weight, coordinate_maps
+            )
+            for weight in set(weights)
+        }
+        self.sequence = [flows[weight] for weight in weights]
+
+    def apply_carrier(self, value):
+        for flow in self.sequence:
+            value = flow.apply_carrier(value)
         return value

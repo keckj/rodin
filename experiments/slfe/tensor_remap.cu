@@ -1,14 +1,17 @@
 /* Distributed under the Boost Software License, Version 1.0.
  * Exact one-dimensional DG remapping on each transverse Gauss row.
  * Every overlap integrates degree 2*(NP-1) with NP Gauss points.
+ * On coinciding uniform partitions, translation invariance permits one
+ * overlap block per transverse row, shared by all longitudinal cells.
  */
 extern "C" __global__ void tensor_counts(const double* edges, const double* source_edges,
-  int n, const double* velocity, const double* duration, int* starts, long long* counts)
+  int n, int compact, const double* velocity, const double* duration, int* starts,
+  long long* counts)
 {
   int row = blockIdx.x * blockDim.x + threadIdx.x;
-  if (row >= n * n * NP)
+  if (row >= (compact ? n : n * n) * NP)
     return;
-  int target = row % n, transverse = row / n;
+  int target = compact ? 0 : row % n, transverse = compact ? row : row / n;
   double shift = duration[0] * velocity[transverse];
   int first = tensor_interval(edges[target] - shift, source_edges, n);
   int last = tensor_interval(edges[target + 1] - shift, source_edges, n);
@@ -17,7 +20,7 @@ extern "C" __global__ void tensor_counts(const double* edges, const double* sour
 }
 
 extern "C" __global__ void tensor_blocks(const double* edges, const double* source_edges,
-  int n, const double* velocity, const double* duration, const int* starts,
+  int n, int compact, const double* velocity, const double* duration, const int* starts,
   const long long* offsets, const int* rows, long long pairs, const double* nodes,
   const double* weights, double* blocks)
 {
@@ -26,7 +29,7 @@ extern "C" __global__ void tensor_blocks(const double* edges, const double* sour
     return;
   long long pair = item / (NP * NP);
   int i = (item / NP) % NP, j = item % NP, row = rows[pair];
-  int target = row % n, transverse = row / n;
+  int target = compact ? 0 : row % n, transverse = compact ? row : row / n;
   int source = starts[row] + (int)(pair - offsets[row]);
   double shift = duration[0] * velocity[transverse];
   double t0 = edges[target], ht = edges[target + 1] - t0;
@@ -56,19 +59,23 @@ extern "C" __global__ void tensor_blocks(const double* edges, const double* sour
 }
 
 extern "C" __global__ void tensor_apply(const double* input, double* output, int n,
-  int fields, int axis, const int* starts, const long long* offsets, const double* blocks)
+  int fields, int axis, int compact, const int* starts, const long long* offsets,
+  const double* blocks)
 {
   int item = blockIdx.x * blockDim.x + threadIdx.x;
   if (item >= n * n * fields * NC)
     return;
   int local = item % NC, field = (item / NC) % fields, cell = item / (NC * fields);
   int x = cell % n, y = cell / n, lx = local % NP, ly = local / NP;
-  int row = axis == 0 ? (y * NP + ly) * n + x : (x * NP + lx) * n + y;
+  int target = axis == 0 ? x : y;
+  int transverse = axis == 0 ? y * NP + ly : x * NP + lx;
+  int row = compact ? transverse : transverse * n + target;
   int i = axis == 0 ? lx : ly;
   double value = 0.;
   for (long long pair = offsets[row]; pair < offsets[row + 1]; ++pair)
   {
-    int source = modulo(starts[row] + (int)(pair - offsets[row]), n);
+    int source =
+      modulo(starts[row] + (compact ? target : 0) + (int)(pair - offsets[row]), n);
     int source_cell = axis == 0 ? y * n + source : source * n + x;
     for (int j = 0; j < NP; ++j)
     {

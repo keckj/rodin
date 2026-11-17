@@ -11,7 +11,12 @@ from pathlib import Path
 
 from gpu import cp, HERE, Mesh, Space, launch
 from carrier import Carrier
-from tensor_hamiltonian import TensorHamiltonian, integer_chart, streamfunction_modes
+from tensor_hamiltonian import (
+    TensorHamiltonian,
+    ComposedHamiltonian,
+    integer_chart,
+    streamfunction_modes,
+)
 from campaign import provenance
 
 
@@ -96,6 +101,43 @@ def main():
         norm = float(cp.linalg.svd(matrix, compute_uv=False)[0])
         assert norm <= 1 + 1e-11, norm
         results["controls"].append(dict(degree=degree, dense_transport_norm=norm))
+        for scheme in ("triple4", "suzuki4", "yoshida6"):
+            coefficients = cp.tile(cp.asarray([[0.013, -0.007]]), (len(vectors), 1))
+            composed = ComposedHamiltonian(carrier, vectors, coefficients, 0.17, scheme)
+            matrix = composed.apply_carrier(identity).transpose(0, 2, 1).reshape(nw, nw)
+            matrix *= cp.sqrt(mass.ravel()[:, None] / mass.ravel()[None, :])
+            norm = float(cp.linalg.svd(matrix, compute_uv=False)[0])
+            constant_error = float(cp.max(cp.abs(composed.apply_carrier(ones) - ones)))
+            actual = composed.apply_carrier(a)
+            mass_error = float(
+                cp.max(cp.abs(cp.sum((actual - a) * mass[:, None, :], axis=(0, 2))))
+            )
+            zero = ComposedHamiltonian(
+                carrier, vectors, coefficients, 0.0, scheme
+            ).apply_carrier(a)
+            identity_error = float(cp.max(cp.abs(zero - a)))
+            independent = a.copy()
+            for weight in composed.weights:
+                independent = TensorHamiltonian(
+                    carrier, vectors, coefficients, 0.17 * weight
+                ).apply_carrier(independent)
+            shared_map_error = float(
+                cp.max(cp.abs(independent - composed.apply_carrier(a)))
+            )
+            assert shared_map_error < 1e-13
+            assert norm <= 1 + 1e-11, norm
+            assert max(constant_error, mass_error, identity_error) < 1e-11
+            results["controls"].append(
+                dict(
+                    degree=degree,
+                    scheme=scheme,
+                    shared_map_error=shared_map_error,
+                    dense_transport_norm=norm,
+                    constant_error=constant_error,
+                    mass_error=mass_error,
+                    zero_time_identity_error=identity_error,
+                )
+            )
         scalar = rng.normal(size=(space.mesh.cells, 1, space.nb))
         coarse = streamfunction_modes(space, scalar, vectors)
         fine = streamfunction_modes(space, scalar, vectors, subdivisions=2)

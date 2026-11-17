@@ -1,7 +1,9 @@
 """GPU central-flux DG/RK4 baseline on the same jittered triangular spaces.
 
 Distributed under the Boost Software License, Version 1.0.
-The prescribed velocity is the autonomous cellular field used in day_study.
+The default velocity is the autonomous cellular field used in day_study.
+An optional CUDA evaluator supplies other periodic divergence-free fields.
+The skew-defect check rejects an incompatible compressible field.
 """
 
 from gpu import cp, HERE, quadrature, launch
@@ -29,7 +31,14 @@ def periodic_mates(mesh):
 
 
 class EulerianDG:
-    def __init__(self, space, degree=18, face_order=12, flux="central"):
+    def __init__(
+        self,
+        space,
+        degree=18,
+        face_order=12,
+        flux="central",
+        velocity_field=cellular_velocity,
+    ):
         if flux not in ("central", "upwind"):
             raise ValueError("Flux must be central or upwind")
         self.space = space
@@ -52,7 +61,7 @@ class EulerianDG:
         f = mesh.triangles[:, 2] - mesh.triangles[:, 0]
         inverse = cp.linalg.inv(cp.stack((e, f), axis=-1))
         physical = cp.einsum("qia,cab->cqib", gradients, inverse)
-        velocity = cellular_velocity(mesh.points(q), 0)
+        velocity = velocity_field(mesh.points(q), 0)
         directional = cp.einsum("cqib,cqb->cqi", physical, velocity)
         volume = cp.einsum("cqi,qj,q->cij", directional, b, 2 * q[:, 2])
         # Recover periodic vertex IDs from this benchmark mesh's lattice
@@ -74,9 +83,7 @@ class EulerianDG:
             starts[:, :, None, :] + nodes[None, None, :, None] * edges[:, :, None, :]
         )
         scaled_normal = cp.stack((edges[:, :, 1], -edges[:, :, 0]), axis=-1)
-        speed = cp.einsum(
-            "ceqd,ced->ceq", cellular_velocity(positions, 0), scaled_normal
-        )
+        speed = cp.einsum("ceqd,ced->ceq", velocity_field(positions, 0), scaled_normal)
         self_face = cp.einsum("ceq,eqi,eqj,q->cij", speed, trace, trace, weights)
         diagonal = volume - 0.5 * self_face / mesh.areas[:, None, None]
         offdiagonal = (
