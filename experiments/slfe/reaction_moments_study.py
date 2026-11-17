@@ -39,6 +39,7 @@ def main():
             "increment-reanchor",
             "fe-projected",
             "coercive-projected",
+            "reset-projected",
         ),
         default=["fe-only", "coercive-lift", "ambient-moments"],
     )
@@ -166,9 +167,13 @@ def main():
                                             else physics
                                         ),
                                         hidden_decay=(
-                                            gamma
-                                            if method.startswith("coercive")
-                                            else None
+                                            0.0
+                                            if method == "reset-projected"
+                                            else (
+                                                gamma
+                                                if method.startswith("coercive")
+                                                else None
+                                            )
                                         ),
                                     )
                                 if half == 0:
@@ -186,6 +191,7 @@ def main():
                             method.startswith("coercive")
                             or method.endswith("moments")
                             or method == "increment-reanchor"
+                            or method == "reset-projected"
                         ):
                             assert bound_ratio <= 1 + 1e-7, bound_ratio
                         result = dict(

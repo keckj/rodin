@@ -92,6 +92,24 @@ def main():
             "remap-consistency-fine",
             "remap-consistency-smallstep",
             "remap-consistency-interval",
+            "moving-reaction",
+            "moving-reaction-controls",
+            "moving-reaction-refinement64",
+            "moving-reaction-refinement128",
+            "moving-reaction-uniform128",
+            "cubic-reaction",
+            "cubic-reaction-pilot",
+            "cubic-reaction-quadrature",
+            "cubic-reaction-reset",
+            "reaction-reset",
+            "reaction-rank0",
+            "reaction-rank1",
+            "reaction-rank2",
+            "moving-reaction-reset",
+            "moving-reset-floor64",
+            "moving-reset-floor128",
+            "graph-sharp-pilot",
+            "graph-sharp-defects",
             "material-minimax",
             "minimax-return",
             "diffusion",
@@ -131,6 +149,67 @@ def main():
         if path.suffix in (".svg", ".pdf", ".png", ".json"):
             shutil.copy2(path, args.output / path.name)
     r.section("Construction étudiée")
+    fig, ax = plt.subplots(figsize=(10, 4.8))
+    ax.set(xlim=(0, 1), ylim=(0, 1))
+    ax.axis("off")
+    boxes = [
+        (
+            0.24,
+            0.76,
+            "1 · État complet",
+            r"$q=a+d,\qquad v=P_Vq$" + "\nUn champ FE observé et une mémoire spatiale",
+        ),
+        (
+            0.76,
+            0.76,
+            "2 · Transport",
+            r"$w^+=Sw,\quad v^+=v+R^*(w^+-w)$"
+            + "\nL'advection agit sur le support auxiliaire",
+        ),
+        (
+            0.76,
+            0.26,
+            "3 · Physique",
+            r"$f=F(q)$"
+            + "\nLa réaction voit aussi la mémoire\nMoments FE et auxiliaires du même champ",
+        ),
+        (
+            0.24,
+            0.26,
+            "4 · Compression",
+            r"$q^+=P_Vf+HXc$"
+            + "\nPetit système de Gram, espace partagé\nChangement de support si nécessaire",
+        ),
+    ]
+    for x, y, title, body in boxes:
+        ax.text(
+            x,
+            y,
+            title + "\n\n" + body,
+            ha="center",
+            va="center",
+            fontsize=10,
+            bbox=dict(
+                boxstyle="round,pad=.9", facecolor="#f2f6fa", edgecolor="#8aa2b7"
+            ),
+        )
+    for start, end in (
+        ((0.45, 0.76), (0.55, 0.76)),
+        ((0.76, 0.57), (0.76, 0.47)),
+        ((0.55, 0.26), (0.45, 0.26)),
+        ((0.24, 0.47), (0.24, 0.57)),
+    ):
+        ax.annotate(
+            "",
+            xy=end,
+            xytext=start,
+            arrowprops=dict(arrowstyle="->", color="#334e68", lw=1.8),
+        )
+    r.save_figure(
+        fig,
+        "night-method-schematic",
+        "Schéma de la réalisation physique. Le champ FE est une observation du champ complet. La compression conserve les moments FE de sa cible; l'énergie décroît pour une cible contractante et une projection cohérente. La variante par réflexion orthogonale étudiée plus loin définit un autre couplage.",
+    )
     r.paragraph(
         "Le maillage triangulaire FE reste fixe et porte les opérations de physique. Un second maillage transporte le champ par cisaillements semi-lagrangiens. Après ce transport, le champ FE reçoit l'incrément projeté; l'état auxiliaire est conservé pour le pas suivant. Cette mémoire évite de reconstruire entièrement le champ transporté à chaque pas. Le problème étudié cette nuit est de modifier le support auxiliaire en préservant le champ FE, la masse et un bilan d'énergie contrôlé."
     )
@@ -2931,6 +3010,391 @@ def main():
                 "night-positive-energy",
                 "Même problème de réaction de force 100 et même discrétisation. Les diagnostics sont ajoutés à des répétitions instrumentées, exclues des comparaisons de temps.",
             )
+    moving_reaction = [x["result"] for x in raw["moving-reaction"]]
+    if moving_reaction:
+        r.section("Réaction et support mobile : distinguer mémoire et moniteur")
+        r.paragraph(
+            "Le même problème de réaction spatiale est calculé sur un espace FE P4 de résolution 128 et un support auxiliaire de résolution 64. Trois géométries sont comparées : uniforme, adaptée au champ initial puis fixe, et avec seize contrôles de maillage sur la durée totale. Chaque méthode fait évoluer son propre moniteur; il s'agit donc d'une comparaison couplée, et non d'une ablation à géométrie prescrite. Le temps complet inclut la construction des couplages, de la physique et des transports, les moniteurs et leurs reconstructions. La projection initiale et la référence communes sont exclues."
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(11, 4))
+        geometries = ("uniform", "initial", "moving")
+        methods = ("fe-only", "coercive-lift", "ambient-moments")
+        labels = ("Réaction FE seule", "Amortissement caché", "Moments complets")
+        for ax, strength in zip(axes, (1, 100)):
+            for index, (method, label) in enumerate(zip(methods, labels)):
+                selected = [
+                    next(
+                        x
+                        for x in moving_reaction
+                        if x["strength"] == strength
+                        and x["steps"] == 256
+                        and x["geometry"] == geometry
+                        and x["method"] == method
+                    )
+                    for geometry in geometries
+                ]
+                ax.bar(
+                    [j + (index - 1) * 0.24 for j in range(3)],
+                    [x["relative_l2"] for x in selected],
+                    width=0.24,
+                    label=label,
+                )
+            ax.set(
+                yscale="log",
+                xticks=range(3),
+                xticklabels=("Uniforme", "Adapté initial", "Mobile"),
+                ylabel="Erreur relative L2",
+                title=f"Force de réaction {strength}",
+            )
+            ax.grid(axis="y", alpha=0.2)
+        axes[0].legend(fontsize=8)
+        r.save_figure(
+            fig,
+            "night-moving-reaction",
+            "256 pas, moniteur auxiliaire sans plancher et transfert partagé de Galerkin. La stabilité en énergie ne garantit pas la qualité de l'adaptation. Un support adapté seulement à l'instant initial devient ici défavorable.",
+        )
+        r.table(
+            ["Force", "Support", "Erreur relative", "Coût complet (s)", "Changements"],
+            [
+                [
+                    x["strength"],
+                    x["geometry"],
+                    x["relative_l2"],
+                    x["complete_seconds"],
+                    x["changes"],
+                ]
+                for x in moving_reaction
+                if x["method"] == "ambient-moments" and x["steps"] == 256
+            ],
+        )
+        controls = [x["result"] for x in raw["moving-reaction-controls"]]
+        if controls:
+            r.paragraph(
+                "Douze ablations isolent le transfert (Galerkin, Chebyshev ou remise à zéro), le champ utilisé par le moniteur (FE ou auxiliaire), et le plancher relatif de son histogramme d'énergie. Le moniteur prend la racine quatrième de l'énergie lissée; cette racine amplifie les variations relatives dans les régions de faible énergie. L'ajout de 1e-6 fois l'énergie moyenne avant cette racine réduit l'erreur d'environ 0,08 à 0,0025 pour les trois transferts. La remise à zéro ne produit qu'une différence secondaire dans cette expérience. Ce constat identifie la sensibilité du moniteur, sans établir un choix optimal universel du plancher."
+            )
+            fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
+            for ax, monitor in zip(axes, ("auxiliary", "fe")):
+                for transfer in ("galerkin", "chebyshev", "reset"):
+                    selected = sorted(
+                        [
+                            x
+                            for x in controls
+                            if x["monitor"] == monitor and x["transfer"] == transfer
+                        ],
+                        key=lambda x: x["energy_floor"],
+                    )
+                    ax.semilogy(
+                        range(len(selected)),
+                        [x["relative_l2"] for x in selected],
+                        "o-",
+                        label=transfer,
+                    )
+                ax.set(
+                    xticks=(0, 1),
+                    xticklabels=("0", r"$10^{-6}$"),
+                    xlabel="Plancher relatif du moniteur",
+                    ylabel="Erreur relative L2",
+                    title="Moniteur "
+                    + ("auxiliaire" if monitor == "auxiliary" else "FE"),
+                )
+                ax.grid(alpha=0.2)
+            axes[0].legend()
+            r.save_figure(
+                fig,
+                "night-moving-reaction-monitor",
+                "Réaction de force 100, 256 pas, mêmes résolutions FE et auxiliaire. Les courbes des trois transferts presque superposées montrent que le plancher du moniteur domine cette ablation.",
+            )
+        refinement = [
+            x["result"]
+            for name in (
+                "moving-reaction-refinement64",
+                "moving-reaction-refinement128",
+            )
+            for x in raw[name]
+        ]
+        if refinement:
+            fig, axes = plt.subplots(1, 2, figsize=(11, 4), sharey=True)
+            for ax, naux in zip(axes, (64, 128)):
+                for floor in sorted({x["energy_floor"] for x in refinement}):
+                    selected = sorted(
+                        [
+                            x
+                            for x in refinement
+                            if x["naux"] == naux and x["energy_floor"] == floor
+                        ],
+                        key=lambda x: x["steps"],
+                    )
+                    if selected:
+                        ax.loglog(
+                            [x["steps"] for x in selected],
+                            [x["relative_l2"] for x in selected],
+                            "o-",
+                            label=f"Plancher {floor:g}",
+                        )
+                ax.set(
+                    xlabel="Nombre de pas",
+                    ylabel="Erreur relative L2",
+                    title=f"Résolution auxiliaire {naux}",
+                )
+                ax.grid(alpha=0.2)
+                ax.legend(fontsize=8)
+            r.save_figure(
+                fig,
+                "night-moving-reaction-refinement",
+                "Raffinement temporel et sensibilité au plancher, avec des intervalles physiques fixes entre contrôles de maillage. Le nombre de coefficients FE reste constant.",
+            )
+
+    cubic = [
+        x["result"]
+        for name in ("cubic-reaction", "cubic-reaction-reset")
+        for x in raw[name]
+    ]
+    if cubic:
+        r.section("Réaction cubique du champ complet par quadrature CUDA")
+        r.paragraph(
+            "Le modèle est maintenant u_t + b·grad(u) = −κ r(x) u³, avec r(x)=1+0,5 sin(2πx). La réaction exacte locale est u/sqrt(1+2τ r u²). Le noyau évalue le champ physique complet a+d sur les intersections, applique cette fonction non linéaire, puis accumule simultanément ses moments FE et auxiliaires. Les mêmes poids positifs donnent l'énergie cible. La référence indépendante suit les caractéristiques et intègre r; la solution scalaire y est analytique. Les temps ci-dessous concernent seulement l'évolution, après compilation et construction, sans quadrature d'erreur."
+        )
+        r.paragraph(
+            "Lorsque la quadrature positive intègre exactement les produits des espaces FE et auxiliaire, la compression conserve la contraction physique en énergie même si la réaction non polynomiale est sous-intégrée. Une borne relative à toute référence FE suit de la même projection et de la propriété lipschitzienne de la réaction. La preuve et ses hypothèses figurent dans l'ébauche d'article. Les défauts non linéaires sont intégrés sous forme de carrés positifs. Cette stabilité ne dispense pas de raffiner la quadrature pour mesurer la précision."
+        )
+        fig, axes = plt.subplots(2, 2, figsize=(11, 8))
+        for row, strength in enumerate((1, 100)):
+            for method, label in (
+                ("fe-only", "Réaction FE seule"),
+                ("fe-reset", "Reconstruction depuis les FE"),
+                ("ambient-moments", "Moments complets"),
+            ):
+                selected = sorted(
+                    [
+                        x
+                        for x in cubic
+                        if x["strength"] == strength
+                        and x["steps"] == 512
+                        and x["method"] == method
+                    ],
+                    key=lambda x: x["nfe"],
+                )
+                if selected:
+                    axes[row, 0].loglog(
+                        [x["nfe"] for x in selected],
+                        [x["relative_l2"] for x in selected],
+                        "o-",
+                        label=label,
+                    )
+                selected = sorted(
+                    [
+                        x
+                        for x in cubic
+                        if x["strength"] == strength
+                        and x["nfe"] == 128
+                        and x["method"] == method
+                    ],
+                    key=lambda x: x["steps"],
+                )
+                if selected:
+                    axes[row, 1].loglog(
+                        [x["steps"] for x in selected],
+                        [x["relative_l2"] for x in selected],
+                        "o-",
+                        label=label,
+                    )
+            selected = sorted(
+                [
+                    x
+                    for x in cubic
+                    if x["strength"] == strength
+                    and x["steps"] == 512
+                    and x["method"] == "ambient-moments"
+                ],
+                key=lambda x: x["nfe"],
+            )
+            if selected:
+                axes[row, 0].loglog(
+                    [x["nfe"] for x in selected],
+                    [x["relative_fe_floor"] for x in selected],
+                    "k--",
+                    label="Plancher de projection FE",
+                )
+            for col in (0, 1):
+                axes[row, col].set(
+                    xlabel="Résolution FE" if col == 0 else "Nombre de pas",
+                    ylabel="Erreur relative L2",
+                    title=f"Réaction cubique, force {strength}",
+                )
+                axes[row, col].grid(alpha=0.2)
+                axes[row, col].legend(fontsize=8)
+        r.save_figure(
+            fig,
+            "night-cubic-reaction",
+            "Raffinements en espace à 512 pas et en temps à résolution FE 128, avec une résolution auxiliaire double. Les solutions sont comparées à la référence par caractéristiques, et non au résultat d'une autre méthode numérique.",
+        )
+        r.table(
+            [
+                "Force",
+                "FE",
+                "Physique",
+                "Erreur relative",
+                "Plancher FE",
+                "Évolution (s)",
+            ],
+            [
+                [
+                    x["strength"],
+                    x["nfe"],
+                    {
+                        "fe-only": "FE seule",
+                        "fe-reset": "Sans mémoire",
+                        "ambient-moments": "Complète",
+                    }[x["method"]],
+                    x["relative_l2"],
+                    x["relative_fe_floor"],
+                    x["evolution_seconds"],
+                ]
+                for x in cubic
+                if x["steps"] == 512
+            ],
+        )
+        refined = [x["result"] for x in raw["cubic-reaction-quadrature"]]
+        if refined:
+            r.table(
+                ["FE", "Pas", "Force", "Physique", "Subdivision", "Erreur relative"],
+                [
+                    [
+                        x["nfe"],
+                        x["steps"],
+                        x["strength"],
+                        x["method"],
+                        x["quadrature_subdivisions"],
+                        x["relative_l2"],
+                    ]
+                    for x in refined
+                ],
+            )
+        validation = args.input / "quadrature-moments.validation.json"
+        if validation.exists():
+            checks = json.loads(validation.read_text())["results"]
+            tests = [x for x in checks if "pythagoras_error" in x]
+            r.paragraph(
+                f"Les {len(checks)} contrôles couvrent P1, P2 et P4, des supports uniformes et non uniformes décalés périodiquement, la limite sans réaction et les solutions constantes. L'erreur maximale de Pythagore vaut {max(x['pythagoras_error'] for x in tests):.3g}; celle de l'identité relative vaut {max(x['relative_identity_error'] for x in tests):.3g}. Le contrôle linéaire révèle un écart de quadrature de 2,27e-10 au degré nominal 20 sur le maillage P4 grossier; la subdivision le ramène à l'arrondi. Pour la réaction cubique de coefficients P4 aléatoires, les différences entre subdivisions 1–2 et 2–4 atteignent respectivement 4,03e-5 et 1,44e-7. Ces écarts de consistance sont conservés dans les données et ne sont pas assimilés à une erreur d'exécution CUDA."
+            )
+        if raw["cubic-reaction-reset"]:
+            r.paragraph(
+                "La reconstruction depuis les FE supprime la mémoire à chaque demi-étape de physique. À résolution FE 128, force 100 et 512 pas, son erreur relative est 0,00779 en 3,15 s d'évolution, contre 0,00331 en 102,9 s pour les moments complets. La réaction FE qui conserve une mémoire non réagie donne ici 0,00330 en 3,13 s. Le nouveau noyau rend la réaction du champ complet cohérente et stable, mais ce cas cubique ne démontre aucun avantage de coût à précision comparable. Les différences entre les deux variantes à mémoire sont faibles devant leur plancher FE."
+            )
+    resets = [x["result"] for x in raw["reaction-reset"]]
+    ranks = [
+        x["result"]
+        for name in ("reaction-rank0", "reaction-rank1", "reaction-rank2")
+        for x in raw[name]
+    ]
+    if resets:
+        r.section("Comparaison avec une reconstruction FE à chaque étape")
+        r.paragraph(
+            "Une base de comparaison cohérente applique la réaction Galerkin au champ observé puis remet la mémoire à zéro. Elle évite le résidu de réaction des extensions incomplètes, au prix d'une reconstruction répétée du champ transporté. Les mêmes espaces FE, supports auxiliaires fixes, profils, références et compositions temporelles sont conservés. Cette comparaison distingue l'intérêt numérique de la mémoire de la seule correction d'un modèle de réaction incomplet."
+        )
+        if ranks:
+            fig, axes = plt.subplots(2, 2, figsize=(11, 8))
+            for row, n in enumerate((64, 128)):
+                for records, label in (
+                    (resets, "Reconstruction FE"),
+                    (
+                        [x for x in ranks if x["iterations"] == 2],
+                        "Mémoire, trois directions",
+                    ),
+                ):
+                    selected = sorted(
+                        [x for x in records if x["nfe"] == n and x["strength"] == 100],
+                        key=lambda x: x["steps"],
+                    )
+                    if selected:
+                        for col, key in enumerate(("steps", "evolution_seconds")):
+                            axes[row, col].loglog(
+                                [x[key] for x in selected],
+                                [x["relative_l2"] for x in selected],
+                                "o-",
+                                label=label,
+                            )
+                floor = next(
+                    x["relative_fe_floor"]
+                    for x in resets
+                    if x["nfe"] == n and x["strength"] == 100
+                )
+                for col in (0, 1):
+                    axes[row, col].axhline(
+                        floor, color="black", linestyle="--", label="Plancher FE"
+                    )
+                    axes[row, col].set(
+                        xlabel="Nombre de pas" if col == 0 else "Évolution (s)",
+                        ylabel="Erreur relative L2",
+                        title=f"Réaction linéaire forte, résolution FE {n}",
+                    )
+                    axes[row, col].grid(alpha=0.2)
+                    axes[row, col].legend(fontsize=8)
+            r.save_figure(
+                fig,
+                "night-reaction-reset-baseline",
+                "Même résolution FE et même support auxiliaire, de résolution double. Les coûts sont ceux de l'évolution seule, après construction des opérateurs. La mémoire doit être évaluée sur ce compromis coût–erreur, au-delà de sa comparaison avec une mémoire non réagie.",
+            )
+            fig, axes = plt.subplots(1, 2, figsize=(11, 4))
+            for ax, n in zip(axes, (64, 128)):
+                for steps in (128, 512):
+                    selected = sorted(
+                        [
+                            x
+                            for x in ranks
+                            if x["nfe"] == n
+                            and x["strength"] == 100
+                            and x["steps"] == steps
+                        ],
+                        key=lambda x: x["iterations"],
+                    )
+                    ax.plot(
+                        [x["iterations"] + 1 for x in selected],
+                        [x["relative_l2"] / x["relative_fe_floor"] for x in selected],
+                        "o-",
+                        label=f"{steps} pas",
+                    )
+                ax.set(
+                    xlabel="Directions par champ",
+                    ylabel="Erreur / plancher FE",
+                    title=f"Compression, résolution FE {n}",
+                    xticks=(1, 2, 3),
+                )
+                ax.grid(alpha=0.2)
+                ax.legend()
+            r.save_figure(
+                fig,
+                "night-reaction-rank",
+                "Les sous-espaces de compression sont engendrés par la direction entrante, puis par zéro, une ou deux directions de Krylov. Leur enrichissement améliore une projection isolée; l'erreur finale de l'EDP n'est pas nécessairement monotone lorsque les trajectoires numériques diffèrent.",
+            )
+    sharp = [
+        x["result"] for x in raw["graph-sharp-defects"] or raw["graph-sharp-pilot"]
+    ]
+    if sharp:
+        r.section("Une compression orthogonale plus poussée ne paie pas ici")
+        r.paragraph(
+            "Le couplage par réflexion est réappliqué à T=2R(I+R*R)^(-1). Son injection a pour blocs 4R(I+A)(I+6A+A²)^(-1) et (I−A)²(I+6A+A²)^(-1), avec A=R*R. Le second bloc contient maintenant le carré du défaut de projection. La réflexion reste orthogonale en arithmétique exacte; le calcul CUDA factorise le dénominateur en deux opérateurs décalés, inversés par des polynômes de Chebyshev fixes. La fonction scalaire 2s/(1+s²) est classique dans les itérations de Newton inverse pour la décomposition polaire; l'expérience teste son intérêt pour ce couplage, sans lui attribuer une nouveauté algébrique."
+        )
+        r.table(
+            ["Résolution", "Couplage", "Erreur L2 max", "Borne", "Évolution (s)"],
+            [
+                [
+                    x["n"],
+                    (
+                        "Deux réflexions"
+                        if x["method"] == "graph-sharp"
+                        else "Une réflexion"
+                    ),
+                    max(x["l2"]),
+                    x["summed_defect_bound"],
+                    x["evolution_seconds"],
+                ]
+                for x in sharp
+            ],
+        )
+        r.paragraph(
+            "Sur ce pilote de translation P4 avec 63 changements de support, la seconde construction réduit l'erreur d'environ 2 % pour un coût environ trois fois supérieur. Les oracles matriciels GPU aux degrés FE 1, 2 et 4 vérifient la nouvelle réalisation : avec le polynôme principal de degré 48, l'écart d'état relatif reste inférieur à 4e-15. Réduire le défaut d'injection n'élimine donc pas les autres défauts de transport. Ce pilote ne justifie pas de retenir cette variante comme méthode plus efficace."
+        )
     r.section("Contrôles et limites pour un article")
     r.paragraph(
         "La borne d'erreur pour des supports variables repose sur la conservation de l'observation et la décroissance de l'énergie lors du transfert, ainsi que sur la non-expansivité de l'évolution entre transferts. Les défauts locaux de transport restent dans la borne, notamment le commutateur entre projection et générateur. Ce résultat conditionnel ne fournit ni un ordre de convergence pour les noyaux actuels ni une garantie d'efficacité du contrôleur."
@@ -2995,6 +3459,22 @@ def main():
         "remap-consistency-fine": 9,
         "remap-consistency-smallstep": 6,
         "remap-consistency-interval": 12,
+        "moving-reaction": 36,
+        "moving-reaction-controls": 12,
+        "moving-reaction-refinement64": 12,
+        "moving-reaction-refinement128": 12,
+        "moving-reaction-uniform128": 3,
+        "cubic-reaction": 36,
+        "cubic-reaction-reset": 18,
+        "reaction-reset": 18,
+        "reaction-rank0": 8,
+        "reaction-rank1": 8,
+        "reaction-rank2": 8,
+        "moving-reaction-reset": 8,
+        "moving-reset-floor64": 6,
+        "moving-reset-floor128": 6,
+        "graph-sharp-pilot": 4,
+        "graph-sharp-defects": 4,
         "material-minimax": 2,
         "minimax-return": 3,
         "diffusion": 20,
@@ -3033,19 +3513,25 @@ def main():
         "reduction-sanitizer",
         "graph-sanitizer",
         "residual-energy-sanitizer",
+        "quadrature-moments-sanitizer",
+        "quadrature-moments-race-sanitizer",
     ):
         path = args.input / (name + ".log")
         if path.exists():
             lines = [
                 line
                 for line in path.read_text().splitlines()
-                if "ERROR SUMMARY" in line
+                if "ERROR SUMMARY" in line or "RACECHECK SUMMARY" in line
             ]
             r.paragraph(
                 name
                 + " : "
                 + ("; ".join(lines) if lines else "contrôle encore incomplet")
             )
+    if (args.input / "quadrature-moments-race-sanitizer.log").exists():
+        r.paragraph(
+            "Pour les moments non linéaires, memcheck couvre l'exécution de validation; racecheck est limité au noyau quadrature_moments. Ce contrôle ciblé ne remplace pas l'audit global des noyaux de bibliothèque, dont les avertissements déjà observés sont conservés ailleurs dans le rapport."
+        )
     r.paragraph(
         "Les validations indépendantes couvrent les degrés 1, 2 et 4, les projections, les adjoints en masse, les constantes, les changements de support et les identités de Gram. Toutes les opérations numériques — recouvrements, quadrature, réductions, matrices denses de contrôle — sont exécutées sur CUDA. Le processeur pilote les expériences et dessine les figures. Il s'agit de prototypes isolés dans experiments/slfe, pas d'une intégration de production au langage variationnel Rodin."
     )
@@ -3053,6 +3539,10 @@ def main():
         "La piste d'article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d'énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture."
     )
     references = [
+        (
+            "Nakatsukasa et Higham (2012), stabilité des itérations pour la décomposition polaire",
+            "https://doi.org/10.1137/110857544",
+        ),
         (
             "Macías-Virgós, Pereira-Sáez et Tanré (2018), paramétrisations de Cayley sur les variétés de Stiefel",
             "https://doi.org/10.1016/j.geomphys.2017.08.011",

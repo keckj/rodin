@@ -74,7 +74,12 @@ def evolve(
                 complete.apply(state)
             else:
                 state.apply_physics(
-                    physics, hidden_decay=gamma if method == "coercive-lift" else None
+                    physics,
+                    hidden_decay=(
+                        0.0
+                        if method == "fe-reset"
+                        else gamma if method == "coercive-lift" else None
+                    ),
                 )
             if half == 0:
                 state.advect(flow.apply_carrier)
@@ -179,7 +184,7 @@ def main():
     parser.add_argument(
         "--methods",
         nargs="+",
-        choices=("fe-only", "coercive-lift", "ambient-moments"),
+        choices=("fe-only", "fe-reset", "coercive-lift", "ambient-moments"),
         default=["fe-only", "coercive-lift", "ambient-moments"],
     )
     parser.add_argument(

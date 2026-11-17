@@ -15,15 +15,18 @@ from carrier import Carrier
 from tensor_grid import TensorGrid
 from tensor_cellular import TensorCellular
 from graph_memory import GraphMemory, inverse_graph_mass
+from sharpened_graph_memory import SharpenedGraphMemory
 from reaction_moments_validation import joint_matrix
 from campaign import provenance
 
 
-def graph_matrix(coupling):
+def graph_matrix(coupling, sharpened=False):
     nv = coupling.space.mesh.cells * coupling.space.nb
     nw = coupling.n**2 * coupling.nc
     gram = joint_matrix(coupling)
     r = gram[nv:, :nv]
+    if sharpened:
+        r = 2 * r @ cp.linalg.solve(cp.eye(nv) + r.T @ r, cp.eye(nv))
     inverse = cp.linalg.solve(cp.eye(nv) + r.T @ r, cp.eye(nv))
     blocks = (
         cp.concatenate((2 * r @ inverse @ r.T - cp.eye(nw), 2 * r @ inverse), axis=1),
@@ -48,7 +51,7 @@ def coordinates(state):
     return cp.concatenate((w, z))
 
 
-def validate(degree):
+def validate(degree, sharpened=False):
     space = Space(Mesh(4, jitter=0.18, seed=817), degree)
     old = Carrier(space, n=4, builder="tiled")
     line = cp.linspace(0, 1, 5)
@@ -61,8 +64,8 @@ def validate(degree):
     new = Carrier(space, n=4, edges=edges, builder="tiled")
     grid = TensorGrid(new, new.edges)
     cross = lambda value: grid.remap(old, value)
-    u0, r0, inverse0 = graph_matrix(old)
-    u1, r1, inverse1 = graph_matrix(new)
+    u0, r0, inverse0 = graph_matrix(old, sharpened)
+    u1, r1, inverse1 = graph_matrix(new, sharpened)
     nw, nv = r0.shape
     wi = cp.ascontiguousarray(
         cp.eye(nw).reshape(old.n**2, old.nc, nw).transpose(0, 2, 1)
@@ -87,8 +90,9 @@ def validate(degree):
     random = cp.random.RandomState(928)
     fields = random.normal(size=(space.mesh.cells, 4, space.nb))
     records = []
-    for polynomial_degree in (12, 16, 20):
-        state = GraphMemory(old, fields, degree=polynomial_degree)
+    create = SharpenedGraphMemory if sharpened else GraphMemory
+    for polynomial_degree in (32, 40, 48) if sharpened else (12, 16, 20):
+        state = create(old, fields, degree=polynomial_degree)
         weighted_fields = (
             (fields * cp.sqrt(space.mesh.areas)[:, None, None])
             .transpose(0, 2, 1)
@@ -121,8 +125,14 @@ def validate(degree):
             )
         )
         rhs = fields
-        solved = inverse_graph_mass(old, rhs, polynomial_degree)
-        residual = rhs - solved - old.adjoint(old.project(solved))
+        if sharpened:
+            solver = create(old, fields, degree=polynomial_degree)
+            solved = solver.solve(rhs)
+            action = solver.gram(solved)
+            residual = rhs - solved - 6 * action - solver.gram(action)
+        else:
+            solved = inverse_graph_mass(old, rhs, polynomial_degree)
+            residual = rhs - solved - old.adjoint(old.project(solved))
         inverse_error = float(
             cp.sqrt(cp.max(space.energy(residual) / space.energy(rhs)))
         )
@@ -146,7 +156,9 @@ def validate(degree):
             cp.max(cp.abs(physical.observe() - factors * old_value))
         )
         physics_energy_ratio = float(cp.max(physical.energy() / energy_before))
-        tolerance = {12: 1e-7, 16: 1e-10, 20: 1e-11}[polynomial_degree]
+        tolerance = {12: 1e-7, 16: 1e-10, 20: 1e-11, 32: 1e-8, 40: 1e-10, 48: 1e-11}[
+            polynomial_degree
+        ]
         assert (
             max(
                 error,
@@ -165,6 +177,7 @@ def validate(degree):
         records.append(
             dict(
                 degree=degree,
+                sharpened=sharpened,
                 inverse_degree=polynomial_degree,
                 exact_transition_norm=norm,
                 dense_orthogonality=orthogonality,
@@ -182,7 +195,7 @@ def validate(degree):
                 physics_energy_ratio=physics_energy_ratio,
             )
         )
-    state = GraphMemory(old, fields)
+    state = create(old, fields)
     flow = TensorCellular(old, 0.01, grading=0.0)
     energy0, mass0 = state.energy(), space.mass(state.value)
     for _ in range(8):
@@ -202,10 +215,11 @@ def validate(degree):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--sharpened", action="store_true")
     args = parser.parse_args()
     result = dict(provenance=provenance(), controls=[], advection=[])
     for degree in (1, 2, 4):
-        controls, flow = validate(degree)
+        controls, flow = validate(degree, args.sharpened)
         result["controls"].extend(controls)
         result["advection"].append(flow)
         args.output.write_text(json.dumps(result, indent=2) + "\n")

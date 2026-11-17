@@ -50,7 +50,7 @@ def main():
     parser.add_argument(
         "--methods",
         nargs="+",
-        choices=("fe-only", "fe-common", "ambient-moments"),
+        choices=("fe-only", "fe-reset", "fe-common", "ambient-moments"),
         default=["fe-only", "ambient-moments"],
     )
     parser.add_argument("--subdivisions", type=int, default=1)
@@ -106,7 +106,7 @@ def main():
                         )
                         state = MemoryTransport(carrier, initial)
                         # Warm the common-quadrature kernel outside timing.
-                        if method != "fe-only":
+                        if method in ("fe-common", "ambient-moments"):
                             complete.moments(
                                 state.anchor,
                                 state.auxiliary - carrier.project(state.anchor),
@@ -126,7 +126,12 @@ def main():
                                         )[0]
                                     )
                                 else:
-                                    state.apply_physics(local.apply)
+                                    state.apply_physics(
+                                        local.apply,
+                                        hidden_decay=(
+                                            0.0 if method == "fe-reset" else None
+                                        ),
+                                    )
                                 if half == 0:
                                     state.advect(flow.apply_carrier)
                             maximum = max(maximum, float(state.energy()[0]) / energy0)

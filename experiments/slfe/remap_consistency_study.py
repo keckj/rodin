@@ -19,6 +19,7 @@ from carrier import Carrier
 from tensor_projection import TensorProjection
 from memory_transport import MemoryTransport
 from graph_memory import GraphMemory
+from sharpened_graph_memory import SharpenedGraphMemory
 from residual_energy import ResidualEnergy
 from campaign import provenance
 
@@ -44,20 +45,29 @@ def evolve(space, carriers, crosses, initial, steps, method, remap_every=1):
     duration = 0.2
     dt = duration / steps
     flows = [c.transport(dt) for c in carriers]
-    create = GraphMemory if method == "graph" else MemoryTransport
+    graph = method.startswith("graph")
+    create = (
+        (SharpenedGraphMemory if method == "graph-sharp" else GraphMemory)
+        if graph
+        else MemoryTransport
+    )
     next_reference = reference(initial, dt)
     defects, minimum_defect_squares = [], []
+    transport_defects, hidden_defects = [], []
     for c, flow in zip(carriers, flows):
-        if method == "graph":
+        if graph:
             old, new = create(c, initial), create(c, next_reference)
-            squared = c.energy(flow.apply_carrier(old.auxiliary) - new.auxiliary)
-            squared += space.energy(old.hidden_fe - new.hidden_fe)
+            transported = c.energy(flow.apply_carrier(old.auxiliary) - new.auxiliary)
+            hidden = space.energy(old.hidden_fe - new.hidden_fe)
         else:
             difference = initial - next_reference
-            squared = c.energy(
+            transported = c.energy(
                 flow.apply_carrier(c.project(initial)) - c.project(next_reference)
             )
-            squared += ResidualEnergy(c).apply(difference, c.project(difference))
+            hidden = ResidualEnergy(c).apply(difference, c.project(difference))
+        squared = transported + hidden
+        transport_defects.append(float(cp.sqrt(cp.sum(transported))))
+        hidden_defects.append(float(cp.sqrt(cp.sum(hidden))))
         # Positive common quadrature avoids cancellation of two integrated norms.
         minimum_defect_squares.append(float(cp.min(squared)))
         assert minimum_defect_squares[-1] > -1e-18
@@ -74,7 +84,7 @@ def evolve(space, carriers, crosses, initial, steps, method, remap_every=1):
         support_steps[current] += 1
         if (step + 1) % remap_every == 0 and step + 1 < steps:
             target = 1 - current
-            if method == "graph":
+            if graph:
                 state.transfer(carriers[target], crosses[current].apply_carrier)
             elif method == "galerkin":
                 state.project_memory_galerkin(
@@ -97,7 +107,7 @@ def evolve(space, carriers, crosses, initial, steps, method, remap_every=1):
             )
             observed = (
                 state.observe()
-                if method == "graph"
+                if graph
                 else state.anchor
                 + state.coupling.adjoint(
                     state.auxiliary - state.coupling.project(state.anchor)
@@ -125,11 +135,11 @@ def evolve(space, carriers, crosses, initial, steps, method, remap_every=1):
         method=method,
         duration=duration,
         local_defects=defects,
+        local_transport_defects=transport_defects,
+        local_hidden_defects=hidden_defects,
         minimum_defect_squares=minimum_defect_squares,
         defect_energy=(
-            "positive common quadrature"
-            if method != "graph"
-            else "positive graph coordinates"
+            "positive common quadrature" if not graph else "positive graph coordinates"
         ),
         summed_defect_bound=bound,
         fe_reference_frobenius_error=error,
@@ -153,7 +163,7 @@ def main():
     parser.add_argument(
         "--methods",
         nargs="+",
-        choices=("reset", "galerkin", "graph"),
+        choices=("reset", "galerkin", "graph", "graph-sharp"),
         default=["reset", "galerkin", "graph"],
     )
     args = parser.parse_args()

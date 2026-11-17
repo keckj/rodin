@@ -139,6 +139,15 @@ directions are rotated together. This gives component covariance of
 the exact projection. Separate state-dependent spaces do not have
 this property. Neither statement implies pointwise positivity.
 
+The tested shared construction uses three directions per component,
+so its Gram matrix has dimension at most $3m$ for $m$ fields. Its
+factorization cost therefore grows with the number of components.
+Cross-mass actions and weighted spatial reductions dominate the large
+arrays; the dense factorization acts only on the small Gram. The
+geometry-dependent cross-mass blocks are stored, rather than regenerated
+at every transport step. Their construction is charged to each support
+change in the complete timing comparisons.
+
 \section{Relative energy and an error bound with changing supports}
 The following identity requires less than pairwise non-expansivity.
 It also applies to energy-reducing transfers that are not orthogonal
@@ -187,6 +196,20 @@ bound loose. Pairwise distances between arbitrary hidden states can
 increase under nonlinear compression without contradicting
 Lemma~\ref{lem:relative}.
 
+The same argument covers different augmented Hilbert spaces
+$\mathcal H_n$ with isometric FE injections $J_n:\V\to\mathcal H_n$.
+For an energy-reducing transition $B_n:\mathcal H_n\to\mathcal H_{n+1}$
+satisfying $J_{n+1}^*B_nz=J_n^*z$, expansion gives
+\[
+ \|B_nz-J_{n+1}u\|^2
+ =\|z-J_nu\|^2-\bigl(\|z\|^2-\|B_nz\|^2\bigr).
+\]
+For evolution $\Phi_n$ within $\mathcal H_n$, use the local defect
+$\delta_n=\|\Phi_nJ_nu_n-J_nu_{n+1}\|$ in
+\eqref{eq:bound}. The resulting final norm is
+$\|z_N-J_Nu_N\|$ and still bounds the FE observation error.
+This is the version tested for the orthogonal graph coupling below.
+
 For an FE reference $\dot u=A_Vu$ and auxiliary generator $L_W$,
 the infinitesimal defect of \eqref{eq:transport} has squared norm
 \begin{equation}\label{eq:generator}
@@ -217,8 +240,60 @@ Lipschitz constant of multiplication by $g$. For a spatial scalar
 rate times a constant symmetric component matrix, GPU diagonalization
 of that matrix reduces the moment calculation to scalar modes. A
 shared final spatial projection preserves conserved component sums.
-Spatially varying eigenvectors and nonlinear reaction networks are
-outside the present implementation.
+Spatially varying eigenvectors and general reaction networks are
+outside the modal implementation.
+
+\subsection{Nonlinear reactions through positive common quadrature}
+Nonlinear physical maps can instead be applied at common quadrature
+points of the FE--auxiliary intersections. Let $Q$ have positive weights
+and integrate products of functions in $\V+W$ exactly. Denote its sampled
+norm by $\|\cdot\|_Q$. For a pointwise map $F$, both moment vectors
+are computed from the same samples $F(a+d)$, followed by the same
+small Gram projection. Write this discrete projection as $P_X^Q$.
+Exactness on the polynomial product space makes its Gram equal to
+the physical Gram, even when $F(a+d)$ is not integrated exactly.
+
+\begin{proposition}\label{prop:quadrature}
+Suppose $F(0)=0$ and $F$ is pointwise Lipschitz with constant
+$\ell\leq1$. For $q\in\V+W$ and $u,u_+\in\V$, set
+$q_+=P_X^QF(q)$. Then
+\begin{align}
+ \|q_+\|&\leq\ell\|q\|,\\
+ \|q_+-u_+\|&\leq\ell\|q-u\|
+                 +\|F(u)-u_+\|_Q.\label{eq:quadrature-bound}
+\end{align}
+These statements allow a state-dependent retained space $X$ and do
+not require exact quadrature of the nonlinear target.
+\end{proposition}
+\begin{proof}
+For each realized $X$, $P_X^Q$ is an orthogonal projection in the
+positive sampled inner product and fixes $\V$. Its output and
+$q-u$ belong to $\V+W$, where sampled and physical norms coincide.
+Pointwise Lipschitz continuity therefore gives
+\[
+ \|q_+-u_+\|=\|P_X^Q(F(q)-u_+)\|_Q
+ \leq\ell\|q-u\|+\|F(u)-u_+\|_Q.
+\]
+Taking $u=u_+=0$ proves the first statement.
+\end{proof}
+The rule may change with the support: the physical norms on either
+side of each step remain exact. Thus these local estimates can be
+composed with transport defects and observation-preserving support
+changes. Quadrature refinement remains necessary for consistency of
+the nonlinear moments; the proposition supplies stability without
+identifying those moments with their continuous integrals.
+
+The CUDA prototype evaluates the cubic reaction map
+\[
+ F_\tau(s;x)=\frac{s}{\sqrt{1+2\tau r(x)s^2}},\qquad r\geq0,
+ \qquad \partial_s F_\tau=(1+2\tau r(x)s^2)^{-3/2}.
+\]
+This gives $\ell=1$. Degree $2\max(p,2q)$ suffices for polynomial
+product exactness on affine triangular intersections. Positive sums
+also evaluate $\|F(u)-u_+\|_Q^2$ directly, without subtraction of
+nearly equal integrated energies. The result uses standard positive
+quadrature and orthogonal projection; these ingredients alone do not
+constitute a novelty claim.
 
 An algebraically tempting alternative computes an increment
 $\Delta q=(g-I)q$ and adds its compressed value. Let $P$ be the
@@ -314,6 +389,32 @@ compared with $7.70\,10^{-2}$ for FE-only reaction. The tested component
 matrix is constant and symmetric. Shared spatial compression retains
 the component sum to roundoff; no general positivity result is inferred.
 
+A coherent memory-free comparator reconstructs the auxiliary state
+from the FE observation at every reaction half-step. At $n=128$,
+$\kappa=100$ and 512 steps, its relative error is $3.20\,10^{-4}$
+in $1.48$ seconds of evolution. Three-direction physical memory gives
+$1.38\,10^{-4}$ in $13.70$ seconds. Retaining only the incoming hidden
+direction gives essentially the same measured error in $9.89$ seconds.
+Thus the complete moments improve accuracy at the same FE resolution,
+but these measurements do not establish an advantage at matched cost.
+The incomplete physics models in Table~\ref{tab:reaction} must not be
+the sole efficiency baselines.
+
+\paragraph{Nonlinear reaction.}
+For $u_t+b\cdot\nabla u=-\kappa r(x)u^3$, independent characteristics
+give $u_0/\sqrt{1+2\kappa u_0^2\int r\,dt}$. At $n=128$,
+$\kappa=100$ and 512 steps, complete positive-quadrature moments give
+relative error $0.00331$, against an FE floor $0.00325$. Reconstruction
+from FE data gives $0.00779$. Their evolution costs are approximately
+$102.9$ and $3.15$ seconds respectively; intersection quadrature is
+recomputed at each nonlinear update. The FE-only extension retaining
+unreacted hidden memory gives $0.00330$ in $3.13$ seconds on this test.
+Consequently the cubic example validates the nonlinear construction
+and its refinement, but does not demonstrate a computational advantage.
+Subdividing the quadrature changes the tested final relative errors
+by less than $5\,10^{-11}$. Random oscillatory $P_4$ states have larger
+quadrature errors, which decrease under further subdivision.
+
 \paragraph{Conditioning and genuine hidden residue.}
 Positive quadrature of $|a+d|^2$ on the common FE--auxiliary intersections
 avoids cancellation in \eqref{eq:energy}. Its degree is sufficient for
@@ -335,7 +436,8 @@ from performance timings.}
 Cooperative CUDA quadrature reduces cross-mass assembly from roughly
 $0.922$ to $0.122$ seconds on the tested $n_{FE}=256$, $n_W=128$
 configuration. A complete adaptive deform-and-return calculation with
-255 support changes takes about $55$ rather than $255$ seconds.
+255 support changes takes a median $55.10$ rather than $255.44$ seconds
+over three repetitions per construction, a factor $4.64$.
 The final errors vary slightly across repetitions because atomics and
 nearly singular small Grams feed the adaptive geometry. The report
 retains all repetitions and their error ranges.
