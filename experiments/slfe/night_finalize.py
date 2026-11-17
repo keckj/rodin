@@ -96,22 +96,23 @@ def finalize(args):
         check=True,
         timeout=240,
     )
-    with (report / "theory-build.log").open("w") as log:
-        for _ in range(2):
-            subprocess.run(
-                [
-                    "pdflatex",
-                    "-interaction=nonstopmode",
-                    "-halt-on-error",
-                    "-output-directory=" + str(report),
-                    str(HERE / "restart_theory.tex"),
-                ],
-                cwd=ROOT,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                check=True,
-                timeout=120,
-            )
+    for name in ("restart_theory", "memory_paper_draft"):
+        shutil.copy2(HERE / (name + ".tex"), report / (name + ".tex"))
+        with (report / (name + "-build.log")).open("w") as log:
+            for _ in range(2):
+                subprocess.run(
+                    [
+                        "pdflatex",
+                        "-interaction=nonstopmode",
+                        "-halt-on-error",
+                        name + ".tex",
+                    ],
+                    cwd=report,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    check=True,
+                    timeout=120,
+                )
     target = HERE / "report_night2"
     target.mkdir(exist_ok=True)
     for path in report.iterdir():

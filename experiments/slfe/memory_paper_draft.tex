@@ -1,0 +1,393 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,amsmath,amssymb,amsthm,graphicx,booktabs,geometry,hyperref}
+\geometry{margin=2.3cm}
+\hypersetup{colorlinks=true,urlcolor=blue,linkcolor=blue,citecolor=blue}
+\setlength{\emergencystretch}{2em}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newcommand{\V}{V_h}
+\newcommand{\W}{W_k}
+\newcommand{\PV}{P_V}
+\newcommand{\PW}{P_W}
+\title{Energy-compatible memory coupling for semi-Lagrangian finite elements\\on changing auxiliary spaces}
+\author{Rodin / SLFE research draft}
+\date{17 November 2026}
+\begin{document}
+\maketitle
+\begin{abstract}
+A fixed finite element observation is coupled to a persistent field on a
+moving auxiliary transport space. Support changes preserve the finite
+element observation while compressing the unresolved component by an
+orthogonal projection. The projection space may depend on the state:
+pairwise non-expansivity can fail, but an exact relative-energy identity
+still controls distance to every finite element reference. This yields an
+error estimate containing local evolution defects without an additional
+term proportional to the number of support changes. Complete-state
+reaction moments provide a dissipative physics update; reacting only the
+visible finite element component can leave a substantial hidden residue.
+Shared compression spaces preserve linear relations between transported
+components. GPU experiments examine strong reaction, frequent remapping,
+conditioning and complete computational cost. A rational orthogonal
+embedding is also tested as a linear alternative with a positive energy
+representation. The analysis is conditional on the transport defects;
+a general PDE convergence rate, general finite element velocity fields
+and bibliographic novelty remain open.
+\end{abstract}
+\noindent\textbf{Status.} Working manuscript, not submitted. The experiments
+are isolated CUDA prototypes; this is not a production integration into
+Rodin's variational language. Full parameter records, unsuccessful avenues
+and implementation controls accompany the illustrated French report.
+
+\section{Scope and relation to existing methods}
+Semi-Lagrangian finite element enrichment, dynamic subscales, conservative
+remapping and particle--grid moment preservation are established subjects
+\cite{ouardghi,codina,simon,adams,keith}. A fixed finite element mesh or the
+storage of a background field plus finite element increments is therefore
+not, by itself, a distinctive contribution. In particular, Remark 2.0.1 of
+\cite{keith} stores a quadrature background and finite element increments.
+The question considered here is narrower: how can an unresolved physical
+memory be transported between auxiliary supports, remain compatible with
+finite element physics, and admit useful stability and error statements
+when its compression space depends on the solution?
+
+The setting is a periodic domain, a fixed finite-dimensional subspace
+$\V\subset L^2(\Omega)$ and a sequence of auxiliary spaces $W_n$.
+All projections in the analysis are orthogonal in the same physical
+$L^2$ inner product. The computational realization uses discontinuous
+$P_p$ functions on affine triangles and tensor-product $Q_q$ auxiliary
+functions. The present transport tests use prescribed velocities with
+exact translations or compositions of separable shears. They do not
+cover a general velocity supplied by a coupled finite element solve.
+
+\section{A physical memory and its finite element observation}
+Write $R=\PW|_{\V}$, so $R^*=\PV|_W$. The physical state and its
+observable are
+\begin{equation}
+ q=a+d,\qquad a\in\V,\quad d\in W,\qquad v=\PV q=a+R^*d.
+\end{equation}
+It is convenient to store $a$ and $w=Ra+d=\PW q$. Then
+\begin{equation}\label{eq:energy}
+ q=a+w-Ra,\qquad
+ \|q\|^2=\|w\|^2+\|a\|^2-\|Ra\|^2.
+\end{equation}
+Given a contraction $S:W\to W$, auxiliary advection acts as
+\begin{equation}\label{eq:transport}
+ \Phi_W q=S\PW q+(I-\PW)q,\qquad
+ w^+=Sw,\quad v^+=v+R^*(Sw-w).
+\end{equation}
+The two components in the first expression are orthogonal, hence
+$\|\Phi_W\|\leq1$. If $1\in W$ and $S$ preserves its integral,
+the full state and its finite element observation preserve mass.
+This argument identifies a contractive discrete evolution; consistency
+with the continuous advection equation remains a separate requirement.
+
+Likewise, a finite element contraction $G:\V\to\V$ has the extension
+$G\PV+(I-\PV)$. This extension leaves the hidden component unchanged.
+It is energy stable but is generally not the physical extension of a
+reaction or diffusion operator to the unresolved field.
+
+\section{Observation-preserving compression on a new support}
+Let $W_+$ be the new auxiliary space and $H_+=(I-\PV)|_{W_+}$.
+Choose directions $X=(x_1,\ldots,x_r)$ in $W_+$, possibly from the
+current state. For a target $f\in L^2(\Omega)$, define
+\begin{equation}\label{eq:compression}
+ v_f=\PV f,\quad h_f=P_{W_+}f-R_+v_f,\quad
+ G_X=X^*(I-R_+R_+^*)X,\quad b_X=X^*h_f.
+\end{equation}
+The candidate is
+\begin{equation}\label{eq:project}
+ \mathcal P_X f=v_f+H_+XG_X^\dagger b_X.
+\end{equation}
+The inverse acts only on a small Gram matrix. Formula
+\eqref{eq:project} is the orthogonal projection onto
+$\V\oplus\operatorname{range}(H_+X)$, including when the columns
+are dependent. A spectral truncation instead projects onto the retained
+hidden subspace; identity on discarded directions must not be assumed.
+
+\begin{proposition}
+For each realized choice of $X$,
+\[
+ \PV\mathcal P_X f=\PV f,\qquad
+ \|f\|^2=\|\mathcal P_Xf\|^2+\|f-\mathcal P_Xf\|^2.
+\]
+If the target belongs to the retained space, the compression is exact.
+\end{proposition}
+\begin{proof}
+The hidden range is orthogonal to $\V$. The Gram system is the normal
+equation of the orthogonal projection onto that range. The claims follow
+from orthogonality and Pythagoras.
+\end{proof}
+
+For support changes, take $f=q=a+d$ and $C=P_{W_+}|_W$. The moments
+needed in \eqref{eq:compression} are available without reconstructing
+a global function:
+\[
+ v_f=v,\qquad h_f=Cd+R_+(a-v).
+\]
+The experiments use the incoming direction $Cd$ and a few Krylov
+directions generated from $h_f$ by $R_+R_+^*$. Augmented Krylov
+constructions themselves are classical \cite{gaul}. At an unchanged
+support, retaining the incoming direction retains the original state.
+
+For several components, one common spatial space is formed from the
+directions of every component. Since $\mathcal P_X$ fixes $\V$, a
+relation $\sum_j c_j f_j=b\in\V$ implies
+$\sum_j c_j\mathcal P_Xf_j=b$. The common space is unchanged by an
+orthogonal rotation of the component basis when all generating
+directions are rotated together. This gives component covariance of
+the exact projection. Separate state-dependent spaces do not have
+this property. Neither statement implies pointwise positivity.
+
+\section{Relative energy and an error bound with changing supports}
+The following identity requires less than pairwise non-expansivity.
+It also applies to energy-reducing transfers that are not orthogonal
+projections.
+
+\begin{lemma}\label{lem:relative}
+Let a possibly nonlinear map $B$ satisfy
+$\PV B(q)=\PV q$ and $\|B(q)\|\leq\|q\|$. For every $u\in\V$,
+\begin{equation}\label{eq:relative}
+ \|B(q)-u\|^2=\|q-u\|^2-
+ \bigl(\|q\|^2-\|B(q)\|^2\bigr).
+\end{equation}
+In particular, $\|B(q)-u\|\leq\|q-u\|$.
+\end{lemma}
+\begin{proof}
+Expand both squared norms. The cross terms agree because
+$\langle B(q),u\rangle=\langle\PV B(q),u\rangle
+=\langle\PV q,u\rangle=\langle q,u\rangle$.
+\end{proof}
+
+\begin{proposition}\label{prop:error}
+Let $q_{n+1}=B_n\Phi_nq_n$, with $B_n$ satisfying
+Lemma~\ref{lem:relative} and $\Phi_n$ Lipschitz with constant
+$\ell_n\leq1$. For arbitrary references $u_n\in\V$, set
+$\delta_n=\|\Phi_nu_n-u_{n+1}\|$. Then
+\begin{equation}\label{eq:bound}
+ \|q_N-u_N\|\leq
+ \left(\prod_{j=0}^{N-1}\ell_j\right)\|q_0-u_0\|
+ +\sum_{n=0}^{N-1}
+ \left(\prod_{j=n+1}^{N-1}\ell_j\right)\delta_n.
+\end{equation}
+The same bound holds for $\|\PV q_N-u_N\|$.
+\end{proposition}
+\begin{proof}
+Apply the lemma with reference $u_{n+1}$, insert $\Phi_nu_n$ and
+use the Lipschitz estimate. Iterating
+$e_{n+1}\leq\ell_ne_n+\delta_n$ proves the result.
+\end{proof}
+
+The supports and compression spaces may be selected from the computed
+trajectory: the argument uses each realized operator and reference.
+There is no additional term proportional to the number of support
+changes. This does not make remapping physically harmless. The chosen
+supports affect every $\delta_n$, and the augmented norm can make the
+bound loose. Pairwise distances between arbitrary hidden states can
+increase under nonlinear compression without contradicting
+Lemma~\ref{lem:relative}.
+
+For an FE reference $\dot u=A_Vu$ and auxiliary generator $L_W$,
+the infinitesimal defect of \eqref{eq:transport} has squared norm
+\begin{equation}\label{eq:generator}
+ \eta_W(u)^2=\|L_WRu-RA_Vu\|^2
+             +\|A_Vu\|^2-\|RA_Vu\|^2.
+\end{equation}
+Both a commutator and an unresolved-generator term appear. Controlling
+only the second term is insufficient. A PDE convergence theorem would
+require estimates for these terms, temporal defects, and FE projection
+error; it is not supplied by energy stability alone.
+
+\section{Physical reaction and the failure of additive compression}
+For $f=gq$, $g(x)=\exp(-\tau r(x))$, the required moments follow from
+weighted local and cross-mass operators:
+\begin{equation}
+ \PV(gq)=F_ga+R_g^*d,\qquad
+ \PW(gq)=R_ga+A_gd,
+\end{equation}
+where $F_g=\PV g|_{\V}$, $R_g=\PW g|_{\V}$ and
+$A_g=\PW g|_W$. They define \eqref{eq:compression} for the physical
+target, even though $gq$ need not belong to $\V+W$.
+If $0\leq g\leq\gamma\leq1$, then
+\[
+ \|\mathcal P_X(gq)\|\leq\gamma\|q\|.
+\]
+The factor $\gamma$ also enters \eqref{eq:bound} through the
+Lipschitz constant of multiplication by $g$. For a spatial scalar
+rate times a constant symmetric component matrix, GPU diagonalization
+of that matrix reduces the moment calculation to scalar modes. A
+shared final spatial projection preserves conserved component sums.
+Spatially varying eigenvectors and nonlinear reaction networks are
+outside the present implementation.
+
+An algebraically tempting alternative computes an increment
+$\Delta q=(g-I)q$ and adds its compressed value. Let $P$ be the
+realized orthogonal projector and $e=(I-P)q$. Then
+\begin{equation}\label{eq:increment}
+ q+P\Delta q=P(gq)+e,\qquad
+ \|q+P\Delta q\|^2=\|P(gq)\|^2+\|e\|^2.
+\end{equation}
+Thus additive and full-target compression agree only if the old state
+is retained. A rank cutoff can violate this requirement even when
+the old hidden direction was nominally included. Strong damping makes
+an absolutely small discarded component large relative to the final
+physical solution. Reprojecting the complete target removes this
+particular persistent residue.
+
+\section{A linear alternative with a positive energy representation}
+To avoid the subtractive energy in \eqref{eq:energy}, consider
+$F=(R,I)^T$, $M=I+R^*R$ and the orthogonal graph reflection
+\[
+ U_R=2FM^{-1}F^*-I,\qquad
+ \widehat J_Rv=U_R(0,v)^T
+  =\bigl(2RM^{-1}v,(2M^{-1}-I)v\bigr)^T.
+\]
+An augmented state $(w,z)$ has energy $\|w\|^2+\|z\|^2$ and
+observation $\widehat J_R^*(w,z)$. For a contraction
+$C:W_0\to W_1$, the transition
+\[
+ \widehat B=U_{R_1}\operatorname{diag}(C,I)U_{R_0}
+\]
+is linear and contractive, satisfies
+$\widehat J_{R_1}^*\widehat B=\widehat J_{R_0}^*$ and is the identity
+when $R_1=R_0$, $C=I$. For a contraction $R$, every inverse has
+spectrum in $[1,2]$. Fixed-degree Chebyshev evaluation avoids a
+data-dependent stopping rule.
+
+This is a different discretization: the first injection block is
+$2R(I+R^*R)^{-1}$ rather than $R$. The physical reaction construction
+above cannot simply be reused. The graph reflection is a classical
+rational orthogonal parametrization, closely related to Cayley
+coordinates \cite{cayley}; no linear-algebra novelty is claimed.
+
+\section{GPU evidence and limitations}
+All numerical assembly, solves, trajectory references and reductions
+use double precision CUDA/CuPy on an RTX 5090. The CPU orchestrates
+runs and generates plots. Dense GPU matrix oracles independently
+check mass adjoints, observation preservation and projection identities
+at degrees 1, 2 and 4. Compute Sanitizer logs accompany the data.
+Reported speed comparisons concern the measured prototypes only.
+
+\paragraph{Frequent support changes.}
+Four sine--cosine fields of frequencies $(1,0)$ and $(1,2)$ are
+translated with velocity $(1,0.37)$ to time $0.2$. Two perturbed
+auxiliary partitions alternate. Rotating the initial FE coefficient
+columns gives the exact FE reference, and the local defect norm is
+independent of the Fourier phase. The 78 recorded configurations
+respect \eqref{eq:bound}; the largest error-to-bound ratio is below
+$0.20$. For 255 changes, the last measured spatial orders of the graph
+variant are $1.93$, $2.99$ and $4.98$ for $P_1$, $P_2$ and $P_4$.
+At $n=32$, the $P_4$ maximum component error changes from
+$2.63\,10^{-7}$ at 255 changes to $2.95\,10^{-7}$ at 4095 changes.
+These are observations for this smooth translation, not a general
+order theorem or a claim that arbitrarily frequent remapping is free.
+\begin{figure}[htbp]\centering
+\includegraphics[width=\linewidth]{night-remap-consistency.pdf}
+\caption{Translation with changing auxiliary supports. Physical errors
+and the independently evaluated defect bound use distinct norms, as
+specified in the illustrated report.}\label{fig:consistency}
+\end{figure}
+
+\paragraph{Strong spatial reaction.}
+A transported localized profile reacts at rate
+$\kappa(1+0.5\sin(2\pi x))$. Independent GPU characteristics integrate
+both trajectory and reaction exponent. At $T=0.25$, $\kappa=100$,
+the reference norm is approximately $4.20\,10^{-14}$; relative errors
+are therefore essential. Table~\ref{tab:reaction} uses 256 time steps,
+$P_4$ FE functions and auxiliary resolution $2n$.
+\begin{table}[htbp]\centering
+\begin{tabular}{llrr}\toprule
+$n$ & Physics extension & Relative error & FE projection floor\\\midrule
+64 & FE-only reaction & $6.05\,10^6$ & $2.37\,10^{-3}$\\
+64 & Uniform hidden damping & $3.27\,10^1$ & $2.37\,10^{-3}$\\
+64 & Complete physical moments & $2.40\,10^{-3}$ & $2.37\,10^{-3}$\\
+128 & Complete physical moments & $1.39\,10^{-4}$ & $1.37\,10^{-4}$\\\bottomrule
+\end{tabular}
+\caption{Correcting the physical extension of reaction substantially
+improves accuracy at additional computational cost. Absolute errors of
+the incomplete models are small but exceed the strongly damped reference.}
+\label{tab:reaction}
+\end{table}
+On the four-component exchange test at $n=64$, the complete moments give
+relative error $7.80\,10^{-4}$ against an FE floor $7.80\,10^{-4}$,
+compared with $7.70\,10^{-2}$ for FE-only reaction. The tested component
+matrix is constant and symmetric. Shared spatial compression retains
+the component sum to roundoff; no general positivity result is inferred.
+
+\paragraph{Conditioning and genuine hidden residue.}
+Positive quadrature of $|a+d|^2$ on the common FE--auxiliary intersections
+avoids cancellation in \eqref{eq:energy}. Its degree is sufficient for
+the square of the difference of $P_p$ and $Q_q$ polynomials. For two
+constants separated by $10^{-12}$, it resolves an energy of order
+$10^{-24}$ where subtractive formulas return roundoff-scale values.
+In the strong-reaction additive experiment, the positive final energy
+is $9.00\,10^{-16}$, whereas full-target reprojection gives
+$1.77\,10^{-27}$. The persistent energy is physical within the discrete
+state, not merely an artifact of the subtractive diagnostic.
+\begin{figure}[htbp]\centering
+\includegraphics[width=.8\linewidth]{night-positive-energy.pdf}
+\caption{Positive common-quadrature energy exposes the residual
+component in \eqref{eq:increment}. Instrumented repetitions are excluded
+from performance timings.}
+\end{figure}
+
+\paragraph{Cost and nonuniform deformation.}
+Cooperative CUDA quadrature reduces cross-mass assembly from roughly
+$0.922$ to $0.122$ seconds on the tested $n_{FE}=256$, $n_W=128$
+configuration. A complete adaptive deform-and-return calculation with
+255 support changes takes about $55$ rather than $255$ seconds.
+The final errors vary slightly across repetitions because atomics and
+nearly singular small Grams feed the adaptive geometry. The report
+retains all repetitions and their error ranges.
+
+The graph variant is not uniformly superior: on the long deform-and-return
+case it gives error $0.0279$ in about $99$ seconds with inverse degree 16,
+against about $0.0233$ in $55$ seconds for physical Galerkin memory.
+On a prescribed identical sequence of 63 supports, graph degrees 16
+and 20 differ by at most $4.1\,10^{-11}$ in component FE norm.
+This separates inverse accuracy from adaptive mesh feedback.
+
+\paragraph{What remains necessary for an article.}
+The principal unresolved issues are a consistency estimate for general
+FE velocities, a coupled PDE example where persistent memory is
+indispensable, robust adaptation for multiple separated structures,
+and comparison with closer GPU remapping and multiscale baselines.
+The present construction and evidence support further study; they do
+not establish a revolutionary or publication-ready result.
+
+\section*{Reproducibility}
+Branch \texttt{SLFE} of \url{https://github.com/keckj/rodin} contains the
+sources under \texttt{experiments/slfe}. The \texttt{results\_night2}
+records contain parameters, provenance and per-run diagnostics.
+The main scripts are \texttt{remap\_consistency\_study.py},
+\texttt{reaction\_moments\_study.py},
+\texttt{spectral\_reaction\_study.py},
+\texttt{increment\_conditioning\_study.py} and
+\texttt{long\_return\_benchmark.py}.
+The illustrated report distinguishes physical PDE accuracy, algebraic
+oracles, exploratory timings and unsuccessful variants.
+
+\begin{thebibliography}{9}
+\bibitem{ouardghi} A. Ouardghi, M. El-Amrani and M. Seaid (2022).
+An adaptive enriched semi-Lagrangian finite element method for coupled flow-transport problems.
+\href{https://doi.org/10.1016/j.compfluid.2022.105474}{Computers \& Fluids, 105474}.
+\bibitem{codina} R. Codina, J. Principe, O. Guasch and S. Badia (2007).
+Time dependent subscales in the stabilized finite element approximation of incompressible
+flow problems. \href{https://doi.org/10.1016/j.cma.2007.01.002}{CMAME}.
+\bibitem{simon} K. Simon and J. Behrens (2021).
+Semi-Lagrangian Subgrid Reconstruction for Advection-Dominant Multiscale Problems with Rough Data.
+\href{https://doi.org/10.1007/s10915-021-01451-w}{Journal of Scientific Computing}.
+\bibitem{adams} M. F. Adams, D. S. Finn, M. G. Knepley and J. V. Pusztay.
+A projection method for particle resampling.
+\href{https://arxiv.org/abs/2501.13681}{arXiv:2501.13681}.
+\bibitem{keith} B. Keith et al. (2026).
+Remap for ALE Hydrodynamics via Direct Interpolation and Constraint Optimization.
+\href{https://arxiv.org/abs/2611.05327}{arXiv:2611.05327}.
+\bibitem{gaul} A. Gaul, M. Gutknecht, J. Liesen and R. Nabben (2013).
+A framework for deflated and augmented Krylov subspace methods.
+\href{https://people.math.ethz.ch/~mhg/pub/defl-GGLN1-SIMAX.pdf}{SIAM Journal on Matrix Analysis and Applications}.
+\bibitem{cayley} E. Mac\'ias-Virg\'os, M. J. Pereira-S\'aez and D. Tanr\'e (2018).
+Cayley transform on Stiefel manifolds.
+\href{https://doi.org/10.1016/j.geomphys.2017.08.011}{Journal of Geometry and Physics 123, 53--60}.
+\end{thebibliography}
+\end{document}

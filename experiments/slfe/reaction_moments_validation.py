@@ -64,7 +64,7 @@ def coordinates(state):
     return cp.concatenate((a, d))
 
 
-def validate(degree, krylov_seed="moment"):
+def validate(degree, krylov_seed="moment", reanchor=False):
     space = Space(Mesh(4, jitter=0.18, seed=817), degree)
     carrier = Carrier(space, n=4)
     rng = cp.random.RandomState(131)
@@ -80,6 +80,19 @@ def validate(degree, krylov_seed="moment"):
     records = []
     for duration, amplitude in ((0.0, 0.5), (0.2, 0.0), (0.2, 0.5)):
         operator = ReactionMoments(carrier, duration, amplitude, diagnostics=True)
+        applied_operator = (
+            ReactionMoments(
+                carrier,
+                duration,
+                amplitude,
+                diagnostics=True,
+                increment=True,
+                reanchor=True,
+                builder="tiled",
+            )
+            if reanchor
+            else operator
+        )
         weighted = joint_matrix(carrier, operator)
         squared = joint_matrix(carrier, operator, 2)
         positive = float(cp.linalg.eigvalsh((weighted + weighted.T) / 2).min())
@@ -101,7 +114,9 @@ def validate(degree, krylov_seed="moment"):
             assert quadrature_error < 1e-10, quadrature_error
         for shared in (False, True):
             state = copy(original)
-            diagnostic = operator.apply(state, shared=shared, krylov_seed=krylov_seed)
+            diagnostic = applied_operator.apply(
+                state, shared=shared, krylov_seed=krylov_seed
+            )
             new = coordinates(state)
             target_energy = cp.sum(coefficient * (squared @ coefficient), axis=0)
             after = cp.sum(new * (gram @ new), axis=0)
@@ -138,6 +153,7 @@ def validate(degree, krylov_seed="moment"):
                 dict(
                     degree=degree,
                     krylov_seed=krylov_seed,
+                    reanchor=reanchor,
                     duration=duration,
                     amplitude=amplitude,
                     shared=shared,
@@ -160,6 +176,7 @@ def validate(degree, krylov_seed="moment"):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--reanchor", action="store_true")
     parser.add_argument(
         "--seed", choices=("moment", "increment", "residual"), default="moment"
     )
@@ -167,7 +184,7 @@ def main():
     meta = provenance()
     results = []
     for degree in (1, 2, 4):
-        records = validate(degree, args.seed)
+        records = validate(degree, args.seed, args.reanchor)
         results.extend(records)
         print(json.dumps(records), flush=True)
         args.output.write_text(

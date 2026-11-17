@@ -22,12 +22,15 @@ from energy_mesh import partitions
 from moving_study import profile_family
 from day_study import reference_feet
 from memory_transport import MemoryTransport
+from graph_memory import GraphMemory
 from campaign import provenance
 
 
 def transfer(state, target, cross, method, gram_backend="einsum"):
     trial = copy(state)
-    if method == "reset":
+    if method.startswith("graph"):
+        diagnostic = trial.transfer(target, cross)
+    elif method == "reset":
         loss = trial.restart(target)
         diagnostic = dict(energy_loss=loss, ambient_change_squared=loss)
     elif method == "warm":
@@ -63,6 +66,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--methods", nargs="+")
+    parser.add_argument("--carrier-builder", default="auto", choices=("auto", "tiled"))
     parser.add_argument(
         "--gram-backend", choices=("einsum", "reduction"), default="einsum"
     )
@@ -95,8 +99,15 @@ def main():
     for _ in range(32):
         points = reference_feet(points, 0.25 / 32, 16)
         schedule.append(partitions(points, weights, 64))
-    carrier = Carrier(space, n=64, edges=schedule[0][0])
-    states = {m: MemoryTransport(carrier, initial) for m in methods}
+    carrier = Carrier(space, n=64, edges=schedule[0][0], builder=args.carrier_builder)
+    states = {
+        m: (
+            GraphMemory(carrier, initial, degree=int(m.removeprefix("graph")))
+            if m.startswith("graph")
+            else MemoryTransport(carrier, initial)
+        )
+        for m in methods
+    }
     energy0, mass0 = space.energy(initial), space.mass(initial)
     cp.cuda.Stream.null.synchronize()
     common_setup = time.perf_counter() - begin
@@ -127,7 +138,9 @@ def main():
                 continue
             cp.cuda.Stream.null.synchronize()
             start = time.perf_counter()
-            target = Carrier(space, n=64, edges=schedule[cursor][0])
+            target = Carrier(
+                space, n=64, edges=schedule[cursor][0], builder=args.carrier_builder
+            )
             cross = TensorProjection(carrier, target)
             flow = TensorCellular(
                 target, direction * 0.25 / 128, oriented_edges=schedule[cursor][1]
@@ -167,9 +180,11 @@ def main():
                         energy_ratio=energy_ratio,
                         mass_error=mass_error,
                         energy_loss=diagnostic["energy_loss"].tolist(),
-                        ambient_change_squared=diagnostic[
-                            "ambient_change_squared"
-                        ].tolist(),
+                        ambient_change_squared=(
+                            diagnostic["ambient_change_squared"].tolist()
+                            if "ambient_change_squared" in diagnostic
+                            else None
+                        ),
                         transfer_seconds_median=statistics.median(measurements),
                         transfer_seconds_min=min(measurements),
                         transfer_seconds_max=max(measurements),
@@ -188,6 +203,14 @@ def main():
             )
             result = dict(
                 method=method,
+                carrier_builder=args.carrier_builder,
+                difference_from_graph20=(
+                    cp.sqrt(
+                        space.energy(states[method].value - states["graph20"].value)
+                    ).tolist()
+                    if "graph20" in states
+                    else None
+                ),
                 gram_backend=args.gram_backend,
                 nfe=128,
                 naux=64,

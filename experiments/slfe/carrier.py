@@ -147,6 +147,7 @@ class Carrier:
                 )
         widths = cp.max(bounds, axis=1) - cp.min(bounds, axis=1) + 3
         slots = int(cp.max(widths[:, 0] * widths[:, 1]))
+        self.candidate_slots = slots
         sources, targets, matrices = [], [], []
         errors = cp.zeros(1, dtype=cp.int32)
         cp.cuda.Stream.null.synchronize()

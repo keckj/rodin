@@ -83,6 +83,15 @@ def main():
             "increment-physical",
             "increment-reanchor",
             "increment-conditioning",
+            "increment-conditioning-positive",
+            "graph-return",
+            "graph-return-long",
+            "graph-frozen",
+            "remap-consistency",
+            "remap-consistency-orders",
+            "remap-consistency-fine",
+            "remap-consistency-smallstep",
+            "remap-consistency-interval",
             "material-minimax",
             "minimax-return",
             "diffusion",
@@ -96,6 +105,15 @@ def main():
         + " (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test."
     )
     r.section("Résultat et portée")
+    r.paragraph(
+        "Trois résultats structurent désormais l'étude : une identité d'énergie relative autorise une borne d'erreur malgré les transferts non linéaires; les réactions appliquées au champ complet évitent une mémoire artificiellement persistante; une réalisation linéaire par réflexion orthogonale conserve une précision P4 proche de l'ordre cinq dans le test de translation à changements fréquents. Le rapport détaille aussi les cas où ces méthodes perdent en coût ou en précision."
+    )
+    r.body.append(
+        "<p><a href='memory_paper_draft.pdf'>Ébauche d'article avec preuves et expériences principales (PDF)</a></p>"
+    )
+    r.tex.append(
+        r"\noindent\href{memory_paper_draft.pdf}{Ébauche d'article avec preuves et expériences principales.}\par"
+    )
     r.paragraph(
         "Un support auxiliaire mobile résout le défaut observé lorsque la bosse quitte la zone fine d'une grille fixe. Le couplage FE avec mémoire accepte désormais un changement de support contractant, et un raffinement exactement emboîté sans perte d'énergie. Les transferts polynomiaux évitent une inversion globale; la variante de Galerkin diagonalise une petite matrice par champ. Les propriétés sont établies sous les hypothèses de restart_theory.pdf; elles n'établissent ni une nouveauté bibliographique, ni une convergence générale vers l'EDP."
     )
@@ -2588,9 +2606,334 @@ def main():
         "night-refinement",
         "Résultat négatif conservé : changer le classement des cellules ne suffit pas à rendre le contrôleur efficace.",
     )
+    reference_file = args.input / "reference-relative.validation.json"
+    if reference_file.exists():
+        relative = json.loads(reference_file.read_text())["results"]
+        r.section(
+            "Stabilité par rapport à une référence FE, même avec un transfert non linéaire"
+        )
+        r.paragraph(
+            "Une identité permet de dépasser la seule décroissance d'énergie. Si le transfert conserve l'observation FE et diminue l'énergie augmentée, sa distance à toute référence FE minimale diminue exactement de l'énergie dissipée, en norme au carré. Cette propriété reste vraie lorsque l'espace de compression dépend de l'état. Elle n'affirme pas la contraction entre deux états possédant des mémoires différentes et ne contredit donc pas le contre-exemple précédent."
+        )
+        r.paragraph(
+            "La preuve résulte du développement des deux normes et de la conservation du terme croisé avec la référence. Si l'évolution entre transferts est non expansive entre deux états, la récurrence borne l'erreur finale par l'erreur initiale et la somme des défauts locaux de transport. Aucun terme supplémentaire proportionnel au nombre de changements de support n'apparaît. Les supports réalisés modifient cependant ces défauts : cette borne ne rend pas le choix du maillage indifférent."
+        )
+        r.table(
+            ["Contrôles GPU", "Défaut relatif d'identité", "Excès relatif de distance"],
+            [
+                [
+                    len(relative),
+                    max(x["relative_identity_defect"] for x in relative),
+                    max(x["relative_distance_excess"] for x in relative),
+                ]
+            ],
+        )
+        r.paragraph(
+            "Les contrôles utilisent une réalisation dense indépendante de l'espace augmenté, les degrés FE 1, 2 et 4, trois mouvements, cinq transferts et trois références d'amplitudes différentes. Une borne de convergence en fonction du pas et des maillages requiert encore une estimation des défauts locaux des noyaux de transport."
+        )
+    graph = [
+        x["result"] for name in ("graph-return", "graph-return-long") for x in raw[name]
+    ]
+    if graph:
+        r.section("Mémoire à énergie positive par réflexion sur le graphe du couplage")
+        r.paragraph(
+            "Une seconde réalisation remplace les différences de normes mal conditionnées par une somme de deux normes positives. Elle construit un réflecteur orthogonal à partir du graphe de R, la projection FE vers le support auxiliaire. Les seules inversions portent sur I+R*R, dont le spectre appartient à [1,2]. Le transfert obtenu est linéaire et contractant pour des supports prescrits; il préserve l'observation FE et devient l'identité à support inchangé."
+        )
+        r.paragraph(
+            "Cette construction change l'injection FE : son premier bloc devient 2R multiplié par l'inverse de I+R*R. Elle définit donc un autre couplage, auquel les résultats de réaction par moments physiques ne sont pas automatiquement applicables. L'inverse est évalué par un polynôme fixe de degré 16 ou 20 sur GPU; aucun critère d'arrêt dépendant des données n'intervient."
+        )
+        file = args.input / "graph.validation.json"
+        if file.exists():
+            controls = json.loads(file.read_text())["controls"]
+            r.table(
+                [
+                    "Degré inverse",
+                    "Erreur état / oracle",
+                    "Défaut observation",
+                    "Résidu inverse",
+                ],
+                [
+                    [degree]
+                    + [
+                        max(x[key] for x in controls if x["inverse_degree"] == degree)
+                        for key in (
+                            "state_oracle_relative_error",
+                            "observed_error",
+                            "inverse_relative_residual",
+                        )
+                    ]
+                    for degree in (12, 16, 20)
+                ],
+            )
+        r.table(
+            [
+                "FE",
+                "Durée aller",
+                "Pas",
+                "Contrôle",
+                "Degré inverse",
+                "L2 max.",
+                "Coût (s)",
+            ],
+            [
+                [
+                    x["nfe"],
+                    x["half_duration"],
+                    x["steps_per_leg"],
+                    x["check_every"],
+                    x["graph_degree"],
+                    max(x["l2"]),
+                    x["setup_seconds"] + x["evolution_seconds"],
+                ]
+                for x in graph
+            ],
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        baselines = [
+            x["result"]
+            for x in raw["residual-return"]
+            if x["result"]["krylov_seed"] == "moment"
+        ]
+        for ax, duration in zip(axes, (0.25, 1.0)):
+            for degree in (16, 20):
+                xs = [
+                    x
+                    for x in graph
+                    if x["half_duration"] == duration and x["graph_degree"] == degree
+                ]
+                ax.scatter(
+                    [x["setup_seconds"] + x["evolution_seconds"] for x in xs],
+                    [max(x["l2"]) for x in xs],
+                    label=f"Graphe, degré {degree}",
+                )
+            xs = [x for x in baselines if x["half_duration"] == duration]
+            ax.scatter(
+                [x["setup_seconds"] + x["evolution_seconds"] for x in xs],
+                [max(x["l2"]) for x in xs],
+                marker="x",
+                label="Moments Galerkin",
+            )
+            ax.set(
+                xlabel="Coût complet (s)",
+                ylabel="Erreur L2 maximale",
+                title=f"Retour après deux trajets de durée {duration}",
+            )
+            ax.set_yscale("log")
+            ax.grid(alpha=0.2)
+            ax.legend(fontsize=8)
+        r.save_figure(
+            fig,
+            "night-graph-return",
+            "Comparaison exploratoire à une exécution par configuration. Chaque méthode adapte son propre support; les tableaux précisent le pas et la fréquence de contrôle. L'amélioration du conditionnement ne garantit pas une meilleure précision de transport.",
+        )
+        frozen = [x["result"] for x in raw["graph-frozen"]]
+        if frozen:
+            r.table(
+                [
+                    "Supports prescrits",
+                    "L2 max.",
+                    "Écart FE / graphe 20",
+                    "Transport (s)",
+                    "Transferts (s)",
+                ],
+                [
+                    [
+                        x["method"],
+                        max(x["l2"]),
+                        max(x["difference_from_graph20"]),
+                        x["advection_seconds"],
+                        x["transfer_seconds"],
+                    ]
+                    for x in frozen
+                ],
+            )
+            r.paragraph(
+                "Cette dernière comparaison partage exactement 63 changements de support prescrits par les trajectoires matérielles. Le coût géométrique commun est exclu des deux dernières colonnes. Elle sépare les différences entre inverses polynomiaux des rétroactions du contrôleur sur la géométrie."
+            )
+    consistency = [
+        x["result"]
+        for name in (
+            "remap-consistency",
+            "remap-consistency-orders",
+            "remap-consistency-fine",
+            "remap-consistency-smallstep",
+            "remap-consistency-interval",
+        )
+        for x in raw[name]
+    ]
+    if consistency:
+        r.section("Translation exacte avec changements de support à chaque pas")
+        r.paragraph(
+            "Quatre champs sinus et cosinus sont transportés à la vitesse constante (1; 0,37) jusqu'au temps 0,2. Le maillage triangulaire est légèrement perturbé. Deux partitions auxiliaires, distantes d'au plus 0,24 cellule par direction, alternent à chaque pas. Le nombre de transferts augmente donc lorsque le pas diminue, sans changement de résolution spatiale. La référence FE exacte est obtenue par rotation des composantes initiales; la référence physique est analytique."
+        )
+        r.paragraph(
+            "La norme du défaut local est mesurée indépendamment sur l'injection de cette référence, pour chacun des deux supports. La somme de ces défauts donne la borne issue de la preuve; aucun coefficient n'est ajusté à l'erreur finale. La norme de Frobenius sur les quatre champs sert à ce contrôle, tandis que les courbes d'erreur physique affichent le maximum des quatre normes L2. Les valeurs restent des calculs en double précision, sans certification par intervalles."
+        )
+        fig, axes = plt.subplots(1, 3, figsize=(14, 4))
+        colors = {"reset": "#777777", "galerkin": "#d56826", "graph": "#176a8a"}
+        for method in colors:
+            selected = [
+                x
+                for x in consistency
+                if x["method"] == method
+                and x["degree"] == 4
+                and x["steps"] == 256
+                and x["remap_every"] == 1
+            ]
+            selected.sort(key=lambda x: x["n"])
+            axes[0].loglog(
+                [x["n"] for x in selected],
+                [max(x["l2"]) for x in selected],
+                "o-",
+                color=colors[method],
+                label=method,
+            )
+            selected = [
+                x
+                for x in consistency
+                if x["method"] == method
+                and x["degree"] == 4
+                and x["n"] == 32
+                and x["remap_every"] == 1
+            ]
+            selected.sort(key=lambda x: x["steps"])
+            axes[1].loglog(
+                [x["steps"] for x in selected],
+                [max(x["l2"]) for x in selected],
+                "o-",
+                color=colors[method],
+                label=method,
+            )
+            axes[2].loglog(
+                [x["steps"] for x in selected],
+                [x["summed_defect_bound"] for x in selected],
+                "o--",
+                color=colors[method],
+                label=method + " : borne",
+            )
+            axes[2].loglog(
+                [x["steps"] for x in selected],
+                [x["fe_reference_frobenius_error"] for x in selected],
+                "o-",
+                color=colors[method],
+                label=method + " : erreur FE",
+            )
+        axes[0].set(
+            xlabel="Résolution n",
+            ylabel="Erreur L2 maximale",
+            title="P4, 255 transferts",
+        )
+        axes[1].set(
+            xlabel="Nombre de pas",
+            ylabel="Erreur L2 maximale",
+            title="P4, résolution 32",
+        )
+        axes[2].set(
+            xlabel="Nombre de pas",
+            ylabel="Norme sur les quatre champs",
+            title="Borne par les défauts locaux",
+        )
+        for ax in axes:
+            ax.grid(alpha=0.2)
+            ax.legend(fontsize=7)
+        r.save_figure(
+            fig,
+            "night-remap-consistency",
+            "L'erreur physique et la borne de consistance sont distinguées. Une augmentation du nombre de pas accroît ici le nombre de changements de support; elle ne constitue pas une étude temporelle à opérateurs de transfert fixés.",
+        )
+        r.table(
+            [
+                "Cas contrôlés",
+                "Rapport erreur / borne max.",
+                "Défaut masse max.",
+                "Excès énergie max.",
+            ],
+            [
+                [
+                    len(consistency),
+                    max(x["bound_ratio"] for x in consistency),
+                    max(x["mass_error"] for x in consistency),
+                    max(x["energy_ratio"] - 1 for x in consistency),
+                ]
+            ],
+        )
+        r.table(
+            ["Degré FE", "Méthode", "n", "Pas", "L2 max.", "Plancher FE"],
+            [
+                [
+                    x["degree"],
+                    x["method"],
+                    x["n"],
+                    x["steps"],
+                    max(x["l2"]),
+                    max(x["best_fe_l2"]),
+                ]
+                for x in consistency
+                if x["n"] in (32, 64) and x["steps"] == 256 and x["remap_every"] == 1
+            ],
+        )
+    positive_file = args.input / "residual-energy.validation.json"
+    if positive_file.exists():
+        positive_controls = json.loads(positive_file.read_text())["results"]
+        r.section("Mesurer les petites énergies sans soustraction de grands termes")
+        r.paragraph(
+            "Un nouveau diagnostic CUDA intègre directement le carré de la différence FE–auxiliaire sur leurs intersections, avec des poids positifs. L'ordre de quadrature intègre exactement le carré du polynôme Pp–Qq sur chaque intersection affine. Le résidu est formé aux points de quadrature avant d'être élevé au carré. Cette mesure évite la soustraction de deux énergies presque égales; elle ne modifie pas l'évolution numérique."
+        )
+        r.paragraph(
+            f"Les {len(positive_controls)} contrôles couvrent P1, P2 et P4, des partitions uniformes et décalées. Sur des champs aléatoires, l'écart relatif maximal à l'identité bilinéaire indépendante vaut {max(x['random_relative_error'] for x in positive_controls):.3g}. Pour deux constantes séparées de 1e-12, l'énergie physique est de l'ordre de 1e-24 : la quadrature positive la résout, alors que la formule soustractive retourne une valeur de l'ordre de l'arrondi absolu, parfois négative."
+        )
+        conditioning = [x["result"] for x in raw["increment-conditioning-positive"]]
+        if conditioning:
+            r.table(
+                [
+                    "Mise à jour",
+                    "Énergie positive",
+                    "Énergie soustractive",
+                    "Énergie FE visible",
+                ],
+                [
+                    [
+                        "Reprojection" if x["reanchor"] else "Addition",
+                        x["history"][-1]["positive_ambient_energy"],
+                        x["history"][-1]["ambient_energy"],
+                        x["history"][-1]["visible_energy"],
+                    ]
+                    for x in conditioning
+                ],
+            )
+            r.paragraph(
+                "La mesure positive confirme une mémoire résiduelle physique dans le calcul additif à réaction forte : ce n'est donc pas seulement un défaut du diagnostic soustractif. La reprojection du champ complet ramène aussi cette énergie cachée à l'échelle du champ amorti. Le seuil de rang peut exclure une direction de faible énergie absolue qui reste déterminante relativement à une solution presque nulle."
+            )
+            fig, ax = plt.subplots(figsize=(8, 4))
+            for x in conditioning:
+                history = [h for h in x["history"] if "positive_ambient_energy" in h]
+                label = (
+                    "Reprojection complète"
+                    if x["reanchor"]
+                    else "Addition d'incréments"
+                )
+                ax.semilogy(
+                    [h["time"] for h in history],
+                    [h["positive_ambient_energy"] for h in history],
+                    "o-",
+                    markersize=3,
+                    label=label,
+                )
+            ax.set(
+                xlabel="Temps",
+                ylabel="Énergie physique par quadrature positive",
+                title="Réaction forte : mémoire réellement persistante",
+            )
+            ax.legend()
+            ax.grid(alpha=0.2)
+            r.save_figure(
+                fig,
+                "night-positive-energy",
+                "Même problème de réaction de force 100 et même discrétisation. Les diagnostics sont ajoutés à des répétitions instrumentées, exclues des comparaisons de temps.",
+            )
     r.section("Contrôles et limites pour un article")
     r.paragraph(
-        "La note établit également une borne d'erreur pour des supports variables : une transition contractante qui envoie l'état minimal J_n v sur J_(n+1) v n'ajoute pas de terme explicite dépendant du nombre de remaillages. Les défauts locaux de transport restent dans la borne, notamment le commutateur entre projection et générateur. Ce résultat conditionnel ne fournit ni un ordre de convergence pour les noyaux actuels ni une garantie d'efficacité du contrôleur."
+        "La borne d'erreur pour des supports variables repose sur la conservation de l'observation et la décroissance de l'énergie lors du transfert, ainsi que sur la non-expansivité de l'évolution entre transferts. Les défauts locaux de transport restent dans la borne, notamment le commutateur entre projection et générateur. Ce résultat conditionnel ne fournit ni un ordre de convergence pour les noyaux actuels ni une garantie d'efficacité du contrôleur."
     )
     expected = {
         "matched": 18,
@@ -2643,6 +2986,15 @@ def main():
         "increment-physical": 18,
         "increment-reanchor": 2,
         "increment-conditioning": 2,
+        "increment-conditioning-positive": 2,
+        "graph-return": 6,
+        "graph-return-long": 2,
+        "graph-frozen": 4,
+        "remap-consistency": 27,
+        "remap-consistency-orders": 24,
+        "remap-consistency-fine": 9,
+        "remap-consistency-smallstep": 6,
+        "remap-consistency-interval": 12,
         "material-minimax": 2,
         "minimax-return": 3,
         "diffusion": 20,
@@ -2679,6 +3031,8 @@ def main():
         "coupled-sanitizer",
         "krylov-sanitizer",
         "reduction-sanitizer",
+        "graph-sanitizer",
+        "residual-energy-sanitizer",
     ):
         path = args.input / (name + ".log")
         if path.exists():
@@ -2699,6 +3053,18 @@ def main():
         "La piste d'article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d'énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture."
     )
     references = [
+        (
+            "Macías-Virgós, Pereira-Sáez et Tanré (2018), paramétrisations de Cayley sur les variétés de Stiefel",
+            "https://doi.org/10.1016/j.geomphys.2017.08.011",
+        ),
+        (
+            "Kim et Um (2026), reconstruction semi-lagrangienne presque orthogonale par noyau de Lanczos",
+            "https://rtg.hufs.ac.kr/publications/SIGRAPHASIA26_lowres.pdf",
+        ),
+        (
+            "Ouardghi, El-Amrani et Seaid (2022), enrichissement adaptatif semi-lagrangien FE",
+            "https://doi.org/10.1016/j.compfluid.2022.105474",
+        ),
         (
             "Keith et al. (2026), interpolation et optimisation pour le remap ALE FE",
             "https://arxiv.org/html/2611.05327v1",

@@ -21,11 +21,16 @@ from campaign import provenance
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--positive", action="store_true")
     args = parser.parse_args()
     meta = provenance()
     space = Space(GradedMesh(128, 0.95), 4)
     initial = space.project(profile_family(0.01, 1), degree=20)
     carrier = Carrier(space, n=256, builder="tiled")
+    if args.positive:
+        from residual_energy import ResidualEnergy
+
+        positive = ResidualEnergy(carrier)
     flow = TensorCellular(carrier, 0.25 / 256, grading=0.0)
     with args.output.open("w") as stream:
         for reanchor in (False, True):
@@ -61,6 +66,10 @@ def main():
                             ),
                         )
                     )
+                    if args.positive and (step % 16 == 0 or step == 255):
+                        history[-1]["positive_ambient_energy"] = float(
+                            positive.apply(state.anchor, -d)[0]
+                        )
                     if half == 0:
                         state.advect(flow.apply_carrier)
             record = dict(
@@ -69,6 +78,7 @@ def main():
                 strength=100,
                 steps=256,
                 reanchor=reanchor,
+                positive_quadrature=args.positive,
                 history=history,
             )
             stream.write(json.dumps(dict(result=record, provenance=meta)) + "\n")

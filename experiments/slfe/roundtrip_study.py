@@ -41,8 +41,17 @@ def evolve(
     gram_backend="einsum",
     carrier_builder="auto",
     krylov_seed="moment",
+    graph_degree=20,
 ):
-    if method not in ("reset", "projected", "chebyshev", "warm", "galerkin", "block"):
+    if method not in (
+        "reset",
+        "projected",
+        "chebyshev",
+        "warm",
+        "galerkin",
+        "block",
+        "graph",
+    ):
         raise ValueError("Unknown memory transfer")
     if check_every < 1:
         raise ValueError("A positive adaptation interval is required")
@@ -65,7 +74,12 @@ def evolve(
     start = time.perf_counter()
     edges, oriented = from_fe(space, initial, naux, energy_floor=energy_floor)
     carrier = Carrier(space, n=naux, edges=edges, builder=carrier_builder)
-    state = MemoryTransport(carrier, initial)
+    if method == "graph":
+        from graph_memory import GraphMemory
+
+        state = GraphMemory(carrier, initial, degree=graph_degree)
+    else:
+        state = MemoryTransport(carrier, initial)
     center = fe_center(space, initial)
     energy0 = state.energy()
     mass0 = space.mass(initial)
@@ -145,6 +159,8 @@ def evolve(
                     remap = lambda w: grid.remap(carrier, w)
                     if method == "reset":
                         loss = state.restart(target)
+                    elif method == "graph":
+                        loss = state.transfer(target, remap)["energy_loss"]
                     elif method == "warm":
                         diagnostic = state.project_memory_warm(
                             target, remap, iterations=8
@@ -212,6 +228,7 @@ def evolve(
         gram_backend=gram_backend,
         carrier_builder=carrier_builder,
         krylov_seed=krylov_seed,
+        graph_degree=graph_degree if method == "graph" else None,
         check_every=check_every,
         sample_order=sample_order,
         energy_floor=energy_floor,
