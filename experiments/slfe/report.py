@@ -60,7 +60,7 @@ def num(value):
 
 def tex_escape(text):
     table = {"\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$",
-             "#": r"\#", "_": r"\_", "{": r"\{", "}": r"\}", "~": r"\textasciitilde{}"}
+             "#": r"\#", "_": r"\_", "{": r"\{", "}": r"\}", "~": r"\textasciitilde{}", "^": r"\textasciicircum{}"}
     return "".join(table.get(c, c) for c in str(text))
 
 
