@@ -14,6 +14,8 @@ import subprocess
 from zoneinfo import ZoneInfo
 
 from report import Report, load, plt, apply_style, tex_escape
+from hamiltonian_report import append_hamiltonian
+from target_seed_report import append_target_seed
 
 
 def main():
@@ -29,6 +31,43 @@ def main():
     raw = {
         name: load(args.input, name)
         for name in (
+            "hamiltonian-compact-benchmark",
+            "hamiltonian-compact-benchmark-triple4",
+            "hamiltonian-compact-benchmark-suzuki4",
+            "hamiltonian-compact-benchmark-yoshida6",
+            "hamiltonian-broad-tail",
+            "hamiltonian-compact-matched-0",
+            "hamiltonian-compact-matched-1",
+            "hamiltonian-compact-matched-2",
+            "hamiltonian-compact-matched-3",
+            "hamiltonian-compact-matched-4",
+            "hamiltonian-reaction-fine",
+            "hamiltonian-reaction-fields",
+            "hamiltonian-dg-refinement",
+            "hamiltonian-reaction",
+            "hamiltonian-fields-final",
+            "hamiltonian-spatial-p1",
+            "hamiltonian-spatial-p2",
+            "hamiltonian-spatial-p4",
+            "hamiltonian-dg-central-fine",
+            "hamiltonian-dg-upwind-fine",
+            "hamiltonian-tuned-matched-0",
+            "hamiltonian-tuned-matched-1",
+            "hamiltonian-tuned-matched-2",
+            "hamiltonian-tuned-matched-3",
+            "hamiltonian-tuned-matched-4",
+            "unresolved-target-quadrature",
+            "unresolved-reaction",
+            "unresolved-target",
+            "hamiltonian-reaction-target",
+            "hamiltonian",
+            "hamiltonian-fine",
+            "hamiltonian-benchmark",
+            "hamiltonian-benchmark-triple4",
+            "hamiltonian-benchmark-suzuki4",
+            "hamiltonian-benchmark-yoshida6",
+            "hamiltonian-broad",
+            "hamiltonian-broad-fine",
             "matched",
             "adaptive-memory",
             "adaptive-projected",
@@ -122,6 +161,12 @@ def main():
         + stamp
         + " (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test."
     )
+    r.body.append(
+        "<p><a href='synthese_08h.html'>Lire la synthèse illustrée en quatre pages</a> · <a href='synthese_08h.pdf'>Synthèse PDF</a></p>"
+    )
+    r.tex.append(
+        r"\noindent\href{synthese_08h.pdf}{Synthèse illustrée en quatre pages.}\par"
+    )
     r.section("Résultat et portée")
     r.paragraph(
         "Trois résultats structurent désormais l'étude : une identité d'énergie relative autorise une borne d'erreur malgré les transferts non linéaires; les réactions appliquées au champ complet évitent une mémoire artificiellement persistante; une réalisation linéaire par réflexion orthogonale conserve une précision P4 proche de l'ordre cinq dans le test de translation à changements fréquents. Le rapport détaille aussi les cas où ces méthodes perdent en coût ou en précision."
@@ -141,6 +186,13 @@ def main():
     r.paragraph(
         "Les contre-tests exposent deux limites importantes : un transfert itératif tronqué peut dissiper même à support inchangé, et un contrôle de maillage tous les quatre pas modifie le problème d'adaptation lorsque le pas diminue. Une variante corrige le premier défaut au prix d'une non-linéarité; une ablation à intervalle physique fixé isole le second. La composition hamiltonienne par SVD perd la comparaison de coût et de précision contre Fourier/RK4 sur le vortex résolu. Ces résultats orientent la suite de la recherche."
     )
+    r.paragraph(
+        "L’extension la plus récente transporte des vitesses issues des moments de Fourier d’une fonction de courant FE, par cartes entières conservatives. Des compositions temporelles d’ordre supérieur sont comparées au DG/RK4 GPU sur le même maillage et la même vitesse. Une seconde étude raffine le filtrage d’une fonction de courant à spectre non limité. Les courbes en fin de rapport séparent vitesse filtrée, transport et coût; elles ne constituent pas une preuve générale pour toute vitesse FE."
+    )
+    if raw["unresolved-target"]:
+        r.paragraph(
+            "Le dernier changement algorithmique conserve le moment auxiliaire brut de la cible physique dans l’espace de compression. Cette direction donne une propriété de meilleure approximation : en arithmétique exacte et si elle est retenue, la compression n’est pas moins précise que la projection auxiliaire de la cible. Sur la réaction sous-résolue P1 grossière, l’erreur de l’observation FE passe de 0,00329 à 2,83e−11 avec deux directions au lieu de trois. Le solveur auxiliaire direct reste plus rapide sur ce problème sans physique FE supplémentaire; le rapport conserve cette comparaison et les limites du seuil de rang."
+        )
     if raw["reaction-moments"]:
         r.paragraph(
             "Le résultat nouveau de la fin de nuit concerne la physique de la mémoire : une contraction de l'énergie ne suffit pas à reproduire une réaction forte. Le prototype applique désormais la réaction spatiale au champ complet, puis conserve exactement ses moments FE et comprime sa composante cachée dans trois directions. Sur le cas de réaction forte testé, l'erreur relative passe de 32,7 pour un amortissement uniforme de la mémoire à 0,00240 pour ces moments complets, avec un plancher FE de 0,00237. C'est une correction de modèle démontrée sur ce test, à un coût supérieur; ce résultat ne constitue pas à lui seul une avancée bibliographique établie."
@@ -3144,6 +3196,115 @@ def main():
                 "Raffinement temporel et sensibilité au plancher, avec des intervalles physiques fixes entre contrôles de maillage. Le nombre de coefficients FE reste constant.",
             )
 
+    moving_matched = [
+        x["result"]
+        for name in (
+            "moving-reaction-refinement64",
+            "moving-reaction-refinement128",
+            "moving-reset-floor64",
+            "moving-reset-floor128",
+        )
+        for x in raw[name]
+        if x["result"]["strength"] == 100 and x["result"]["energy_floor"] == 0.01
+    ]
+    if moving_matched:
+        r.section("Support mobile : même moniteur avec et sans mémoire")
+        r.paragraph(
+            "Cette comparaison fixe le plancher relatif du moniteur à 0,01 et conserve les mêmes intervalles physiques de contrôle. Le champ FE reste P4, n = 128; la force de réaction vaut 100. Le moniteur est identique mais les géométries peuvent différer légèrement car elles dépendent de la solution calculée. Les temps incluent la préparation spécifique et les reconstructions de support, hors projection initiale et référence communes. Il s’agit de mesures uniques, non d’un benchmark entrelacé."
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 3.8), sharey=True)
+        for ax, naux in zip(axes, (64, 128)):
+            for reset, label in (
+                (False, "Moments complets"),
+                (True, "Reconstruction FE"),
+            ):
+                selected = sorted(
+                    [
+                        x
+                        for x in moving_matched
+                        if x["naux"] == naux and (x["method"] == "fe-reset") == reset
+                    ],
+                    key=lambda x: x["steps"],
+                )
+                ax.loglog(
+                    [x["complete_seconds"] for x in selected],
+                    [x["relative_l2"] for x in selected],
+                    "o--" if reset else "s-",
+                    label=label,
+                )
+                for x in selected:
+                    ax.annotate(
+                        str(x["steps"]),
+                        (x["complete_seconds"], x["relative_l2"]),
+                        xytext=(4, 4),
+                        textcoords="offset points",
+                        fontsize=7,
+                    )
+            ax.axhline(
+                moving_matched[0]["relative_fe_floor"],
+                color="#555555",
+                ls=":",
+                label="Projection FE",
+            )
+            ax.set(
+                xlabel="Coût complet spécifique (s)",
+                ylabel="Erreur relative L2",
+                title=f"n auxiliaire = {naux}",
+            )
+            ax.grid(True, which="both", alpha=0.18)
+        axes[0].legend(fontsize=8)
+        r.save_figure(
+            fig,
+            "night-moving-reset-matched",
+            "Même règle d’adaptation et même résolution FE. Les nombres indiquent les pas de temps. La reconstruction FE est moins coûteuse; le gain de précision de la mémoire doit être jugé sur cette comparaison cohérente.",
+        )
+        r.table(
+            [
+                "n auxiliaire",
+                "Pas",
+                "Mémoire : erreur",
+                "Reset : erreur",
+                "Mémoire : s",
+                "Reset : s",
+            ],
+            [
+                [
+                    n,
+                    steps,
+                    next(
+                        x["relative_l2"]
+                        for x in moving_matched
+                        if x["naux"] == n
+                        and x["steps"] == steps
+                        and x["method"] != "fe-reset"
+                    ),
+                    next(
+                        x["relative_l2"]
+                        for x in moving_matched
+                        if x["naux"] == n
+                        and x["steps"] == steps
+                        and x["method"] == "fe-reset"
+                    ),
+                    next(
+                        x["complete_seconds"]
+                        for x in moving_matched
+                        if x["naux"] == n
+                        and x["steps"] == steps
+                        and x["method"] != "fe-reset"
+                    ),
+                    next(
+                        x["complete_seconds"]
+                        for x in moving_matched
+                        if x["naux"] == n
+                        and x["steps"] == steps
+                        and x["method"] == "fe-reset"
+                    ),
+                ]
+                for n in (64, 128)
+                for steps in (128, 256, 512)
+            ],
+        )
+
     cubic = [
         x["result"]
         for name in ("cubic-reaction", "cubic-reaction-reset")
@@ -3373,7 +3534,7 @@ def main():
     if sharp:
         r.section("Une compression orthogonale plus poussée ne paie pas ici")
         r.paragraph(
-            "Le couplage par réflexion est réappliqué à T=2R(I+R*R)^(-1). Son injection a pour blocs 4R(I+A)(I+6A+A²)^(-1) et (I−A)²(I+6A+A²)^(-1), avec A=R*R. Le second bloc contient maintenant le carré du défaut de projection. La réflexion reste orthogonale en arithmétique exacte; le calcul CUDA factorise le dénominateur en deux opérateurs décalés, inversés par des polynômes de Chebyshev fixes. La fonction scalaire 2s/(1+s²) est classique dans les itérations de Newton inverse pour la décomposition polaire; l'expérience teste son intérêt pour ce couplage, sans lui attribuer une nouveauté algébrique."
+            "Le couplage par réflexion est réappliqué à T=2R(I+R*R)^(-1). Avec A=R*R, les deux blocs de son injection partagent le dénominateur I + 6A + A². Le second bloc contient maintenant le carré du défaut de projection. La réflexion reste orthogonale en arithmétique exacte; le calcul CUDA factorise le dénominateur en deux opérateurs décalés, inversés par des polynômes de Chebyshev fixes. La fonction scalaire 2s/(1+s²) est classique dans les itérations de Newton inverse pour la décomposition polaire; l'expérience teste son intérêt pour ce couplage, sans lui attribuer une nouveauté algébrique."
         )
         r.table(
             ["Résolution", "Couplage", "Erreur L2 max", "Borne", "Évolution (s)"],
@@ -3395,11 +3556,51 @@ def main():
         r.paragraph(
             "Sur ce pilote de translation P4 avec 63 changements de support, la seconde construction réduit l'erreur d'environ 2 % pour un coût environ trois fois supérieur. Les oracles matriciels GPU aux degrés FE 1, 2 et 4 vérifient la nouvelle réalisation : avec le polynôme principal de degré 48, l'écart d'état relatif reste inférieur à 4e-15. Réduire le défaut d'injection n'élimine donc pas les autres défauts de transport. Ce pilote ne justifie pas de retenir cette variante comme méthode plus efficace."
         )
+    append_hamiltonian(r, raw, args.input)
+    append_target_seed(r, raw, args.input)
+
     r.section("Contrôles et limites pour un article")
     r.paragraph(
         "La borne d'erreur pour des supports variables repose sur la conservation de l'observation et la décroissance de l'énergie lors du transfert, ainsi que sur la non-expansivité de l'évolution entre transferts. Les défauts locaux de transport restent dans la borne, notamment le commutateur entre projection et générateur. Ce résultat conditionnel ne fournit ni un ordre de convergence pour les noyaux actuels ni une garantie d'efficacité du contrôleur."
     )
     expected = {
+        "unresolved-target-quadrature": 20,
+        "unresolved-reaction": 78,
+        "unresolved-target": 30,
+        "hamiltonian-reaction-target": 4,
+        "hamiltonian-dg-central-fine": 3,
+        "hamiltonian-dg-upwind-fine": 3,
+        "hamiltonian-tuned-matched-0": 6,
+        "hamiltonian-tuned-matched-1": 6,
+        "hamiltonian-tuned-matched-2": 6,
+        "hamiltonian-tuned-matched-3": 6,
+        "hamiltonian-tuned-matched-4": 6,
+        "hamiltonian-spatial-p1": 12,
+        "hamiltonian-spatial-p2": 12,
+        "hamiltonian-spatial-p4": 12,
+        "hamiltonian-reaction": 18,
+        "hamiltonian-reaction-fine": 18,
+        "hamiltonian-reaction-fields": 3,
+        "hamiltonian-dg-refinement": 10,
+        "hamiltonian-fields-final": 2,
+        "hamiltonian-compact-benchmark": 28,
+        "hamiltonian-compact-benchmark-triple4": 20,
+        "hamiltonian-compact-benchmark-suzuki4": 20,
+        "hamiltonian-compact-benchmark-yoshida6": 20,
+        "hamiltonian-broad-tail": 16,
+        "hamiltonian-compact-matched-0": 6,
+        "hamiltonian-compact-matched-1": 6,
+        "hamiltonian-compact-matched-2": 6,
+        "hamiltonian-compact-matched-3": 6,
+        "hamiltonian-compact-matched-4": 6,
+        "hamiltonian": 36,
+        "hamiltonian-fine": 9,
+        "hamiltonian-benchmark": 28,
+        "hamiltonian-benchmark-triple4": 20,
+        "hamiltonian-benchmark-suzuki4": 20,
+        "hamiltonian-benchmark-yoshida6": 20,
+        "hamiltonian-broad": 20,
+        "hamiltonian-broad-fine": 8,
         "matched": 18,
         "adaptive-physics": 24,
         "adaptive-chebyshev": 12,
@@ -3513,6 +3714,9 @@ def main():
         "reduction-sanitizer",
         "graph-sanitizer",
         "residual-energy-sanitizer",
+        "hamiltonian-sanitizer",
+        "hamiltonian-composition-sanitizer",
+        "tensor-storage-sanitizer",
         "quadrature-moments-sanitizer",
         "quadrature-moments-race-sanitizer",
     ):
@@ -3539,6 +3743,22 @@ def main():
         "La piste d'article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d'énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture."
     )
     references = [
+        (
+            "Suzuki (1990), décompositions symétriques d’opérateurs exponentiels",
+            "https://doi.org/10.1016/0375-9601(90)90962-N",
+        ),
+        (
+            "Yoshida (1990), compositions symétriques d’ordre supérieur",
+            "https://doi.org/10.1016/0375-9601(90)90092-3",
+        ),
+        (
+            "Zanna (2015), décomposition en bases tensorielles des champs à divergence nulle",
+            "https://doi.org/10.1093/imanum/drt070",
+        ),
+        (
+            "Quispel et McLaren (2003), intégrateurs pour flots trigonométriques",
+            "https://www.sciencedirect.com/science/article/abs/pii/S0021999103000688",
+        ),
         (
             "Nakatsukasa et Higham (2012), stabilité des itérations pour la décomposition polaire",
             "https://doi.org/10.1137/110857544",
@@ -3643,6 +3863,7 @@ def main():
     tex = preamble + "\n".join(r.tex) + r"\end{document}"
     for char, replacement in {
         "κ": r"\ensuremath{\kappa}",
+        "α": r"\ensuremath{\alpha}",
         "γ": r"\ensuremath{\gamma}",
         "τ": r"\ensuremath{\tau}",
         "σ": r"\ensuremath{\sigma}",

@@ -35,6 +35,8 @@ def main():
     parser.add_argument("--sl-steps", nargs="+", type=int, default=[64, 256, 1024])
     parser.add_argument("--scales", nargs="+", type=float, default=[1, 2, 4, 8])
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--central-scales", nargs="+", type=float)
+    parser.add_argument("--upwind-scales", nargs="+", type=float)
     parser.add_argument(
         "--scheme",
         choices=("strang", "triple4", "suzuki4", "yoshida6"),
@@ -102,7 +104,14 @@ def main():
                 (method, scale)
                 for method in args.methods
                 if method.startswith("dg-")
-                for scale in args.scales
+                for scale in (
+                    (
+                        args.central_scales
+                        if method == "dg-central"
+                        else args.upwind_scales
+                    )
+                    or args.scales
+                )
             ]
             cases += [
                 (method, steps)

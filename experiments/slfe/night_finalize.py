@@ -96,6 +96,19 @@ def finalize(args):
         check=True,
         timeout=240,
     )
+    subprocess.run(
+        [
+            sys.executable,
+            str(HERE / "night_brief.py"),
+            "--input",
+            str(snapshot),
+            "--output",
+            str(report),
+        ],
+        cwd=ROOT,
+        check=True,
+        timeout=120,
+    )
     for name in ("restart_theory", "memory_paper_draft"):
         shutil.copy2(HERE / (name + ".tex"), report / (name + ".tex"))
         with (report / (name + "-build.log")).open("w") as log:

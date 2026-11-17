@@ -30,7 +30,7 @@ def main():
     parser.add_argument(
         "--methods",
         nargs="+",
-        choices=("full", "reset", "fe-only"),
+        choices=("full", "target", "reset", "fe-only"),
         default=["full", "reset", "fe-only"],
     )
     parser.add_argument("--iterations", type=int, default=2)
@@ -133,8 +133,14 @@ def main():
                         begin = time.perf_counter()
                         for _ in range(steps):
                             for half in (0, 1):
-                                if method == "full":
-                                    reaction.apply(state, iterations=args.iterations)
+                                if method in ("full", "target"):
+                                    reaction.apply(
+                                        state,
+                                        iterations=(
+                                            1 if method == "target" else args.iterations
+                                        ),
+                                        target_seed=method == "target",
+                                    )
                                 else:
                                     state.apply_physics(
                                         reaction.apply_fe,

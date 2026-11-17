@@ -26,8 +26,10 @@ error estimate containing local evolution defects without an additional
 term proportional to the number of support changes. Complete-state
 reaction moments provide a dissipative physics update; reacting only the
 visible finite element component can leave a substantial hidden residue.
-Shared compression spaces preserve linear relations between transported
-components. GPU experiments examine strong reaction, frequent remapping,
+Retaining the raw auxiliary target moment guarantees an approximation
+no worse than its auxiliary projection, provided the direction survives
+numerical rank truncation. Shared compression spaces preserve linear
+relations between transported components. GPU experiments examine strong reaction, frequent remapping,
 conditioning and complete computational cost. A rational orthogonal
 embedding is also tested as a linear alternative with a positive energy
 representation. The analysis is conditional on the transport defects;
@@ -147,6 +149,34 @@ arrays; the dense factorization acts only on the small Gram. The
 geometry-dependent cross-mass blocks are stored, rather than regenerated
 at every transport step. Their construction is charged to each support
 change in the complete timing comparisons.
+
+\subsection{Retaining the raw target moment}
+The available raw moment $m_f=P_Wf$ gives a stronger approximation
+property than using only the hidden moment $h_f=m_f-RP_Vf$ as a Krylov
+seed. The new option retains the incoming direction and $m_f$ in one
+shared space, requiring two rather than three directions per component.
+
+\begin{proposition}\label{prop:target-seed}
+If $m_f=P_Wf\in X$, then
+\[
+ \|f-\mathcal P_Xf\|\leq\|f-P_Wf\|.
+\]
+In particular, a target belonging to $W$ is reproduced exactly.
+\end{proposition}
+\begin{proof}
+Since $m_f=P_Vm_f+(I-P_V)m_f$, it belongs to
+$V+(I-P_V)X$. Orthogonal projection is at least as accurate as this
+particular element of its range.
+\end{proof}
+The same argument holds in the positive common-quadrature norm with
+$m_f=P_W^QF(q)$. The raw moment is already computed, so selecting this
+seed adds no weighted moment action. The incoming direction is still
+retained for unchanged targets. The proposition applies to the actually
+retained space: numerical Gram rank truncation can remove a necessary
+component and perturb the guarantee. Dense GPU controls and an unresolved
+reaction experiment below examine the resulting accuracy. This is an
+application of the best-approximation property, not a new abstract
+projection theorem.
 
 \section{Relative energy and an error bound with changing supports}
 The following identity requires less than pairwise non-expansivity.
@@ -335,6 +365,74 @@ above cannot simply be reused. The graph reflection is a classical
 rational orthogonal parametrization, closely related to Cayley
 coordinates \cite{cayley}; no linear-algebra novelty is claimed.
 
+
+\section{Conservative charts for filtered finite element velocities}
+On the two-dimensional torus, a finite element streamfunction supplies
+real Fourier moments. Collinear harmonics are grouped by a primitive
+integer direction $(k,l)$. Bezout's identity completes that direction
+to an integer matrix with determinant one, giving a periodic,
+area-preserving coordinate chart. Integer shears and quarter-turns
+realize the chart on a uniform tensor support. Quarter-turns permute
+coefficients exactly; shear projections are contractions. This is a
+finite spectral approximation of the supplied FE velocity, not an
+exact transport of arbitrary FE data. Trigonometric Hamiltonian
+splittings and tensor-basis divergence-free decompositions are
+established constructions \cite{quispel,zanna}.
+
+Let $C$ denote the discrete chart and $S(t)$ its transverse shear.
+Directly composing $C^*S(t)C$ would dissipate even at $t=0$. Instead,
+use the increment form
+\[
+ K(t)=I+C^*\bigl(S(t)-I\bigr)C.
+\]
+\begin{proposition}
+If $C$ and $S(t)$ are contractions, then $K(t)$ is a contraction.
+If $S(0)=I$, then $K(0)=I$. If both directions of $C$ and $S(t)$
+fix constants, then $K(t)$ preserves constants and their mass moment.
+\end{proposition}
+\begin{proof}
+Set $D_C=(I-C^*C)^{1/2}$ and $L=(C,D_C)^T$. Then $L^*L=I$ and
+$K=L^*\operatorname{diag}(S,I)L$, proving contraction. The remaining
+claims follow directly from the increment formula and its adjoint.
+\end{proof}
+The square root is used only in the proof. The code applies two chart
+actions and one shear. Positive and negative duration shears are both
+orthogonal projections of unitary translations. Thus any composition
+of these stages remains contractive, including classical signed
+fourth- and sixth-order continuous compositions \cite{suzuki,yoshida}.
+This fact does not preserve their formal order after spatial projection.
+
+\begin{proposition}[One-sided generator of signed stages]
+Suppose $S(0)=I$, $S(-t)=S(t)^*$ and, for $t\downarrow0$,
+$S(t)=I+t(A-D)+o(t)$, with $A^*=-A$ and $D^*=D\geq0$.
+For real weights with $\sum_jw_j=1$, the composition satisfies
+\[
+ \prod_jS(w_jt)=I+t\bigl(A-\alpha D\bigr)+o(t),
+ \qquad \alpha=\sum_j|w_j|.
+\]
+\end{proposition}
+\begin{proof}
+Taking adjoints gives $S(-t)=I+t(-A-D)+o(t)$. Hence each signed
+stage contributes $w_jA-|w_j|D$ to the derivative. At the identity,
+the derivative of the product is the sum of these contributions.
+\end{proof}
+For projected DG translations on a fixed partition, the one-sided
+derivative exists and its dissipative part comes from cell jumps.
+Contraction implies $D\geq0$. The same adjoint relation holds for
+$K(t)$ and a palindromic product of charts. Negative weights therefore
+amplify the jump dissipation instead of canceling it. Observed high
+orders for smooth data can hold before the spatial plateau, while
+uniform temporal order at fixed discrete space does not follow.
+The dense GPU generator diagnostic in the report tests this expansion
+independently for degrees one, two and four.
+
+On a uniform auxiliary partition, the overlap blocks are invariant
+under longitudinal cell translations. The implementation stores one
+block per transverse Gauss row and reuses it across longitudinal
+cells. Coordinate maps are also shared by signed stages. This reduces
+storage without changing the quadrature or mathematical operator.
+The full nonuniform representation remains an independent control.
+
 \section{GPU evidence and limitations}
 All numerical assembly, solves, trajectory references and reductions
 use double precision CUDA/CuPy on an RTX 5090. The CPU orchestrates
@@ -449,6 +547,9 @@ On a prescribed identical sequence of 63 supports, graph degrees 16
 and 20 differ by at most $4.1\,10^{-11}$ in component FE norm.
 This separates inverse accuracy from adaptive mesh feedback.
 
+\IfFileExists{hamiltonian_evidence.tex}{\input{hamiltonian_evidence.tex}}{}
+\IfFileExists{target_seed_evidence.tex}{\input{target_seed_evidence.tex}}{}
+
 \paragraph{What remains necessary for an article.}
 The principal unresolved issues are a consistency estimate for general
 FE velocities, a coupled PDE example where persistent memory is
@@ -488,6 +589,17 @@ Remap for ALE Hydrodynamics via Direct Interpolation and Constraint Optimization
 \bibitem{gaul} A. Gaul, M. Gutknecht, J. Liesen and R. Nabben (2013).
 A framework for deflated and augmented Krylov subspace methods.
 \href{https://people.math.ethz.ch/~mhg/pub/defl-GGLN1-SIMAX.pdf}{SIAM Journal on Matrix Analysis and Applications}.
+\bibitem{quispel} G. R. W. Quispel and D. I. McLaren (2003).
+Explicit volume-preserving and symplectic integrators for trigonometric
+polynomial flows. \href{https://www.sciencedirect.com/science/article/abs/pii/S0021999103000688}{Journal of Computational Physics 186, 308--316}.
+\bibitem{zanna} A. Zanna (2015). Explicit volume-preserving splitting
+methods for divergence-free ODEs by tensor-product basis decompositions.
+\href{https://doi.org/10.1093/imanum/drt070}{IMA Journal of Numerical Analysis 35, 89--106}.
+\bibitem{suzuki} M. Suzuki (1990). Fractal decomposition of exponential
+operators with applications to many-body theories and Monte Carlo simulations.
+\href{https://doi.org/10.1016/0375-9601(90)90962-N}{Physics Letters A 146, 319--323}.
+\bibitem{yoshida} H. Yoshida (1990). Construction of higher order symplectic
+integrators. \href{https://doi.org/10.1016/0375-9601(90)90092-3}{Physics Letters A 150, 262--268}.
 \bibitem{cayley} E. Mac\'ias-Virg\'os, M. J. Pereira-S\'aez and D. Tanr\'e (2018).
 Cayley transform on Stiefel manifolds.
 \href{https://doi.org/10.1016/j.geomphys.2017.08.011}{Journal of Geometry and Physics 123, 53--60}.

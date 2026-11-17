@@ -60,6 +60,7 @@ def main():
     )
     parser.add_argument("--velocity-source", choices=("fe", "analytic"), default="fe")
     parser.add_argument("--fields", action="store_true")
+    parser.add_argument("--degree", type=int, choices=(1, 2, 4), default=4)
     parser.add_argument(
         "--scheme",
         choices=("strang", "triple4", "suzuki4", "yoshida6"),
@@ -106,7 +107,7 @@ def main():
     maximum_speed = float(cp.max(cp.abs(exact_velocity)))
     with args.output.open("w") as output:
         for n in args.sizes:
-            space = Space(Mesh(n, jitter=0.18, seed=421), 4)
+            space = Space(Mesh(n, jitter=0.18, seed=421), args.degree)
             initial = space.project(profile, degree=20)
             coefficients = (
                 streamfunction_modes(
@@ -173,7 +174,7 @@ def main():
                     result = dict(
                         nfe=n,
                         naux=2 * n,
-                        degree=4,
+                        degree=args.degree,
                         steps=steps,
                         end=duration,
                         method=method,
@@ -238,6 +239,8 @@ def render_fields(output, space, exact, values, n, steps, scheme):
     )
     error = cp.abs(sampled - reference[..., None])
     name = f"night-hamiltonian-fields-{scheme}-{n}-{steps}"
+    if space.degree != 4:
+        name += f"-p{space.degree}"
     cp.savez_compressed(
         str(output / (name + "-data.npz")),
         reference=reference,
@@ -260,6 +263,7 @@ def render_fields(output, space, exact, values, n, steps, scheme):
         "reset": "Reconstruction FE",
         "memory": "Mémoire physique",
         "full": "Moments complets",
+        "target": "Moment cible retenu",
         "fe-only": "Réaction FE seule",
         "graph": "Réflexion orthogonale",
     }

@@ -93,7 +93,22 @@ class ReactionMoments:
         result = cp.einsum("xij,yxfkj->yxfki", self.auxiliary[power], reshaped)
         return cp.ascontiguousarray(result.reshape(value.shape))
 
-    def apply(self, state, iterations=2, shared=True, krylov_seed="moment"):
+    def apply(
+        self, state, iterations=2, shared=True, krylov_seed="moment", target_seed=False
+    ):
+        """Compress physical moments, optionally retaining their raw W moment.
+
+        With target_seed, the retained ambient space contains P_W(f), so
+        the projection error cannot exceed ||f-P_W(f)||. Incoming memory
+        is also retained. This option requires at least two directions and
+        applies only to full targets, not additive increment updates.
+        """
+        if target_seed and (
+            iterations < 1 or self.increment or krylov_seed != "moment"
+        ):
+            raise ValueError(
+                "Target seeding requires a full target and at least two moment directions"
+            )
         if state.coupling is not self.coupling:
             raise ValueError("The weighted reaction belongs to a fixed support")
         c = self.coupling
@@ -116,7 +131,7 @@ class ReactionMoments:
             target_energy += cp.einsum(
                 "cfi,ci,cfi->f", d, mass, self.apply_auxiliary(d, 2)
             )
-        search_seed = None
+        search_seed = moment if target_seed else None
         if self.reanchor:
             search_seed = hidden
             if target_energy is not None:

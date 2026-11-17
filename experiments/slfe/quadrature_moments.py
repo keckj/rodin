@@ -110,7 +110,10 @@ class QuadratureMoments:
             None if reference is None else totals[:, 2],
         )
 
-    def apply(self, state, iterations=2, shared=True):
+    def apply(self, state, iterations=2, shared=True, target_seed=False):
+        """Project nonlinear moments; a raw target seed retains P_W^Q F(q)."""
+        if target_seed and iterations < 1:
+            raise ValueError("Target seeding requires at least two moment directions")
         c = self.coupling
         if state.coupling is not c:
             raise ValueError("The common quadrature belongs to a fixed support")
@@ -125,6 +128,7 @@ class QuadratureMoments:
             iterations=iterations,
             shared=shared,
             gram_backend="reduction",
+            search_seed=moment if target_seed else None,
         )
         result.update(positive_input_energy=before, positive_target_energy=target)
         return result
