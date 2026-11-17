@@ -1,0 +1,56 @@
+[
+  {
+    "name": "hamiltonian-triple4",
+    "scheme": "triple4",
+    "status": "completed",
+    "started": "2026-11-17T06:44:06.610988+01:00",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_study.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian-triple4.jsonl",
+      "--sizes",
+      "64",
+      "--steps",
+      "2",
+      "4",
+      "8",
+      "16",
+      "32",
+      "--methods",
+      "memory",
+      "--scheme",
+      "triple4"
+    ],
+    "returncode": 0,
+    "finished": "2026-11-17T06:44:11.588018+01:00"
+  },
+  {
+    "name": "hamiltonian-suzuki4",
+    "scheme": "suzuki4",
+    "status": "completed",
+    "started": "2026-11-17T06:44:11.588453+01:00",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_study.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian-suzuki4.jsonl",
+      "--sizes",
+      "64",
+      "--steps",
+      "2",
+      "4",
+      "8",
+      "16",
+      "32",
+      "--methods",
+      "memory",
+      "--scheme",
+      "suzuki4"
+    ],
+    "returncode": 0,
+    "finished": "2026-11-17T06:44:16.911935+01:00"
+  }
+]

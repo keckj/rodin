@@ -1,0 +1,66 @@
+[
+  {
+    "name": "hamiltonian",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_study.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian.jsonl",
+      "--sizes",
+      "16",
+      "32",
+      "64",
+      "--steps",
+      "4",
+      "16",
+      "64",
+      "256",
+      "--fields"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T06:33:27.220691+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T06:33:47.657125+01:00"
+  },
+  {
+    "name": "hamiltonian-fine",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_study.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian-fine.jsonl",
+      "--sizes",
+      "128",
+      "--steps",
+      "16",
+      "64",
+      "256",
+      "--fields"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T06:33:47.657513+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T06:34:18.741660+01:00"
+  },
+  {
+    "name": "hamiltonian-sanitizer",
+    "command": [
+      "/usr/local/cuda/bin/compute-sanitizer",
+      "--tool",
+      "memcheck",
+      "--error-exitcode",
+      "71",
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_validation.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian-sanitizer.json"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T06:34:18.742105+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T06:34:33.137094+01:00"
+  }
+]

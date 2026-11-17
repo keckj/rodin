@@ -1,0 +1,155 @@
+[
+  {
+    "name": "hamiltonian-dg-central-fine",
+    "command": [
+      "/usr/bin/python3",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_benchmark.py",
+      "--sizes",
+      "128",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian-dg-central-fine.jsonl",
+      "--methods",
+      "dg-central",
+      "--scales",
+      "5.25",
+      "5.5",
+      "5.75"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "hamiltonian-dg-upwind-fine",
+    "command": [
+      "/usr/bin/python3",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_benchmark.py",
+      "--sizes",
+      "128",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian-dg-upwind-fine.jsonl",
+      "--methods",
+      "dg-upwind",
+      "--scales",
+      "7.25",
+      "7.5",
+      "7.75"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "hamiltonian-tuned-matched-0",
+    "command": [
+      "/usr/bin/python3",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_benchmark.py",
+      "--sizes",
+      "128",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian-tuned-matched-0.jsonl",
+      "--sl-steps",
+      "4",
+      "8",
+      "--central-scales",
+      "5.0",
+      "--upwind-scales",
+      "7.25",
+      "--scheme",
+      "yoshida6",
+      "--repeats",
+      "1"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "hamiltonian-tuned-matched-1",
+    "command": [
+      "/usr/bin/python3",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_benchmark.py",
+      "--sizes",
+      "128",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian-tuned-matched-1.jsonl",
+      "--sl-steps",
+      "4",
+      "8",
+      "--central-scales",
+      "5.0",
+      "--upwind-scales",
+      "7.25",
+      "--scheme",
+      "yoshida6",
+      "--repeats",
+      "1",
+      "--reverse-case-order"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "hamiltonian-tuned-matched-2",
+    "command": [
+      "/usr/bin/python3",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_benchmark.py",
+      "--sizes",
+      "128",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian-tuned-matched-2.jsonl",
+      "--sl-steps",
+      "4",
+      "8",
+      "--central-scales",
+      "5.0",
+      "--upwind-scales",
+      "7.25",
+      "--scheme",
+      "yoshida6",
+      "--repeats",
+      "1"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "hamiltonian-tuned-matched-3",
+    "command": [
+      "/usr/bin/python3",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_benchmark.py",
+      "--sizes",
+      "128",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian-tuned-matched-3.jsonl",
+      "--sl-steps",
+      "4",
+      "8",
+      "--central-scales",
+      "5.0",
+      "--upwind-scales",
+      "7.25",
+      "--scheme",
+      "yoshida6",
+      "--repeats",
+      "1",
+      "--reverse-case-order"
+    ],
+    "returncode": 0
+  },
+  {
+    "name": "hamiltonian-tuned-matched-4",
+    "command": [
+      "/usr/bin/python3",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/hamiltonian_benchmark.py",
+      "--sizes",
+      "128",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/hamiltonian-tuned-matched-4.jsonl",
+      "--sl-steps",
+      "4",
+      "8",
+      "--central-scales",
+      "5.0",
+      "--upwind-scales",
+      "7.25",
+      "--scheme",
+      "yoshida6",
+      "--repeats",
+      "1"
+    ],
+    "returncode": 0
+  }
+]

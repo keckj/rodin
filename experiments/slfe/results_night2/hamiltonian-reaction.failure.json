@@ -1,0 +1,9 @@
+{
+  "status": "numerics_complete_at_n64_plot_failed",
+  "completed_records": 18,
+  "error": "Field plot did not define the full-reaction label. Added method labels and a dynamic error scale; resumed n128 separately.",
+  "continuation": [
+    "hamiltonian-reaction-fine.jsonl",
+    "hamiltonian-reaction-fields.jsonl"
+  ]
+}

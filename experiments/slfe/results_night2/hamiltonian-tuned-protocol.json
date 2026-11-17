@@ -1,0 +1,10 @@
+{
+  "selection": "Largest tested step scale passing the full-duration random-energy probe, separately for each flux; empirical, not a stability theorem.",
+  "chosen_scales": {
+    "dg-central": 5.0,
+    "dg-upwind": 7.25
+  },
+  "random_seed": 631,
+  "repetitions": 5,
+  "order": "Forward on even blocks, reversed on odd blocks; one timed trajectory per case and block."
+}

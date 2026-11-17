@@ -1,0 +1,78 @@
+{
+  "matched": [
+    {
+      "method": "dg-central",
+      "steps": 310,
+      "repetitions": 5,
+      "median_seconds": 0.28964743400138104,
+      "minimum_seconds": 0.27482446700014407,
+      "maximum_seconds": 0.3207491060020402,
+      "relative_error": 7.029150022546374e-08
+    },
+    {
+      "method": "dg-upwind",
+      "steps": 303,
+      "repetitions": 5,
+      "median_seconds": 0.26200051400155644,
+      "minimum_seconds": 0.260128428999451,
+      "maximum_seconds": 0.2624388160002127,
+      "relative_error": 3.747871955339665e-08
+    },
+    {
+      "method": "memory",
+      "steps": 4,
+      "repetitions": 5,
+      "median_seconds": 0.10461775500152726,
+      "minimum_seconds": 0.10440714300057152,
+      "maximum_seconds": 0.10485275199971511,
+      "relative_error": 4.7290473672056677e-08
+    },
+    {
+      "method": "memory",
+      "steps": 8,
+      "repetitions": 5,
+      "median_seconds": 0.2086475750002137,
+      "minimum_seconds": 0.20802070500212722,
+      "maximum_seconds": 0.21033022000119672,
+      "relative_error": 2.058434574419865e-08
+    },
+    {
+      "method": "reset",
+      "steps": 4,
+      "repetitions": 5,
+      "median_seconds": 0.10688660200321465,
+      "minimum_seconds": 0.10651304700149922,
+      "maximum_seconds": 0.10715277599956607,
+      "relative_error": 4.743315540118776e-08
+    },
+    {
+      "method": "reset",
+      "steps": 8,
+      "repetitions": 5,
+      "median_seconds": 0.2123941259997082,
+      "minimum_seconds": 0.21177433200136875,
+      "maximum_seconds": 0.21537676399748307,
+      "relative_error": 2.1668014724494134e-08
+    }
+  ],
+  "orders": [
+    [
+      "Composition 4 (3 stages)",
+      0.0005028028589516779,
+      3.197650270230299e-05,
+      3.974908789230399
+    ],
+    [
+      "Composition 4 (5 stages)",
+      2.3704637154463354e-05,
+      1.4196338048638996e-06,
+      4.061578570942094
+    ],
+    [
+      "Yoshida 6 (7 stages)",
+      2.7277467083485047e-06,
+      4.729047366651839e-08,
+      5.850016283290043
+    ]
+  ]
+}

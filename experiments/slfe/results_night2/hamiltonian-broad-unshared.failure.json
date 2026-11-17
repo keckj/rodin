@@ -1,0 +1,8 @@
+{
+  "status": "failed",
+  "reason": "CUDA out of memory during K=6 coordinate-map assembly",
+  "allocated_bytes": 31589199872,
+  "completed_records": 16,
+  "log": "hamiltonian-broad.log",
+  "resolution": "Share coordinate maps between signed stages and translation-invariant overlap blocks between longitudinal cells. Revalidate and rerun."
+}
