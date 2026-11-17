@@ -5,7 +5,7 @@
 \setlength{\emergencystretch}{3em}
 \setlength{\parskip}{5pt}\setlength{\parindent}{0pt}
 \begin{document}
-{\Large\bfseries SLFE : synthèse de recherche}\hfill 17/11/2026, 07:40 CET\par
+{\Large\bfseries SLFE : synthèse de recherche}\hfill 17/11/2026, 07:45 CET\par
 \section{Une piste construite, une revendication à établir}
 Le travail a produit un couplage FE avec mémoire, des preuves conditionnelles d’énergie et d’erreur, et des prototypes CUDA vérifiés. Le choix du moment cible améliore fortement la compression d’une physique sous-résolue. L’extension du transport utilise une vitesse obtenue d’une fonction de courant FE par des cartes conservatives et des compositions temporelles d’ordre supérieur. Une avancée algorithmique publiable reste à démontrer face aux méthodes les plus proches; aucun résultat ne permet encore de qualifier l’ensemble de révolutionnaire.
 
@@ -61,7 +61,7 @@ Avec 220 vecteurs d’onde retenus, huit pas et n FE = 128, l’erreur relative 
 
 La piste défendable pour un article est la compatibilité entre mémoire physique, observation FE, compression dépendant de l’état et physique dissipative. Les briques de projection, de sous-échelles, de cisaillement et de composition ont des antécédents : les preuves seules n’établissent pas la nouveauté bibliographique.
 
-Les prochaines expériences décisives doivent établir un bénéfice à précision et coût comparables dans un problème couplé où la mémoire est nécessaire, contrôler les défauts pour des vitesses FE générales, puis comparer avec les remaps et méthodes de sous-échelles GPU les plus proches. Le prototype périodique 2D ne couvre encore ni frontières physiques, ni MPI, ni intégration de production dans Rodin.
+La sélection numérique de rang doit d’abord protéger le moment cible : un diagnostic a identifié sa perte au deuxième pas du cas P4 presque dépendant. Les prochaines expériences décisives doivent établir un bénéfice à précision et coût comparables dans un problème couplé où la mémoire est nécessaire, contrôler les défauts pour des vitesses FE générales, puis comparer avec les remaps et méthodes de sous-échelles GPU les plus proches. Le prototype périodique 2D ne couvre encore ni frontières physiques, ni MPI, ni intégration de production dans Rodin.
 
 Limite établie : les sous-pas négatifs restent contractants mais amplifient la dissipation des projections à maillage fixé. Les ordres quatre et six mesurés avant le plateau spatial ne doivent pas être annoncés comme un théorème d’ordre uniforme.
 \end{document}

@@ -4,9 +4,9 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : supports mobiles\\et transfert de mémoire}
-\author{Recherche GPU sur le fork keckj/rodin}\date{17/11/2026 à 07:40}
+\author{Recherche GPU sur le fork keckj/rodin}\date{17/11/2026 à 07:45}
 \begin{document}\maketitle
-Résultats disponibles le 17/11/2026 à 07:40 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test.
+Résultats disponibles le 17/11/2026 à 07:45 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test.
 
 \noindent\href{synthese_08h.pdf}{Synthèse illustrée en quatre pages.}\par
 \section{Résultat et portée}
@@ -1019,6 +1019,18 @@ Quinze contrôles GPU indépendants vérifient la conservation des observations,
 
 La propriété est celle d’une projection sur un espace enrichi qui contient une approximation connue de sa cible. Elle ne constitue pas à elle seule une nouveauté bibliographique. Sa conséquence algorithmique concrète est de choisir une direction disponible qui assure cette propriété, plutôt que d’espérer la récupérer par quelques puissances de R R*. Le cas P4, n = 8 atteint seulement environ 2e-8 avec cette réalisation : le conditionnement et la troncature de Gram restent à contrôler lorsque la cible est presque dans V.
 
+Le diagnostic instrumenté P4, n = 8 isole cette limite. Au deuxième pas, une valeur propre de Gram voisine de 3,1e-13 passe sous le seuil 1e-12 : le rang conservé devient un. Une projection indépendante utilisant exactement les mêmes directions ne reproduit alors plus leur moment cible, avec une erreur physique relative de 1,24e-7. L’observation FE reste préservée à ce pas, mais l’erreur apparaît dans les étapes suivantes. Le problème de rang est donc mesuré, et la garantie de meilleure approximation reste conditionnelle à la rétention effective du moment. Ces calculs instrumentés ne figurent pas dans les chronométrages.
+
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Pas & Rang & Petite valeur propre & Défaut cible W & Erreur observation\\\midrule
+1 & 2 & 2.86e-12 & 2.197e-11 & 1.134e-14\\
+2 & 1 & 3.104e-13 & 1.24e-07 & 5.601e-12\\
+3 & 2 & 2.267e-12 & 2.321e-10 & 6.262e-09\\
+4 & 2 & 8.995e-12 & 1.234e-11 & 1.132e-08\\
+16 & 2 & 5.288e-10 & 1.788e-12 & 2.118e-08\\
+32 & 2 & 7.358e-09 & 1.254e-12 & 1.882e-08\\
+64 & 2 & 3.183e-08 & 1.536e-12 & 2.277e-08\\
+\bottomrule\end{tabular}\end{center}
 Doubler la subdivision de la quadrature pondérée modifie l’erreur relative d’observation d’au plus 2.71e-10; pour les trajectoires de 64 pas, l’écart maximal vaut 8.72e-11. Le plus grand écart concerne un unique grand pas de réaction P4 sur le maillage le plus grossier.
 
 \section{Contrôles et limites pour un article}
@@ -1237,5 +1249,7 @@ La piste d'article est le couplage FE avec mémoire sur supports variables, acco
 \noindent\href{https://cseweb.ucsd.edu/~ravir/sinasiga.pdf}{Nabizadeh et al. (2024), CO-FLIP et remise à zéro des cartes de flot}\par
 \noindent\href{https://arxiv.org/abs/2212.03036}{Einkemmer et Moriggl, SL-DG sur GPU}\par
 \section{Reproduction}
+Les dernières campagnes utilisent hamiltonian\_study.py pour les ordres, hamiltonian\_benchmark.py et hamiltonian\_tuned\_campaign.py pour les comparaisons capturées, broad\_hamiltonian\_study.py pour le filtrage spectral, hamiltonian\_reaction\_study.py pour la physique intermédiaire et unresolved\_reaction\_study.py pour la fermeture sous-résolue. target\_seed\_validation.py vérifie le nouveau choix de direction; target\_seed\_rank\_diagnostic.py mesure sa limite numérique. Les paramètres de lancement et empreintes des sources accompagnent les données.
+
 Les sources sont dans experiments/slfe : matched\_benchmark.py, adaptive\_study.py, moving\_study.py, refinement\_study.py, nested\_validation.py et ambient\_validation.py. Les fichiers results\_night2 contiennent les paramètres, erreurs, historiques et empreintes du code. night\_fields.py reproduit les champs; night\_report.py reconstruit ce rapport sans simulation; restart\_theory.tex fournit les hypothèses et preuves. Publication exclusivement sur la branche SLFE du fork keckj/rodin.
 \end{document}
