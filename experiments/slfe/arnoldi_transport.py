@@ -6,9 +6,21 @@ mode is retained explicitly. The projected exponential uses CuPy dense algebra.
 The endpoint residual is an indicator, not a certified integrated error bound.
 """
 
+import math
+
 from cupyx.scipy.linalg import expm
 
 from gpu import cp
+
+
+def matrix_exponential(matrix):
+    """Pre-scale to avoid overflow in CuPy's intermediate trace shifting."""
+    norm = float(cp.linalg.norm(matrix, ord=1))
+    scaling = max(0, math.ceil(math.log2(max(norm, 1.0))))
+    result = expm(matrix / 2**scaling)
+    for _ in range(scaling):
+        result = result @ result
+    return result, scaling
 
 
 class ArnoldiTransport:
@@ -63,7 +75,14 @@ class ArnoldiTransport:
                     used = j + 1
                     break
                 basis[:, j + 1] = vector / beta
-            exponential = expm(duration * hessenberg[:used, :used])[:, 0]
+            reduced = duration * hessenberg[:used, :used]
+            # CuPy 13.6 subtracts the mean trace before Padé evaluation.
+            # For a very dissipative matrix the shifted exponential can
+            # overflow before multiplication by exp(mean_trace), even when
+            # the desired exponential is bounded. Pre-scaling prevents this
+            # intermediate overflow; the final squarings remain on CUDA.
+            exponential_matrix, scaling = matrix_exponential(reduced)
+            exponential = exponential_matrix[:, 0]
             updated = mean * self.unit + norm * (basis[:, :used] @ exponential)
             result[:, field : field + 1] = (
                 updated.reshape(self.space.mesh.cells, 1, self.space.nb)
@@ -73,6 +92,7 @@ class ArnoldiTransport:
                 dict(
                     dimension=used,
                     residual_indicator=float(cp.abs(norm * beta * exponential[-1])),
+                    exponential_scaling=scaling,
                 )
             )
         return result

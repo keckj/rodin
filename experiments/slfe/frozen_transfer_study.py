@@ -25,16 +25,27 @@ from memory_transport import MemoryTransport
 from campaign import provenance
 
 
-def transfer(state, target, cross, method):
+def transfer(state, target, cross, method, gram_backend="einsum"):
     trial = copy(state)
     if method == "reset":
         loss = trial.restart(target)
         diagnostic = dict(energy_loss=loss, ambient_change_squared=loss)
     elif method == "warm":
         diagnostic = trial.project_memory_warm(target, cross, iterations=8)
+    elif method.startswith("block"):
+        diagnostic = trial.project_memory_galerkin(
+            target,
+            cross,
+            iterations=int(method.removeprefix("block")),
+            shared=True,
+            gram_backend=gram_backend,
+        )
     elif method.startswith("galerkin"):
         diagnostic = trial.project_memory_galerkin(
-            target, cross, iterations=int(method.removeprefix("galerkin"))
+            target,
+            cross,
+            iterations=int(method.removeprefix("galerkin")),
+            gram_backend=gram_backend,
         )
     else:
         diagnostic = {}
@@ -51,16 +62,25 @@ def transfer(state, target, cross, method):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--methods", nargs="+")
+    parser.add_argument(
+        "--gram-backend", choices=("einsum", "reduction"), default="einsum"
+    )
     args = parser.parse_args()
+    meta = provenance()
     methods = (
-        "reset",
-        "cold",
-        "chebyshev",
-        "warm",
-        "galerkin0",
-        "galerkin1",
-        "galerkin2",
-        "galerkin4",
+        tuple(args.methods)
+        if args.methods
+        else (
+            "reset",
+            "cold",
+            "chebyshev",
+            "warm",
+            "galerkin0",
+            "galerkin1",
+            "galerkin2",
+            "galerkin4",
+        )
     )
     profile = profile_family(0.01, 4, spread=0.15)
     space = Space(GradedMesh(128, 0.95), 4)
@@ -116,13 +136,23 @@ def main():
             common_rebuild += time.perf_counter() - start
             for method in order:
                 # Warm allocations, then repeat from the exact same input state.
-                transfer(states[method], target, cross.apply_carrier, method)
+                transfer(
+                    states[method],
+                    target,
+                    cross.apply_carrier,
+                    method,
+                    args.gram_backend,
+                )
                 measurements = []
                 for _ in range(3):
                     cp.cuda.Stream.null.synchronize()
                     start = time.perf_counter()
                     result, diagnostic = transfer(
-                        states[method], target, cross.apply_carrier, method
+                        states[method],
+                        target,
+                        cross.apply_carrier,
+                        method,
+                        args.gram_backend,
                     )
                     cp.cuda.Stream.null.synchronize()
                     measurements.append(time.perf_counter() - start)
@@ -150,7 +180,6 @@ def main():
                 print(
                     json.dumps(dict(completed_checks=32 * leg + check + 1)), flush=True
                 )
-    meta = provenance()
     floor = space.errors(initial, profile, 0, degree=20, subdivisions=2)["l2"]
     with args.output.open("w") as stream:
         for method in methods:
@@ -159,6 +188,7 @@ def main():
             )
             result = dict(
                 method=method,
+                gram_backend=args.gram_backend,
                 nfe=128,
                 naux=64,
                 fields=4,

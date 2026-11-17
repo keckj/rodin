@@ -378,6 +378,76 @@ Gaul, Gutknecht, Liesen et Nabben (2013),
 L'intérêt à examiner porte ici sur sa réalisation dans la mémoire
 orthogonale au champ FE, et non sur une nouvelle méthode d'algèbre linéaire.
 
+\subsection{Un espace partagé entre les champs}
+Pour un système de $s$ champs, des projections calculées indépendamment
+ne commutent pas en général avec un changement de base des composantes.
+Cette difficulté apparaît lorsque le petit espace augmenté dépend de
+chaque état scalaire. Une variante forme une unique famille $X$ en
+réunissant les directions $Cd_{0,f},h_f,R_1R_1^*h_f,\ldots$ de tous
+les champs $f=1,\ldots,s$. Chaque état est projeté sur le même espace
+$V\oplus\operatorname{im}(HX)$, avec une matrice de Gram commune
+et $s$ seconds membres.
+
+Soient $\mathcal E_{fg}=\langle q_f,q_g\rangle$ et
+$r_f=q_f-q_f^+$. L'orthogonalité de cette projection commune donne
+\[
+ \mathcal E^- - \mathcal E^+
+   =\bigl(\langle r_f,r_g\rangle\bigr)_{f,g=1}^s\succeq0.
+\]
+La perte est donc positive pour toute combinaison linéaire des champs,
+et pas seulement pour les énergies individuelles. Cet espace contient
+chacun des petits espaces scalaires, d'où une énergie retenue au moins
+aussi grande pour chaque champ à entrée et géométrie fixées.
+
+Si les composantes sont multipliées par une matrice orthogonale $Q$,
+la famille de directions est multipliée à droite par des blocs $Q$;
+son image ambiante reste identique. La sortie est donc multipliée par
+le même $Q$. La normalisation utilise un scalaire commun à chaque
+bloc de directions, ce qui préserve cette covariance, y compris
+le critère spectral de rang en arithmétique exacte. Le produit scalaire
+entre composantes est fixé par les unités et pondérations retenues.
+La famille demeure dépendante de l'ensemble des états; cette covariance
+ne démontre pas une non-expansivité entre deux ensembles différents.
+La construction utilise l'algèbre classique des projections par blocs.
+
+\subsection{Énergie et stabilité entre deux états}
+La distinction précédente admet un contre-exemple explicite, y compris
+pour la variante à trois directions. Dans $\mathbb R^6$, soient
+$V=\operatorname{span}(e_1,e_2,e_3)$,
+$W_0=V^\perp$ et
+\[
+ W_1=\operatorname{span}\{\sqrt{1-\lambda_i}\,e_i
+              +\sqrt{\lambda_i}\,e_{i+3}:i=1,2,3\},
+ \qquad (\lambda_1,\lambda_2,\lambda_3)=(0{,}01,0{,}1,1).
+\]
+Les trois valeurs propres de $K$ sont les $\lambda_i$. Pour un état
+purement caché $q\in W_0$, on a $Cd_0=h$; les trois directions
+$Cd_0,h,R_1R_1^*h$ n'engendrent donc que deux directions indépendantes.
+Dans les coordonnées de $W_0$, leur image ambiante est
+$\operatorname{span}\{Dq,D^2q\}$, où $D=\operatorname{diag}(\lambda_i)$.
+Pour $q_0=(e_4+e_5)/\sqrt2$, la projection restitue exactement $q_0$.
+Le polynôme qui représente cette restitution sur les deux modes est
+\[
+ g(\lambda)=1-(1-\lambda/\lambda_1)(1-\lambda/\lambda_2).
+\]
+Pour $q_\varepsilon=q_0+\varepsilon e_6$, les coefficients de projection
+changent de $O(\varepsilon^2)$, car les équations normales sont des
+sommes de contributions quadratiques des composantes. Par conséquent,
+\[
+ \lim_{\varepsilon\to0}
+ \frac{\|Tq_\varepsilon-Tq_0\|}{\|q_\varepsilon-q_0\|}
+ =|g(\lambda_3)|=890.
+\]
+Chaque sortie reste une projection orthogonale de son entrée et satisfait
+le bilan de Pythagore. Le transfert non linéaire n'est cependant pas
+non expansif. Avec la seule direction entrante et $q_0=e_4$, le même
+argument donne un gain limite $\lambda_3/\lambda_1=100$.
+Ces gains concernent des perturbations d'état à géométrie fixée.
+Ils ne contredisent pas la borne de défaut cumulé de la section suivante,
+qui compare chaque compression à son omission le long des mêmes
+opérateurs d'évolution. Le contrôle GPU indépendant de ces exemples
+est fourni par \texttt{galerkin\_stability.py}.
+
 \subsection{Budget de transfert et réduction du mouvement}
 L'identité précédente permet de mesurer le défaut de chaque compression
 par $\eta_j=\sqrt{E_j^--E_j^+}$. Soient $F_j$ des évolutions

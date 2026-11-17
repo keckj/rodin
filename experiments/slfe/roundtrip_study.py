@@ -38,8 +38,9 @@ def evolve(
     phase_metric="probability",
     remap_budget=None,
     budget_allocation="uniform",
+    gram_backend="einsum",
 ):
-    if method not in ("reset", "projected", "chebyshev", "warm", "galerkin"):
+    if method not in ("reset", "projected", "chebyshev", "warm", "galerkin", "block"):
         raise ValueError("Unknown memory transfer")
     if check_every < 1:
         raise ValueError("A positive adaptation interval is required")
@@ -49,6 +50,8 @@ def evolve(
         raise ValueError("A positive remapping budget requires the Galerkin transfer")
     if budget_allocation not in ("uniform", "remaining"):
         raise ValueError("Expected uniform or remaining-budget allocation")
+    if gram_backend not in ("einsum", "reduction"):
+        raise ValueError("Expected einsum or reduction Gram assembly")
     possible_changes = 2 * ((steps + check_every - 1) // check_every) - 1
     budget_used = 0.0
     space = Space(GradedMesh(nfe, 0.95), 4)
@@ -141,9 +144,13 @@ def evolve(
                             target, remap, iterations=8
                         )
                         loss = diagnostic["energy_loss"]
-                    elif method == "galerkin":
+                    elif method in ("galerkin", "block"):
                         diagnostic = state.project_memory_galerkin(
-                            target, remap, iterations=2
+                            target,
+                            remap,
+                            iterations=2,
+                            shared=method == "block",
+                            gram_backend=gram_backend,
                         )
                         loss = diagnostic["energy_loss"]
                     else:
@@ -195,6 +202,7 @@ def evolve(
         half_duration=half_duration,
         steps_per_leg=steps,
         method=method,
+        gram_backend=gram_backend,
         check_every=check_every,
         sample_order=sample_order,
         energy_floor=energy_floor,

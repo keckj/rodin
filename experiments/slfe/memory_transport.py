@@ -205,7 +205,14 @@ class MemoryTransport:
             limiter=scale,
         )
 
-    def project_memory_galerkin(self, coupling, cross_projection, iterations=2):
+    def project_memory_galerkin(
+        self,
+        coupling,
+        cross_projection,
+        iterations=2,
+        shared=False,
+        gram_backend="einsum",
+    ):
         """Project onto a small augmented hidden subspace, using CUDA Gram solves.
 
         This experimental DG-only path augments a Krylov subspace by the
@@ -215,6 +222,11 @@ class MemoryTransport:
         the old hidden state, subject to the numerical rank threshold. The
         subspace depends on the field, so this is nonlinear. Tiny Gram
         eigenvalues are discarded at a stated tolerance.
+
+        With shared=True all fields use the same augmented ambient space.
+        This preserves orthogonal changes of field coordinates and gives a
+        positive-semidefinite loss of the full field Gram matrix. Direction
+        normalization uses one scalar per block to retain this covariance.
         """
         from gpu import cp
 
@@ -222,6 +234,8 @@ class MemoryTransport:
             raise ValueError("Memory projection requires the same FE space")
         if not isinstance(iterations, int) or iterations < 0:
             raise ValueError("A nonnegative Krylov size is required")
+        if gram_backend not in ("einsum", "reduction"):
+            raise ValueError("Expected einsum or reduction Gram assembly")
         before = self.energy()
         visible = coupling.space.energy(self.value)
         d = self.auxiliary - self.coupling.project(self.anchor)
@@ -230,8 +244,9 @@ class MemoryTransport:
         vectors, images = [], []
         candidate = mapped
         for index in range(iterations + 1):
-            norm = cp.sqrt(coupling.energy(candidate)).clip(1e-150)
-            vector = candidate / norm[None, :, None]
+            energy = coupling.energy(candidate)
+            norm = cp.sqrt(cp.sum(energy) if shared else energy).clip(1e-150)
+            vector = candidate / (norm if shared else norm[None, :, None])
             image = coupling.adjoint(vector)
             vectors.append(vector)
             images.append(image)
@@ -239,21 +254,76 @@ class MemoryTransport:
         xbasis = cp.stack(vectors, axis=-1)
         vbasis = cp.stack(images, axis=-1)
         mass = cp.broadcast_to(coupling.mass, (coupling.n**2, coupling.nc))
-        gram = cp.einsum("cfik,ci,cfil->fkl", xbasis, mass, xbasis)
-        gram -= cp.einsum("cfik,c,cfil->fkl", vbasis, coupling.space.mesh.areas, vbasis)
-        gram = (gram + gram.transpose(0, 2, 1)) / 2
-        rhs = cp.einsum("cfi,ci,cfik->fk", h, mass, xbasis)
+        if gram_backend == "reduction":
+            from weighted_products import weighted_products
+
+            if shared:
+                xbasis = xbasis.transpose(0, 2, 3, 1).reshape(
+                    coupling.n**2, coupling.nc, -1
+                )
+                vbasis = vbasis.transpose(0, 2, 3, 1).reshape(
+                    coupling.space.mesh.cells, coupling.space.nb, -1
+                )
+                xflat = xbasis.reshape(1, -1, xbasis.shape[-1])
+                vflat = vbasis.reshape(1, -1, vbasis.shape[-1])
+                hflat = h.transpose(0, 2, 1).reshape(1, -1, h.shape[1])
+            else:
+                xflat = xbasis.transpose(1, 0, 2, 3).reshape(
+                    h.shape[1], -1, iterations + 1
+                )
+                vflat = vbasis.transpose(1, 0, 2, 3).reshape(
+                    h.shape[1], -1, iterations + 1
+                )
+                hflat = h.transpose(1, 0, 2).reshape(h.shape[1], -1, 1)
+            gram = weighted_products(xflat, xflat, mass.ravel())
+            gram -= weighted_products(
+                vflat, vflat, cp.repeat(coupling.space.mesh.areas, coupling.space.nb)
+            )
+            rhs = weighted_products(xflat, hflat, mass.ravel())
+            if shared:
+                gram, rhs = gram[0], rhs[0]
+                gram = (gram + gram.T) / 2
+            else:
+                gram = (gram + gram.transpose(0, 2, 1)) / 2
+                rhs = rhs[..., 0]
+        elif shared:
+            fields = h.shape[1]
+            xbasis = xbasis.transpose(0, 2, 3, 1).reshape(
+                coupling.n**2, coupling.nc, -1
+            )
+            vbasis = vbasis.transpose(0, 2, 3, 1).reshape(
+                coupling.space.mesh.cells, coupling.space.nb, -1
+            )
+            gram = cp.einsum("cik,ci,cil->kl", xbasis, mass, xbasis)
+            gram -= cp.einsum(
+                "cik,c,cil->kl", vbasis, coupling.space.mesh.areas, vbasis
+            )
+            gram = (gram + gram.T) / 2
+            rhs = cp.einsum("cfi,ci,cik->kf", h, mass, xbasis)
+            assert rhs.shape == ((iterations + 1) * fields, fields)
+        else:
+            gram = cp.einsum("cfik,ci,cfil->fkl", xbasis, mass, xbasis)
+            gram -= cp.einsum(
+                "cfik,c,cfil->fkl", vbasis, coupling.space.mesh.areas, vbasis
+            )
+            gram = (gram + gram.transpose(0, 2, 1)) / 2
+            rhs = cp.einsum("cfi,ci,cfik->fk", h, mass, xbasis)
         eigen, eigenvectors = cp.linalg.eigh(gram)
         assert float(eigen.min()) > -1e-8, float(eigen.min())
         # Mass-normalized directions make an absolute cutoff meaningful.
         # The relative part protects nearly dependent augmented directions.
-        cutoff = 1e-12 * cp.maximum(eigen[:, -1:], 1.0)
+        cutoff = 1e-12 * cp.maximum(eigen[-1] if shared else eigen[:, -1:], 1.0)
         keep = eigen > cutoff
         inverse = cp.where(keep, 1 / cp.maximum(eigen, cutoff), 0)
-        coordinates = cp.einsum("fij,fi->fj", eigenvectors, rhs)
-        coefficients = cp.einsum("fij,fj->fi", eigenvectors, inverse * coordinates)
-        x = cp.einsum("cfik,fk->cfi", xbasis, coefficients)
-        b = cp.einsum("cfik,fk->cfi", vbasis, coefficients)
+        if shared:
+            coefficients = eigenvectors @ (inverse[:, None] * (eigenvectors.T @ rhs))
+            x = cp.einsum("cik,kf->cfi", xbasis, coefficients)
+            b = cp.einsum("cik,kf->cfi", vbasis, coefficients)
+        else:
+            coordinates = cp.einsum("fij,fi->fj", eigenvectors, rhs)
+            coefficients = cp.einsum("fij,fj->fi", eigenvectors, inverse * coordinates)
+            x = cp.einsum("cfik,fk->cfi", xbasis, coefficients)
+            b = cp.einsum("cfik,fk->cfi", vbasis, coefficients)
         self.anchor = self.value - b
         self.auxiliary = coupling.project(self.anchor) + x
         self.coupling = coupling
@@ -263,5 +333,5 @@ class MemoryTransport:
             energy_loss=before - after,
             ambient_change_squared=before + after - 2 * visible - 2 * cross,
             gram_eigenvalues=eigen,
-            retained_rank=cp.sum(keep, axis=1),
+            retained_rank=cp.sum(keep, axis=-1),
         )

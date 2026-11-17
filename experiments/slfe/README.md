@@ -127,6 +127,37 @@ material-driven geometry schedule. `krylov_study.py` adds a classical GPU
 Arnoldi exponential-DG competitor, with an independent dense-matrix oracle.
 Results of these further campaigns are included only after execution.
 
+The identical-geometry comparison isolates an implementation bottleneck in
+the augmented transfer: tiny Gram outputs with very long reduction dimensions
+are expensive through the original CuPy contractions. `weighted_products.py`
+uses a fused CUDA reduction over spatial chunks. On the four-field P4 test,
+three-direction transfers take 8.08 ms instead of 126.93 ms (five interleaved
+repeats); the retained ranks agree and the ambient state difference is below
+2e-11 across the tested configurations. Near-null directions amplify anchor
+coefficient differences, which are recorded separately. Independent weighted
+products, degree-1/2/4 transfer comparisons and Compute Sanitizer pass.
+The `gram_backend="reduction"` option is explicit; historical timings retain
+their original backend. Full-solve savings remain limited by geometric rebuilds.
+An alternative tiny Jacobi eigensolver is retained as a diagnostic experiment;
+the eigensolve was not the bottleneck and that alternative is not selected.
+
+`shared=True` forms one augmented space from all fields. Its common projection
+preserves orthogonal changes of component coordinates and makes the full
+cross-field Gram loss positive semidefinite. The 48 independent controls in
+`block_validation.py` check these properties and the ambient Pythagorean
+identity. This is a block-projection construction, not a claim of a new Krylov
+method. It remains nonlinear in the ensemble of states. In particular,
+`galerkin_stability.py` gives explicit scalar-transfer counterexamples with
+pairwise distance gains approaching 100 and 890 despite energy contraction.
+
+The exponential-DG competitor now includes smaller time steps that meet the
+same physical tolerance. Its initial upwind run exposed overflow in CuPy's
+intermediate trace shift for stiff dissipative matrices; external scaling and
+GPU squaring resolve this on an independent spectral oracle. Failed accuracy
+settings and the successful refinements remain in the report. The subsequent
+system-reaction study compares the same coupled FE problem in two component
+bases, using a characteristic reference and a common material support schedule.
+
 ```sh
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/ambient_validation.py --output /tmp/slfe-ambient.json
 CUDA_PATH=/usr/local/cuda python3 experiments/slfe/adaptive_study.py --suite physics --output /tmp/slfe-physics.jsonl

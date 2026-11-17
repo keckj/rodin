@@ -61,6 +61,12 @@ def main():
             "joint-return",
             "frozen-transfer",
             "krylov",
+            "krylov-tuned",
+            "krylov-fine",
+            "block-frozen",
+            "gram",
+            "fast-return",
+            "system-coupling",
             "material-minimax",
             "minimax-return",
             "diffusion",
@@ -317,7 +323,9 @@ def main():
     r.paragraph(
         "Le pas DG retenu passe un contrôle de croissance sur champs aléatoires et la tolérance finale. Le réglage plus agressif (échelle 12) est rejeté : le contrôle aléatoire révèle une croissance d'énergie supérieure au seuil. Ce contrôle fini n'est pas un certificat spectral de stabilité. La variante mobile à 16 pas échoue à la tolérance; le benchmark utilise 64 pas."
     )
-    krylov = [x["result"] for x in raw["krylov"]]
+    krylov = [
+        x["result"] for x in raw["krylov"] + raw["krylov-tuned"] + raw["krylov-fine"]
+    ]
     if krylov:
         r.section("Comparateur DG à intégration exponentielle")
         r.paragraph(
@@ -328,7 +336,7 @@ def main():
         )
         fig, axes = plt.subplots(1, 2, figsize=(10, 4))
         for flux in ("central", "upwind"):
-            for dimension in (48, 96):
+            for dimension in sorted({x["dimension"] for x in krylov}):
                 selected = sorted(
                     [
                         x
@@ -367,7 +375,7 @@ def main():
         r.save_figure(
             fig,
             "night-krylov",
-            "Exploration de deux dimensions de Krylov et quatre nombres de pas. La stabilité de l'exponentielle projetée ne suffit pas à garantir sa précision; les configurations rejetées restent affichées.",
+            "Exploration des dimensions de Krylov et du nombre de pas. La stabilité de l'exponentielle projetée ne suffit pas à garantir sa précision; les configurations rejetées restent affichées.",
         )
         r.table(
             ["Flux", "Dimension", "Pas", "L2", "Accepté", "Temps (s)"],
@@ -1142,6 +1150,24 @@ def main():
         r.paragraph(
             "Le sous-espace est construit à partir de chaque champ : le transfert est non linéaire. L'identité de Pythagore ne démontre pas une contraction de la distance entre deux solutions, ni un gain d'erreur pour l'EDP. Les tests de retour servent à examiner ce second point."
         )
+    stability_file = args.input / "galerkin-stability.json"
+    if stability_file.exists():
+        stability = json.loads(stability_file.read_text())["results"]
+        r.paragraph(
+            "Un contre-exemple indépendant en dimension six précise la limite de stabilité. Deux entrées séparées de 1e-7 sont projetées sur des espaces augmentés qui dépendent de l'état. Les sorties peuvent être beaucoup plus éloignées, alors que chaque énergie décroît et que chaque identité de Pythagore est satisfaite. La note donne la construction explicite et les gains limites analytiques. Cette observation exclut une preuve de non-expansivité de ce transfert non linéaire."
+        )
+        r.table(
+            ["Directions", "Rang effectif", "Gain de distance", "Limite analytique"],
+            [
+                [
+                    x["directions"],
+                    x["effective_directions"],
+                    f"{x['distance_gain']:.5g}",
+                    x["limiting_gain"],
+                ]
+                for x in stability
+            ],
+        )
     frozen = [x["result"] for x in raw["frozen-transfer"]]
     if frozen:
         r.section("Comparaison des transferts à géométrie identique")
@@ -1182,6 +1208,225 @@ def main():
         )
         r.paragraph(
             f"Construction initiale commune : {frozen[0]['common_setup_seconds']:.3g} s; constructions géométriques communes pendant l'évolution : {frozen[0]['common_rebuild_seconds']:.3g} s. Ces coûts restent à payer pour une exécution indépendante."
+        )
+    block_file = args.input / "block-validation.json"
+    if block_file.exists():
+        block_controls = [
+            item
+            for group in json.loads(block_file.read_text())["results"]
+            for item in group["records"]
+        ]
+        r.section("Une mémoire commune aux composantes du système")
+        r.paragraph(
+            "Les espaces de transfert construits séparément pour chaque champ dépendent du choix de base des composantes. Une variante réunit leurs directions dans un espace partagé et projette tous les champs sur cet espace. Elle préserve le champ FE et l'identité au support inchangé. La perte de la matrice complète des produits scalaires entre champs est positive semi-définie; une rotation orthogonale des composantes produit la même rotation de la sortie. Les preuves, à géométrie et métrique des composantes fixées, sont données dans la note."
+        )
+        r.table(
+            ["Contrôle GPU, degrés 1, 2 et 4", "Défaut maximal"],
+            [
+                [label, max(x[key] for x in block_controls)]
+                for label, key in (
+                    ("Observation FE", "observation_error"),
+                    ("Pythagore, matrice complète", "pythagoras_error"),
+                    ("Rotation des champs, espace partagé", "covariance_error"),
+                    (
+                        "Rotation des champs, espaces séparés",
+                        "individual_covariance_error",
+                    ),
+                )
+            ],
+        )
+        r.paragraph(
+            "Le défaut de covariance est ici le maximum absolu des différences de coefficients de l'ancre et du champ auxiliaire après rotation. Les champs de contrôle sont aléatoires; ce résultat teste une propriété algébrique et ne mesure pas une erreur d'EDP. L'espace partagé reste dépendant de l'ensemble des états et ne supprime pas le contre-exemple de stabilité entre entrées distinctes."
+        )
+    block_frozen = [x["result"] for x in raw["block-frozen"]]
+    if block_frozen:
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        labels = [x["method"] for x in block_frozen]
+        axes[0].bar(labels, [max(x["l2"]) for x in block_frozen])
+        axes[0].set(yscale="log", ylabel="Erreur L2 maximale")
+        axes[1].bar(labels, [x["transfer_seconds"] for x in block_frozen])
+        axes[1].set(ylabel="Somme des temps de transfert (s)")
+        for ax in axes:
+            ax.tick_params(axis="x", rotation=25)
+            ax.grid(axis="y", alpha=0.2)
+        r.save_figure(
+            fig,
+            "night-block-transfer",
+            "Tous les champs et toutes les méthodes suivent la même suite de 63 changements de support. Les constructions géométriques sont communes; les temps de transfert incluent les diagnostics. Les variantes block réunissent les directions des quatre champs.",
+        )
+        r.paragraph(
+            f"La géométrie commune coûte {block_frozen[0]['common_setup_seconds']:.3g} s initialement, puis {block_frozen[0]['common_rebuild_seconds']:.3g} s pendant le trajet. Ce coût doit être ajouté pour une résolution indépendante."
+        )
+    reduction_file = args.input / "reduction-validation.json"
+    if reduction_file.exists() and "timings" in json.loads(reduction_file.read_text()):
+        reductions = json.loads(reduction_file.read_text())
+        r.section("Réduction CUDA des produits de Gram")
+        r.paragraph(
+            "Le profilage synchronisé identifie la formation des petits produits de Gram comme le surcoût de Galerkin : les contractions emploient une très longue dimension spatiale et peu de colonnes. Une réduction CUDA divise cette somme en blocs de 1024 degrés de liberté, puis réunit les sommes partielles sur GPU. La diagonalisation et le critère de rang restent identiques. Cinq répétitions entrelacées comparent les deux assemblages sur le même état; ces temps concernent un transfert et incluent ses diagnostics."
+        )
+        r.table(
+            [
+                "Directions/champ",
+                "Espace",
+                "Initial (ms)",
+                "Réduction (ms)",
+                "Écart ambiant",
+            ],
+            [
+                [
+                    x["iterations"] + 1,
+                    "partagé" if x["shared"] else "séparé",
+                    1e3 * x["median_seconds"]["einsum"],
+                    1e3 * x["median_seconds"]["reduction"],
+                    x["ambient_error"],
+                ]
+                for x in reductions["timings"]
+            ],
+        )
+        r.paragraph(
+            "Les contrôles indépendants comparent les produits pondérés, les rangs retenus, les coefficients et l'état ambiant. Les directions presque nulles peuvent amplifier les différences de coefficients; le fichier brut conserve également la variabilité entre répétitions du calcul initial. Le gain local doit être distingué du temps de construction des supports."
+        )
+    fast_return = [x["result"] for x in raw["fast-return"]]
+    if fast_return:
+        r.section("Coût du trajet complet avec la réduction CUDA")
+        r.paragraph(
+            "Le changement d'assemblage est ensuite évalué dans le contrôleur adaptatif complet. Les coûts incluent la préparation, les contrôles et toutes les reconstructions géométriques. Les espaces partagés sont comparés aux projections séparées; la métrique d'erreur reste le maximum des quatre erreurs L2 après retour exact."
+        )
+        r.table(
+            [
+                "FE / auxiliaire",
+                "Durée/branche",
+                "Pas / contrôle",
+                "Mémoire",
+                "Changements",
+                "L2 max",
+                "Coût (s)",
+            ],
+            [
+                [
+                    f"{x['nfe']} / {x['naux']}",
+                    x["half_duration"],
+                    f"{x['steps_per_leg']} / {x['check_every']}",
+                    x["method"],
+                    x["changes"],
+                    max(x["l2"]),
+                    x["setup_seconds"] + x["evolution_seconds"],
+                ]
+                for x in fast_return
+            ],
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        for ax, duration, nfe, naux in zip(axes, (0.25, 1.0), (128, 256), (64, 128)):
+            groups = (
+                (
+                    [
+                        x["result"]
+                        for x in raw["roundtrip-long"]
+                        if x["result"]["method"] == "chebyshev"
+                    ],
+                    "Chebyshev",
+                ),
+                (
+                    [
+                        x["result"]
+                        for x in raw["galerkin"] + raw["joint-return"]
+                        if not x["result"].get("floating_phase", False)
+                    ],
+                    "Galerkin initial",
+                ),
+                (
+                    [x for x in fast_return if x["method"] == "galerkin"],
+                    "Galerkin, réduction",
+                ),
+                (
+                    [x for x in fast_return if x["method"] == "block"],
+                    "Espace partagé, réduction",
+                ),
+            )
+            for values, label in groups:
+                selected = [
+                    x
+                    for x in values
+                    if x["half_duration"] == duration
+                    and x["nfe"] == nfe
+                    and x["naux"] == naux
+                ]
+                if selected:
+                    ax.scatter(
+                        [x["setup_seconds"] + x["evolution_seconds"] for x in selected],
+                        [max(x["l2"]) for x in selected],
+                        label=label,
+                    )
+            ax.set(
+                xscale="log",
+                yscale="log",
+                xlabel="Préparation et évolution (s)",
+                ylabel="Erreur L2 maximale",
+                title=f"Durée {duration} par branche",
+            )
+            ax.grid(alpha=0.2)
+            ax.legend(fontsize=7)
+        r.save_figure(
+            fig,
+            "night-fast-return",
+            "Le gain sur les petits produits de Gram se répercute partiellement sur le coût complet, dominé par les reconstructions des supports. Les points comprennent plusieurs pas et fréquences de contrôle; le tableau conserve leurs paramètres.",
+        )
+    systems = [x["result"] for x in raw["system-coupling"]]
+    if systems:
+        r.section("Réaction FE à quatre composantes et changement de base")
+        r.paragraph(
+            "Le système transporte quatre profils et applique la réaction spatiale diagonale de taux (0,5; 1; 2; 4) fois 1+0,5 sin(2πx). Le même problème est résolu après une rotation orthogonale des composantes, où la réaction devient couplée. Les résultats sont ramenés dans la base initiale. Une suite matérielle de supports est imposée à toutes les variantes pour isoler cette propriété du contrôleur. Les demi-pas de réaction sont effectués dans l'espace FE; le transport et la mémoire auxiliaire restent sur GPU."
+        )
+        r.table(
+            [
+                "FE",
+                "Dispersion",
+                "Méthode",
+                "L2, base initiale",
+                "L2, base tournée",
+                "Écart entre bases",
+            ],
+            [
+                [
+                    x["nfe"],
+                    x["spread"],
+                    x["method"],
+                    max(x["diagonal_basis_errors"]["l2"]),
+                    max(x["rotated_basis_errors"]["l2"]),
+                    x["fe_covariance_l2"],
+                ]
+                for x in systems
+            ],
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        for ax, spread in zip(axes, (0.008, 0.15)):
+            for method in ("chebyshev", "galerkin2", "block2"):
+                selected = sorted(
+                    [
+                        x
+                        for x in systems
+                        if x["spread"] == spread and x["method"] == method
+                    ],
+                    key=lambda x: x["nfe"],
+                )
+                if selected:
+                    ax.semilogy(
+                        [x["nfe"] for x in selected],
+                        [max(x["fe_covariance_l2"], 1e-16) for x in selected],
+                        "o-",
+                        label=method,
+                    )
+            ax.set(
+                xlabel="Résolution FE",
+                ylabel="Norme L2 de la différence entre bases",
+                title=f"Dispersion initiale {spread}",
+            )
+            ax.legend(fontsize=8)
+            ax.grid(alpha=0.2)
+        r.save_figure(
+            fig,
+            "night-system-covariance",
+            "Le changement de coordonnées des composantes décrit la même équation physique. L'écart affiché est une différence entre deux solutions FE, distincte de leur erreur par rapport à la référence caractéristique, donnée dans le tableau.",
         )
     joint = [x["result"] for x in raw["joint-return"]]
     if joint:
@@ -1814,6 +2059,12 @@ def main():
         "joint-return": 5,
         "frozen-transfer": 8,
         "krylov": 16,
+        "krylov-tuned": 4,
+        "krylov-fine": 8,
+        "block-frozen": 5,
+        "gram": 12,
+        "fast-return": 8,
+        "system-coupling": 12,
         "material-minimax": 2,
         "minimax-return": 3,
         "diffusion": 20,
@@ -1849,6 +2100,8 @@ def main():
         "energy-mesh-sanitizer",
         "late-sanitizer",
         "coupled-sanitizer",
+        "krylov-sanitizer",
+        "reduction-sanitizer",
     ):
         path = args.input / (name + ".log")
         if path.exists():
