@@ -1,0 +1,39 @@
+[
+  {
+    "name": "graph-sharp-validation",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/graph_validation.py",
+      "--sharpened",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/graph-sharp.validation.json"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T06:13:57.815416+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T06:14:00.151708+01:00"
+  },
+  {
+    "name": "graph-sharp-pilot",
+    "command": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/keckj/Documents/rodin-SLFE/experiments/slfe/remap_consistency_study.py",
+      "--output",
+      "/home/keckj/Documents/slfe-results-night2/graph-sharp-pilot.jsonl",
+      "--sizes",
+      "16",
+      "32",
+      "--steps",
+      "64",
+      "--methods",
+      "graph",
+      "graph-sharp"
+    ],
+    "status": "completed",
+    "started": "2026-11-17T06:14:00.152402+01:00",
+    "returncode": 0,
+    "finished": "2026-11-17T06:14:05.546772+01:00"
+  }
+]

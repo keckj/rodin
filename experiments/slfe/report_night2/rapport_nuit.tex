@@ -4,9 +4,9 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : supports mobiles\\et transfert de mémoire}
-\author{Recherche GPU sur le fork keckj/rodin}\date{17/11/2026 à 05:34}
+\author{Recherche GPU sur le fork keckj/rodin}\date{17/11/2026 à 06:25}
 \begin{document}\maketitle
-Résultats disponibles le 17/11/2026 à 05:34 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test.
+Résultats disponibles le 17/11/2026 à 06:25 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test.
 
 \section{Résultat et portée}
 Trois résultats structurent désormais l'étude : une identité d'énergie relative autorise une borne d'erreur malgré les transferts non linéaires; les réactions appliquées au champ complet évitent une mémoire artificiellement persistante; une réalisation linéaire par réflexion orthogonale conserve une précision P4 proche de l'ordre cinq dans le test de translation à changements fréquents. Le rapport détaille aussi les cas où ces méthodes perdent en coût ou en précision.
@@ -21,6 +21,7 @@ Les contre-tests exposent deux limites importantes : un transfert itératif tron
 Le résultat nouveau de la fin de nuit concerne la physique de la mémoire : une contraction de l'énergie ne suffit pas à reproduire une réaction forte. Le prototype applique désormais la réaction spatiale au champ complet, puis conserve exactement ses moments FE et comprime sa composante cachée dans trois directions. Sur le cas de réaction forte testé, l'erreur relative passe de 32,7 pour un amortissement uniforme de la mémoire à 0,00240 pour ces moments complets, avec un plancher FE de 0,00237. C'est une correction de modèle démontrée sur ce test, à un coût supérieur; ce résultat ne constitue pas à lui seul une avancée bibliographique établie.
 
 \section{Construction étudiée}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-method-schematic.pdf}\caption{Schéma de la réalisation physique. Le champ FE est une observation du champ complet. La compression conserve les moments FE de sa cible; l'énergie décroît pour une cible contractante et une projection cohérente. La variante par réflexion orthogonale étudiée plus loin définit un autre couplage.}\end{figure}
 Le maillage triangulaire FE reste fixe et porte les opérations de physique. Un second maillage transporte le champ par cisaillements semi-lagrangiens. Après ce transport, le champ FE reçoit l'incrément projeté; l'état auxiliaire est conservé pour le pas suivant. Cette mémoire évite de reconstruire entièrement le champ transporté à chaque pas. Le problème étudié cette nuit est de modifier le support auxiliaire en préservant le champ FE, la masse et un bilan d'énergie contrôlé.
 
 \begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-coupling.pdf}\caption{Schéma des deux mises à jour. Les flèches correspondent à des sous-pas successifs. L'ancre FE supplémentaire conserve la relation entre les états quand le support et son opérateur de projection changent.}\end{figure}
@@ -357,7 +358,7 @@ tiled & block & 3 & 57.86 & 57.76 & 57.99 & 0.02348 & 0.02351\\
 tiled & chebyshev & 3 & 55.83 & 55.65 & 55.84 & 0.02868 & 0.02868\\
 tiled & galerkin & 3 & 55.1 & 54.88 & 55.27 & 0.02331 & 0.02332\\
 warp & chebyshev & 3 & 255.8 & 255.7 & 255.9 & 0.02868 & 0.02868\\
-warp & galerkin & 2 & 255.4 & 255.3 & 255.5 & 0.02331 & 0.02331\\
+warp & galerkin & 3 & 255.4 & 255.3 & 255.5 & 0.02331 & 0.02331\\
 \bottomrule\end{tabular}\end{center}
 Les réductions atomiques et les petits Grams proches d'un défaut de rang peuvent amplifier les différences d'arrondi dans le calcul adaptatif. Les intervalles d'erreur des répétitions sont donc conservés à côté des temps; un accord à l'arrondi des blocs n'implique pas un accord à l'arrondi du champ après 255 changements non linéaires.
 
@@ -782,6 +783,80 @@ Reprojection & 1.768e-27 & 1.768e-27 & 1.768e-27\\
 La mesure positive confirme une mémoire résiduelle physique dans le calcul additif à réaction forte : ce n'est donc pas seulement un défaut du diagnostic soustractif. La reprojection du champ complet ramène aussi cette énergie cachée à l'échelle du champ amorti. Le seuil de rang peut exclure une direction de faible énergie absolue qui reste déterminante relativement à une solution presque nulle.
 
 \begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-positive-energy.pdf}\caption{Même problème de réaction de force 100 et même discrétisation. Les diagnostics sont ajoutés à des répétitions instrumentées, exclues des comparaisons de temps.}\end{figure}
+\section{Réaction et support mobile : distinguer mémoire et moniteur}
+Le même problème de réaction spatiale est calculé sur un espace FE P4 de résolution 128 et un support auxiliaire de résolution 64. Trois géométries sont comparées : uniforme, adaptée au champ initial puis fixe, et avec seize contrôles de maillage sur la durée totale. Chaque méthode fait évoluer son propre moniteur; il s'agit donc d'une comparaison couplée, et non d'une ablation à géométrie prescrite. Le temps complet inclut la construction des couplages, de la physique et des transports, les moniteurs et leurs reconstructions. La projection initiale et la référence communes sont exclues.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-moving-reaction.pdf}\caption{256 pas, moniteur auxiliaire sans plancher et transfert partagé de Galerkin. La stabilité en énergie ne garantit pas la qualité de l'adaptation. Un support adapté seulement à l'instant initial devient ici défavorable.}\end{figure}
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Force & Support & Erreur relative & Coût complet (s) & Changements\\\midrule
+1 & uniform & 0.01208 & 4.455 & 0\\
+1 & initial & 0.5084 & 4.534 & 0\\
+1 & moving & 0.0003775 & 4.43 & 15\\
+100 & uniform & 0.01273 & 4.434 & 0\\
+100 & initial & 1 & 4.548 & 0\\
+100 & moving & 0.08118 & 4.388 & 15\\
+\bottomrule\end{tabular}\end{center}
+Douze ablations isolent le transfert (Galerkin, Chebyshev ou remise à zéro), le champ utilisé par le moniteur (FE ou auxiliaire), et le plancher relatif de son histogramme d'énergie. Le moniteur prend la racine quatrième de l'énergie lissée; cette racine amplifie les variations relatives dans les régions de faible énergie. L'ajout de 1e-6 fois l'énergie moyenne avant cette racine réduit l'erreur d'environ 0,08 à 0,0025 pour les trois transferts. La remise à zéro ne produit qu'une différence secondaire dans cette expérience. Ce constat identifie la sensibilité du moniteur, sans établir un choix optimal universel du plancher.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-moving-reaction-monitor.pdf}\caption{Réaction de force 100, 256 pas, mêmes résolutions FE et auxiliaire. Les courbes des trois transferts presque superposées montrent que le plancher du moniteur domine cette ablation.}\end{figure}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-moving-reaction-refinement.pdf}\caption{Raffinement temporel et sensibilité au plancher, avec des intervalles physiques fixes entre contrôles de maillage. Le nombre de coefficients FE reste constant.}\end{figure}
+\section{Réaction cubique du champ complet par quadrature CUDA}
+Le modèle est maintenant u\_t + b·grad(u) = -\ensuremath{\kappa} r(x) u³, avec r(x)=1+0,5 sin(2\(\pi\)x). La réaction exacte locale est u/sqrt(1+2\ensuremath{\tau} r u\(^{2}\)). Le noyau évalue le champ physique complet a+d sur les intersections, applique cette fonction non linéaire, puis accumule simultanément ses moments FE et auxiliaires. Les mêmes poids positifs donnent l'énergie cible. La référence indépendante suit les caractéristiques et intègre r; la solution scalaire y est analytique. Les temps ci-dessous concernent seulement l'évolution, après compilation et construction, sans quadrature d'erreur.
+
+Lorsque la quadrature positive intègre exactement les produits des espaces FE et auxiliaire, la compression conserve la contraction physique en énergie même si la réaction non polynomiale est sous-intégrée. Une borne relative à toute référence FE suit de la même projection et de la propriété lipschitzienne de la réaction. La preuve et ses hypothèses figurent dans l'ébauche d'article. Les défauts non linéaires sont intégrés sous forme de carrés positifs. Cette stabilité ne dispense pas de raffiner la quadrature pour mesurer la précision.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-cubic-reaction.pdf}\caption{Raffinements en espace à 512 pas et en temps à résolution FE 128, avec une résolution auxiliaire double. Les solutions sont comparées à la référence par caractéristiques, et non au résultat d'une autre méthode numérique.}\end{figure}
+\begin{center}\small\begin{tabular}{llllll}\toprule
+Force & FE & Physique & Erreur relative & Plancher FE & Évolution (s)\\\midrule
+1 & 32 & FE seule & 0.09456 & 0.09133 & 1.145\\
+1 & 32 & Complète & 0.09435 & 0.09133 & 10.05\\
+100 & 32 & FE seule & 0.1076 & 0.09589 & 1.136\\
+100 & 32 & Complète & 0.1047 & 0.09589 & 10.05\\
+1 & 64 & FE seule & 0.01987 & 0.01958 & 1.299\\
+1 & 64 & Complète & 0.01988 & 0.01958 & 26.89\\
+100 & 64 & FE seule & 0.02739 & 0.02668 & 1.296\\
+100 & 64 & Complète & 0.02735 & 0.02668 & 26.9\\
+1 & 128 & FE seule & 0.001501 & 0.00148 & 3.127\\
+1 & 128 & Complète & 0.001504 & 0.00148 & 102.7\\
+100 & 128 & FE seule & 0.003305 & 0.003251 & 3.125\\
+100 & 128 & Complète & 0.003311 & 0.003251 & 102.9\\
+1 & 32 & Sans mémoire & 0.1269 & 0.09133 & 1.191\\
+100 & 32 & Sans mémoire & 0.1319 & 0.09589 & 1.183\\
+1 & 64 & Sans mémoire & 0.03677 & 0.01958 & 1.352\\
+100 & 64 & Sans mémoire & 0.04845 & 0.02668 & 1.344\\
+1 & 128 & Sans mémoire & 0.004565 & 0.00148 & 3.146\\
+100 & 128 & Sans mémoire & 0.007793 & 0.003251 & 3.145\\
+\bottomrule\end{tabular}\end{center}
+\begin{center}\small\begin{tabular}{llllll}\toprule
+FE & Pas & Force & Physique & Subdivision & Erreur relative\\\midrule
+64 & 128 & 100 & fe-only & 2 & 0.02735\\
+64 & 128 & 100 & fe-common & 2 & 0.02735\\
+64 & 128 & 100 & ambient-moments & 2 & 0.02732\\
+128 & 128 & 100 & fe-only & 2 & 0.003302\\
+128 & 128 & 100 & fe-common & 2 & 0.003302\\
+128 & 128 & 100 & ambient-moments & 2 & 0.003308\\
+\bottomrule\end{tabular}\end{center}
+Les 24 contrôles couvrent P1, P2 et P4, des supports uniformes et non uniformes décalés périodiquement, la limite sans réaction et les solutions constantes. L'erreur maximale de Pythagore vaut 8.33e-17; celle de l'identité relative vaut 4.16e-17. Le contrôle linéaire révèle un écart de quadrature de 2,27e-10 au degré nominal 20 sur le maillage P4 grossier; la subdivision le ramène à l'arrondi. Pour la réaction cubique de coefficients P4 aléatoires, les différences entre subdivisions 1–2 et 2–4 atteignent respectivement 4,03e-5 et 1,44e-7. Ces écarts de consistance sont conservés dans les données et ne sont pas assimilés à une erreur d'exécution CUDA.
+
+La reconstruction depuis les FE supprime la mémoire à chaque demi-étape de physique. À résolution FE 128, force 100 et 512 pas, son erreur relative est 0,00779 en 3,15 s d'évolution, contre 0,00331 en 102,9 s pour les moments complets. La réaction FE qui conserve une mémoire non réagie donne ici 0,00330 en 3,13 s. Le nouveau noyau rend la réaction du champ complet cohérente et stable, mais ce cas cubique ne démontre aucun avantage de coût à précision comparable. Les différences entre les deux variantes à mémoire sont faibles devant leur plancher FE.
+
+\section{Comparaison avec une reconstruction FE à chaque étape}
+Une base de comparaison cohérente applique la réaction Galerkin au champ observé puis remet la mémoire à zéro. Elle évite le résidu de réaction des extensions incomplètes, au prix d'une reconstruction répétée du champ transporté. Les mêmes espaces FE, supports auxiliaires fixes, profils, références et compositions temporelles sont conservés. Cette comparaison distingue l'intérêt numérique de la mémoire de la seule correction d'un modèle de réaction incomplet.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-reaction-reset-baseline.pdf}\caption{Même résolution FE et même support auxiliaire, de résolution double. Les coûts sont ceux de l'évolution seule, après construction des opérateurs. La mémoire doit être évaluée sur ce compromis coût–erreur, au-delà de sa comparaison avec une mémoire non réagie.}\end{figure}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-reaction-rank.pdf}\caption{Les sous-espaces de compression sont engendrés par la direction entrante, puis par zéro, une ou deux directions de Krylov. Leur enrichissement améliore une projection isolée; l'erreur finale de l'EDP n'est pas nécessairement monotone lorsque les trajectoires numériques diffèrent.}\end{figure}
+\section{Une compression orthogonale plus poussée ne paie pas ici}
+Le couplage par réflexion est réappliqué à T=2R(I+R*R)\textasciicircum{}(-1). Son injection a pour blocs 4R(I+A)(I+6A+A\(^{2}\))\textasciicircum{}(-1) et (I-A)\(^{2}\)(I+6A+A\(^{2}\))\textasciicircum{}(-1), avec A=R*R. Le second bloc contient maintenant le carré du défaut de projection. La réflexion reste orthogonale en arithmétique exacte; le calcul CUDA factorise le dénominateur en deux opérateurs décalés, inversés par des polynômes de Chebyshev fixes. La fonction scalaire 2s/(1+s\(^{2}\)) est classique dans les itérations de Newton inverse pour la décomposition polaire; l'expérience teste son intérêt pour ce couplage, sans lui attribuer une nouveauté algébrique.
+
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Résolution & Couplage & Erreur L2 max & Borne & Évolution (s)\\\midrule
+16 & Une réflexion & 7.759e-06 & 0.0001811 & 0.4732\\
+16 & Deux réflexions & 7.593e-06 & 0.0001712 & 1.557\\
+32 & Une réflexion & 2.406e-07 & 8.97e-06 & 0.4726\\
+32 & Deux réflexions & 2.358e-07 & 8.403e-06 & 1.571\\
+\bottomrule\end{tabular}\end{center}
+Sur ce pilote de translation P4 avec 63 changements de support, la seconde construction réduit l'erreur d'environ 2 \% pour un coût environ trois fois supérieur. Les oracles matriciels GPU aux degrés FE 1, 2 et 4 vérifient la nouvelle réalisation : avec le polynôme principal de degré 48, l'écart d'état relatif reste inférieur à 4e-15. Réduire le défaut d'injection n'élimine donc pas les autres défauts de transport. Ce pilote ne justifie pas de retenir cette variante comme méthode plus efficace.
+
 \section{Contrôles et limites pour un article}
 La borne d'erreur pour des supports variables repose sur la conservation de l'observation et la décroissance de l'énergie lors du transfert, ainsi que sur la non-expansivité de l'évolution entre transferts. Les défauts locaux de transport restent dans la borne, notamment le commutateur entre projection et générateur. Ce résultat conditionnel ne fournit ni un ordre de convergence pour les noyaux actuels ni une garantie d'efficacité du contrôleur.
 
@@ -833,7 +908,7 @@ reaction-moments-quadrature & 1 & 1\\
 reaction-projection & 90 & 90\\
 spectral-reaction & 36 & 36\\
 tiled-return-pilot & 1 & 1\\
-long-return-benchmark & 14 & 15\\
+long-return-benchmark & 15 & 15\\
 residual-return & 12 & 12\\
 reaction-increment-projection & 90 & 90\\
 reaction-residual-projection & 90 & 90\\
@@ -852,6 +927,25 @@ remap-consistency-orders & 24 & 24\\
 remap-consistency-fine & 9 & 9\\
 remap-consistency-smallstep & 6 & 6\\
 remap-consistency-interval & 12 & 12\\
+moving-reaction & 36 & 36\\
+moving-reaction-controls & 12 & 12\\
+moving-reaction-refinement64 & 12 & 12\\
+moving-reaction-refinement128 & 12 & 12\\
+moving-reaction-uniform128 & 3 & 3\\
+cubic-reaction & 36 & 36\\
+cubic-reaction-reset & 18 & 18\\
+reaction-reset & 18 & 18\\
+reaction-rank0 & 8 & 8\\
+reaction-rank1 & 8 & 8\\
+reaction-rank2 & 8 & 8\\
+moving-reaction-reset & 8 & 8\\
+moving-reset-floor64 & 6 & 6\\
+moving-reset-floor128 & 6 & 6\\
+graph-sharp-pilot & 4 & 4\\
+graph-sharp-defects & 4 & 4\\
+\bottomrule\end{tabular}\end{center}
+\begin{center}\small\begin{tabular}{lll}\toprule
+Campagne & Enregistrés & Prévus\\\midrule
 material-minimax & 2 & 2\\
 minimax-return & 3 & 3\\
 diffusion & 20 & 20\\
@@ -900,10 +994,17 @@ graph-sanitizer : ========= ERROR SUMMARY: 0 errors
 
 residual-energy-sanitizer : ========= ERROR SUMMARY: 0 errors
 
+quadrature-moments-sanitizer : ========= ERROR SUMMARY: 0 errors
+
+quadrature-moments-race-sanitizer : ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+
+Pour les moments non linéaires, memcheck couvre l'exécution de validation; racecheck est limité au noyau quadrature\_moments. Ce contrôle ciblé ne remplace pas l'audit global des noyaux de bibliothèque, dont les avertissements déjà observés sont conservés ailleurs dans le rapport.
+
 Les validations indépendantes couvrent les degrés 1, 2 et 4, les projections, les adjoints en masse, les constantes, les changements de support et les identités de Gram. Toutes les opérations numériques — recouvrements, quadrature, réductions, matrices denses de contrôle — sont exécutées sur CUDA. Le processeur pilote les expériences et dessine les figures. Il s'agit de prototypes isolés dans experiments/slfe, pas d'une intégration de production au langage variationnel Rodin.
 
 La piste d'article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d'énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture.
 
+\noindent\href{https://doi.org/10.1137/110857544}{Nakatsukasa et Higham (2012), stabilité des itérations pour la décomposition polaire}\par
 \noindent\href{https://doi.org/10.1016/j.geomphys.2017.08.011}{Macías-Virgós, Pereira-Sáez et Tanré (2018), paramétrisations de Cayley sur les variétés de Stiefel}\par
 \noindent\href{https://rtg.hufs.ac.kr/publications/SIGRAPHASIA26_lowres.pdf}{Kim et Um (2026), reconstruction semi-lagrangienne presque orthogonale par noyau de Lanczos}\par
 \noindent\href{https://doi.org/10.1016/j.compfluid.2022.105474}{Ouardghi, El-Amrani et Seaid (2022), enrichissement adaptatif semi-lagrangien FE}\par
