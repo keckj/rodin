@@ -4,17 +4,21 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : supports mobiles\\et transfert de mémoire}
-\author{Recherche GPU sur le fork keckj/rodin}\date{17/11/2026 à 01:24}
+\author{Recherche GPU sur le fork keckj/rodin}\date{17/11/2026 à 03:18}
 \begin{document}\maketitle
-Résultats disponibles le 17/11/2026 à 01:24 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les figures représentent les solutions calculées, avec une référence indépendante par caractéristiques.
+Résultats disponibles le 17/11/2026 à 03:18 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test.
 
 \section{Résultat et portée}
-Un support auxiliaire mobile résout le défaut observé lorsque la bosse quitte la zone fine d'une grille fixe. Le couplage FE avec mémoire accepte désormais un changement de support contractant, et un raffinement exactement emboîté sans perte d'énergie. Les formules s'exécutent sans racine ni inversion de matrice. Ces propriétés sont démontrées dans restart\_theory.pdf et vérifiées sur GPU; elles n'établissent ni une nouveauté bibliographique, ni une convergence générale vers l'EDP.
+Un support auxiliaire mobile résout le défaut observé lorsque la bosse quitte la zone fine d'une grille fixe. Le couplage FE avec mémoire accepte désormais un changement de support contractant, et un raffinement exactement emboîté sans perte d'énergie. Les transferts polynomiaux évitent une inversion globale; la variante de Galerkin diagonalise une petite matrice par champ. Les propriétés sont établies sous les hypothèses de restart\_theory.pdf; elles n'établissent ni une nouveauté bibliographique, ni une convergence générale vers l'EDP.
 
 Deux méthodes sont distinguées : le couplage avec mémoire maintient le champ FE à chaque changement; la référence d'advection pure transporte uniquement le champ DG auxiliaire entre une projection FE initiale et une projection FE finale. Cette seconde méthode est la plus rapide ici, mais elle n'offre pas les opérations physiques FE intermédiaires du couplage.
 
 Les contre-tests exposent deux limites importantes : un transfert itératif tronqué peut dissiper même à support inchangé, et un contrôle de maillage tous les quatre pas modifie le problème d'adaptation lorsque le pas diminue. Une variante corrige le premier défaut au prix d'une non-linéarité; une ablation à intervalle physique fixé isole le second. La composition hamiltonienne par SVD perd la comparaison de coût et de précision contre Fourier/RK4 sur le vortex résolu. Ces résultats orientent la suite de la recherche.
 
+\section{Construction étudiée}
+Le maillage triangulaire FE reste fixe et porte les opérations de physique. Un second maillage transporte le champ par cisaillements semi-lagrangiens. Après ce transport, le champ FE reçoit l'incrément projeté; l'état auxiliaire est conservé pour le pas suivant. Cette mémoire évite de reconstruire entièrement le champ transporté à chaque pas. Le problème étudié cette nuit est de modifier le support auxiliaire en préservant le champ FE, la masse et un bilan d'énergie contrôlé.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-coupling.pdf}\caption{Schéma des deux mises à jour. Les flèches correspondent à des sous-pas successifs. L'ancre FE supplémentaire conserve la relation entre les états quand le support et son opérateur de projection changent.}\end{figure}
 \begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-fields.pdf}\caption{Même domaine et mêmes échelles de couleur. Champ initial, référence, supports fixe et mobile, puis erreurs absolues. Le tracé est un échantillonnage FE; l'erreur L2 est intégrée séparément sur les triangles.}\end{figure}
 \section{Problème et protocole}
 Le domaine est le tore unité. Une vitesse cellulaire incompressible prescrite transporte jusqu'à t=0,25 une bosse de largeur 0,01, initialement centrée en (0,35; 0,45), de norme L2 proche de 1. L'espace FE principal possède 32768 triangles DG P4, soit 491520 coefficients par champ; la graduation fixe vaut 0,95. Le support principal auxiliaire comporte 64\(\times\)64 cellules Q4, soit 102400 valeurs par champ. Deux supports orientés supplémentaires servent aux cisaillements diagonaux. Les méthodes n'ont donc pas le même nombre d'inconnues.
@@ -35,6 +39,37 @@ Champs & DG (s) & Mobile (s) & Ratio & L2 DG max & L2 mobile max\\\midrule
 16 & 21.12 & 0.6091 & 34.67 & 0.000877 & 0.0004549\\
 \bottomrule\end{tabular}\end{center}
 Le pas DG retenu passe un contrôle de croissance sur champs aléatoires et la tolérance finale. Le réglage plus agressif (échelle 12) est rejeté : le contrôle aléatoire révèle une croissance d'énergie supérieure au seuil. Ce contrôle fini n'est pas un certificat spectral de stabilité. La variante mobile à 16 pas échoue à la tolérance; le benchmark utilise 64 pas.
+
+\section{Comparateur DG à intégration exponentielle}
+Le même opérateur DG triangulaire est aussi intégré par projection d'Arnoldi de l'action exponentielle, avec flux central ou amont. Deux passages d'orthogonalisation et l'exponentielle de la petite matrice sont calculés sur GPU. Le mode constant est conservé explicitement. Cette construction classique, étudiée notamment par Saad (1992), fournit un comparateur à grands pas; la dimension de Krylov et le nombre de pas restent des paramètres de précision.
+
+Le maillage, le champ initial et la tolérance L2 de 0,001 sont ceux du benchmark à un champ. La référence par caractéristiques et la quadrature indépendante sont construites une seule fois, hors chronométrage. Chaque coût inclut l'assemblage DG, un pas de chauffe et l'évolution; aucun graphe CUDA n'est employé pour Arnoldi. Le résidu final de Krylov est enregistré comme indicateur, tandis que l'acceptation repose sur l'erreur physique intégrée.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-krylov.pdf}\caption{Exploration des dimensions de Krylov et du nombre de pas. La stabilité de l'exponentielle projetée ne suffit pas à garantir sa précision; les configurations rejetées restent affichées.}\end{figure}
+\begin{center}\small\begin{tabular}{llllll}\toprule
+Flux & Dimension & Pas & L2 & Accepté & Temps (s)\\\midrule
+central & 48 & 1 & 1.414 & non & 0.08463\\
+central & 48 & 4 & 1.414 & non & 0.1717\\
+central & 48 & 16 & 1.414 & non & 0.5239\\
+central & 48 & 64 & 1.414 & non & 1.938\\
+central & 96 & 1 & 1.413 & non & 0.1823\\
+central & 96 & 4 & 1.414 & non & 0.4198\\
+central & 96 & 16 & 1.414 & non & 1.358\\
+central & 96 & 64 & 1.414 & non & 5.125\\
+upwind & 48 & 1 & 1.157 & non & 0.08898\\
+upwind & 48 & 4 & 1.03 & non & 0.1749\\
+upwind & 48 & 16 & 1.006 & non & 0.5249\\
+upwind & 48 & 64 & 1.087 & non & 1.916\\
+upwind & 96 & 1 & 1.18 & non & 0.1886\\
+upwind & 96 & 4 & 1 & non & 0.4228\\
+upwind & 96 & 16 & 0.9996 & non & 1.355\\
+upwind & 96 & 64 & 1.186 & non & 5.095\\
+upwind & 48 & 256 & 0.0002865 & oui & 7.554\\
+upwind & 48 & 1024 & 0.0002865 & oui & 29.78\\
+upwind & 96 & 256 & 0.0002865 & oui & 20.12\\
+upwind & 96 & 1024 & 0.0002865 & oui & 79.93\\
+\bottomrule\end{tabular}\end{center}
+Le meilleur coût accepté dans cette exploration vaut 7.554 s, pour une erreur 0.0002865. Une seule mesure par configuration est disponible ici; la sélection et les répétitions de chronométrage sont distinctes.
 
 \section{Mémoire : changement d'espace sans changer le champ FE}
 L'état est représenté par trois tableaux (v,w,a), avec v=R*w+(I-R*R)a. Son énergie est ||w||\(^{2}\)+||a||\(^{2}\)-||Ra||\(^{2}\). La remise à zéro conserve v mais perd toute la mémoire invisible dans ce champ. Le transfert contractant conserve une partie de cette mémoire. En cas de raffinement exactement emboîté, l'injection corrige w par les nouveaux modes de a et préserve toute l'énergie augmentée.
@@ -117,7 +152,7 @@ Aux. n & Pas & Réaction & Itér. & L2 max & Plancher max\\\midrule
 128 & 256 & oui & 8 & 0.0002416 & 0.0002408\\
 \bottomrule\end{tabular}\end{center}
 \section{Déformer puis revenir : erreur accumulée sans référence numérique}
-Le flot autonome est suivi pendant une durée T, puis sa vitesse est inversée pendant la même durée. La solution exacte finale est le profil initial : aucune intégration de caractéristiques n'est nécessaire pour cette référence. Les partitions restent adaptées au champ calculé pendant les deux trajets. La dissipation et les pertes de mémoire ne s'annulent pas lors du retour.
+Le flot autonome est suivi pendant une durée T, puis sa vitesse est inversée pendant la même durée. La solution exacte finale est le profil initial : aucune intégration de caractéristiques n'est nécessaire pour cette référence. Les partitions restent adaptées au champ calculé pendant les deux trajets. La dissipation et les pertes de mémoire ne s'annulent pas lors du retour. Une erreur de phase réversible peut toutefois s'annuler : ce test complète les références aller simple sans les remplacer.
 
 \begin{center}\small\begin{tabular}{lllll}\toprule
 Durée aller & Transfert & Changements & L2 max & Retour FE max\\\midrule
@@ -128,12 +163,26 @@ Durée aller & Transfert & Changements & L2 max & Retour FE max\\\midrule
 0.5 & projected & 63 & 0.01545 & 0.01545\\
 0.5 & chebyshev & 63 & 0.01491 & 0.01491\\
 \bottomrule\end{tabular}\end{center}
-Campagne de déformation élargie : 29 cas sur 48 enregistrés. Les erreurs affichées portent sur le pire des quatre champs; les cas qui n'atteignent pas la tolérance restent présents.
+Campagne de déformation élargie : 48 cas sur 48 enregistrés. Les erreurs affichées portent sur le pire des quatre champs; les cas qui n'atteignent pas la tolérance restent présents.
 
 Le contrôle de maillage de cette campagne a lieu tous les quatre pas numériques. Réduire le pas augmente donc aussi la fréquence physique de contrôle : ces courbes seules n'isolent pas l'erreur temporelle. Certains cas à 512 pas déclenchent presque un remaillage à chaque contrôle et deviennent plus coûteux et moins précis. L'ablation suivante teste séparément ce mécanisme.
 
 \begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-return-0-25.pdf}\caption{Aller-retour de durée totale 0.5. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n'est pas encore enregistré.}\end{figure}
 \begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-return-1-0.pdf}\caption{Aller-retour de durée totale 2.0. Le raffinement en temps et en espace est distingué. Un panneau vide signifie que le calcul correspondant n'est pas encore enregistré.}\end{figure}
+Une ablation retire ensuite les observations FE intermédiaires et les transferts de mémoire. Le champ DG auxiliaire est transporté et remaillé directement, avec seulement une projection FE au départ et au retour. Elle isole les erreurs du transport auxiliaire et de son adaptation. Le nombre de cellules par direction vaut 128 ou 256; des grilles uniformes fixes servent de second contrôle. Cette version ne fournit pas de physique FE intermédiaire.
+
+\begin{center}\small\begin{tabular}{llllll}\toprule
+Aux. n & Pas & Intervalle & Uniforme & Changements & L2 max\\\midrule
+128 & 128 & 4 & non & 63 & 0.05121\\
+128 & 512 & 4 & non & 255 & 0.02317\\
+128 & 512 & 16 & non & 63 & 0.05353\\
+256 & 128 & 4 & non & 63 & 0.006786\\
+256 & 512 & 4 & non & 255 & 0.002697\\
+256 & 512 & 16 & non & 63 & 0.007261\\
+128 & 512 & 4 & oui & 0 & 0.3259\\
+256 & 512 & 4 & oui & 0 & 0.05874\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-auxiliary-return.pdf}\caption{Déformation et retour de durée totale deux. Les grilles adaptées sont décidées par leurs champs respectifs. Les points uniformes fixes apparaissent uniquement à 512 pas; le raffinement auxiliaire est distinct du raffinement temporel.}\end{figure}
 \section{Diagnostic du moniteur : champ immobile et fréquence fixée}
 Un premier test supprime toute advection et reconstitue vingt-quatre fois le support à partir du même champ, avec projection entre supports. Il compare 5 et 12 points de Gauss par direction, ainsi qu'un plancher nul ou égal à un millionième de l'énergie marginale moyenne avant la racine quatrième. La surintégration conserve l'intégrale du carré du polynôme mais affine son histogramme spatial. Un déplacement résiduel dans ce test provient de la boucle moniteur-projection.
 
@@ -169,6 +218,23 @@ Pas & Intervalle & Changements & L2 max\\\midrule
 512 & 4 & 202 & 0.001273\\
 512 & 16 & 63 & 0.0008747\\
 \bottomrule\end{tabular}\end{center}
+Un alignement de phase par moindres carrés dans les coordonnées cumulées du moniteur supprime la dépendance à une coupure fixe. Il ne minimise toutefois pas le déplacement maximal des arêtes, qui déclenche ici les changements. Cette première variante ne réduit pas le nombre de remaillages ni l'erreur de retour; elle reste un résultat négatif du contrôleur.
+
+\begin{center}\small\begin{tabular}{llll}\toprule
+Pas & Intervalle & Changements & L2 max\\\midrule
+128 & 4 & 63 & 0.001004\\
+512 & 4 & 255 & 0.001307\\
+512 & 16 & 63 & 0.001004\\
+\bottomrule\end{tabular}\end{center}
+Une seconde phase minimise directement le plus grand déplacement physique des quantiles pour le nouveau moniteur fixé. La monotonie des quantiles permet de trouver par dichotomie le point où les déplacements extrêmes positifs et négatifs s'équilibrent. Cette optimalité locale ne minimise ni l'erreur du champ ni le nombre futur de changements.
+
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Pas & Intervalle & Changements minimax & L2 max & Temps (s)\\\midrule
+128 & 4 & 47 & 0.001427 & 17.06\\
+512 & 4 & 59 & 0.001006 & 32.03\\
+512 & 16 & 47 & 0.001454 & 17.5\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-phase-comparison.pdf}\caption{Même transfert de mémoire tronqué, trois choix de coupure périodique. La troisième configuration conserve l'intervalle physique de contrôle de la première.}\end{figure}
 \section{Un transfert sans changement doit conserver la mémoire}
 Le filtre polynomial initial démarre de zéro. Même quand l'ancien et le nouveau support coïncident, il multiplie chaque mode de mémoire par un facteur inférieur à un : un nombre fini d'itérations introduit donc un défaut pour une opération géométriquement nulle. Ce défaut est distinct de la stabilité énergétique. Le contrôle ci-dessous utilise des états aléatoires après transport et physique, et calcule leur distance dans un espace ambiant commun.
 
@@ -194,6 +260,115 @@ Pas & Intervalle & Transfert & Changements & L2 max & Temps (s)\\\midrule
 512 & 16 & projected & 63 & 0.0008703 & 17.23\\
 512 & 16 & warm & 63 & 0.0009124 & 17.36\\
 \bottomrule\end{tabular}\end{center}
+\section{Projection de mémoire dans un petit espace augmenté}
+L'état précédent transféré est ajouté à un petit espace de Krylov. La projection orthogonale de la mémoire sur son image orthogonale au champ FE se calcule avec une petite matrice de Gram GPU. Elle conserve le champ FE et vérifie une identité de Pythagore : perte d'énergie égale carré du déplacement ambiant. L'espace contient la mémoire entrante lorsque le support est inchangé. Un seuil de rang \(10^{-12}\) limite ces propriétés en arithmétique flottante. L'augmentation de Krylov est classique; cette réalisation est évaluée ici dans le transfert FE.
+
+\begin{center}\small\begin{tabular}{llll}\toprule
+Degré & Défaut observation max & Défaut oracle max & Défaut Pythagore max\\\midrule
+1 & 1.554e-15 & 1.943e-15 & 1.91e-14\\
+2 & 1.776e-15 & 2.887e-15 & 3.153e-14\\
+4 & 1.776e-15 & 1.377e-14 & 6.395e-14\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-galerkin.pdf}\caption{Trois réalisations du transfert de mémoire avec le même contrôleur de maillage. Les trajectoires de supports peuvent différer parce que le contrôleur dépend du champ calculé. Une exécution par configuration.}\end{figure}
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Pas & Intervalle & Changements & L2 max & Temps (s)\\\midrule
+128 & 4 & 63 & 0.0007944 & 23.98\\
+512 & 4 & 202 & 0.0007418 & 77.67\\
+512 & 16 & 63 & 0.000814 & 24.33\\
+\bottomrule\end{tabular}\end{center}
+Le sous-espace est construit à partir de chaque champ : le transfert est non linéaire. L'identité de Pythagore ne démontre pas une contraction de la distance entre deux solutions, ni un gain d'erreur pour l'EDP. Les tests de retour servent à examiner ce second point.
+
+Un contre-exemple indépendant en dimension six précise la limite de stabilité. Deux entrées séparées de 1e-7 sont projetées sur des espaces augmentés qui dépendent de l'état. Les sorties peuvent être beaucoup plus éloignées, alors que chaque énergie décroît et que chaque identité de Pythagore est satisfaite. La note donne la construction explicite et les gains limites analytiques. Cette observation exclut une preuve de non-expansivité de ce transfert non linéaire.
+
+\begin{center}\small\begin{tabular}{llll}\toprule
+Directions & Rang effectif & Gain de distance & Limite analytique\\\midrule
+1 & 1 & 100 & 100\\
+3 & 2 & 890 & 890\\
+\bottomrule\end{tabular}\end{center}
+\section{Comparaison des transferts à géométrie identique}
+Des points matériels transportent les poids d'énergie de la solution initiale et définissent à l'avance les partitions. Les huit méthodes suivent exactement cette même succession de 63 changements, puis les mêmes opérateurs auxiliaires. Les matrices FE–auxiliaire et les projections entre supports sont construites une seule fois et partagées. La rétroaction du champ calculé sur le maillage est ainsi supprimée de cette comparaison.
+
+À chaque changement, trois mesures partent du même état, après une application de chauffe. Leur médiane inclut le transfert et ses diagnostics. La somme de ces médianes isole le coût des transferts; elle exclut la construction géométrique commune et n'est pas un temps complet de résolution. Les états des méthodes peuvent différer parce que leurs erreurs se sont accumulées.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-frozen-transfer.pdf}\caption{Même suite de supports et mêmes transports. Les variantes de Galerkin utilisent une, deux, trois ou cinq directions; la matrice de Gram peut avoir un rang numérique plus faible. La seconde colonne mesure uniquement les transferts avec diagnostics.}\end{figure}
+Construction initiale commune : 0.532 s; constructions géométriques communes pendant l'évolution : 16.3 s. Ces coûts restent à payer pour une exécution indépendante.
+
+\section{Une mémoire commune aux composantes du système}
+Les espaces de transfert construits séparément pour chaque champ dépendent du choix de base des composantes. Une variante réunit leurs directions dans un espace partagé et projette tous les champs sur cet espace. Elle préserve le champ FE et l'identité au support inchangé. La perte de la matrice complète des produits scalaires entre champs est positive semi-définie; une rotation orthogonale des composantes produit la même rotation de la sortie. Les preuves, à géométrie et métrique des composantes fixées, sont données dans la note.
+
+\begin{center}\small\begin{tabular}{ll}\toprule
+Contrôle GPU, degrés 1, 2 et 4 & Défaut maximal\\\midrule
+Observation FE & 2.109e-15\\
+Pythagore, matrice complète & 1.492e-13\\
+Rotation des champs, espace partagé & 3.015e-12\\
+Rotation des champs, espaces séparés & 0.2181\\
+\bottomrule\end{tabular}\end{center}
+Le défaut de covariance est ici le maximum absolu des différences de coefficients de l'ancre et du champ auxiliaire après rotation. Les champs de contrôle sont aléatoires; ce résultat teste une propriété algébrique et ne mesure pas une erreur d'EDP. L'espace partagé reste dépendant de l'ensemble des états et ne supprime pas le contre-exemple de stabilité entre entrées distinctes.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-block-transfer.pdf}\caption{Tous les champs et toutes les méthodes suivent la même suite de 63 changements de support. Les constructions géométriques sont communes; les temps de transfert incluent les diagnostics. Les variantes block réunissent les directions des quatre champs.}\end{figure}
+La géométrie commune coûte 0.532 s initialement, puis 18 s pendant le trajet. Ce coût doit être ajouté pour une résolution indépendante.
+
+\section{Réduction CUDA des produits de Gram}
+Le profilage synchronisé identifie la formation des petits produits de Gram comme le surcoût de Galerkin : les contractions emploient une très longue dimension spatiale et peu de colonnes. Une réduction CUDA divise cette somme en blocs de 1024 degrés de liberté, puis réunit les sommes partielles sur GPU. La diagonalisation et le critère de rang restent identiques. Cinq répétitions entrelacées comparent les deux assemblages sur le même état; ces temps concernent un transfert et incluent ses diagnostics.
+
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Directions/champ & Espace & Initial (ms) & Réduction (ms) & Écart ambiant\\\midrule
+1 & séparé & 7.537 & 6.666 & 5.208e-13\\
+1 & partagé & 156.1 & 6.939 & 1.904e-11\\
+3 & séparé & 126.9 & 8.084 & 5.88e-12\\
+3 & partagé & 147.2 & 8.943 & 5.692e-12\\
+5 & séparé & 128.5 & 9.866 & 5.003e-12\\
+5 & partagé & 149 & 13.54 & 4.775e-12\\
+\bottomrule\end{tabular}\end{center}
+Les contrôles indépendants comparent les produits pondérés, les rangs retenus, les coefficients et l'état ambiant. Les directions presque nulles peuvent amplifier les différences de coefficients; le fichier brut conserve également la variabilité entre répétitions du calcul initial. Le gain local doit être distingué du temps de construction des supports.
+
+\section{Coût du trajet complet avec la réduction CUDA}
+Le changement d'assemblage est ensuite évalué dans le contrôleur adaptatif complet. Les coûts incluent la préparation, les contrôles et toutes les reconstructions géométriques. Les espaces partagés sont comparés aux projections séparées; la métrique d'erreur reste le maximum des quatre erreurs L2 après retour exact.
+
+\begin{center}\small\begin{tabular}{lllllll}\toprule
+FE / auxiliaire & Durée/branche & Pas / contrôle & Mémoire & Changements & L2 max & Coût (s)\\\midrule
+128 / 64 & 0.25 & 128 / 4 & galerkin & 63 & 0.000791 & 18.32\\
+128 / 64 & 0.25 & 128 / 4 & block & 63 & 0.0007934 & 18.1\\
+128 / 64 & 0.25 & 512 / 4 & galerkin & 202 & 0.0007402 & 58.11\\
+128 / 64 & 0.25 & 512 / 4 & block & 202 & 0.0007412 & 58\\
+128 / 64 & 0.25 & 512 / 16 & galerkin & 63 & 0.0008151 & 18.46\\
+128 / 64 & 0.25 & 512 / 16 & block & 63 & 0.0008124 & 17.96\\
+256 / 128 & 1 & 512 / 4 & galerkin & 255 & 0.0233 & 255.2\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-fast-return.pdf}\caption{Le gain sur les petits produits de Gram se répercute partiellement sur le coût complet, dominé par les reconstructions des supports. Les points comprennent plusieurs pas et fréquences de contrôle; le tableau conserve leurs paramètres.}\end{figure}
+\section{Association de la projection enrichie et de la phase minimax}
+La projection enrichie et la minimisation du déplacement périodique sont ensuite utilisées ensemble. Les essais courts reprennent les trois fréquences de contrôle. Deux essais plus longs sur FE n=256 et auxiliaire n=128 comparent la projection enrichie avec coupure fixe et avec phase minimax. Les ingrédients ont des contrôles séparés; cette campagne examine leur interaction.
+
+\begin{center}\small\begin{tabular}{lllllll}\toprule
+T aller & FE n & Phase & Pas / contrôle & Changements & L2 max & Temps (s)\\\midrule
+0.25 & 128 & minimax & 128 / 4 & 47 & 0.001241 & 23.73\\
+0.25 & 128 & minimax & 512 / 4 & 58 & 0.001134 & 40.25\\
+0.25 & 128 & minimax & 512 / 16 & 47 & 0.001298 & 23.99\\
+1 & 256 & fixe & 512 / 4 & 255 & 0.02332 & 376.5\\
+1 & 256 & minimax & 512 / 4 & 226 & 0.02527 & 360.1\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-joint.pdf}\caption{Comparaison exploratoire des configurations courtes, à trois fréquences de contrôle. Chaque point correspond à une exécution; les trajectoires de supports sont propres à chaque méthode. Cette figure ne remplace pas la comparaison à géométrie identique.}\end{figure}
+Le gain obtenu par Galerkin face au filtre tronqué à 512 pas ne suffit pas à établir un avantage de coût : Chebyshev à 128 pas donne déjà une erreur proche avec beaucoup moins de contrôles. Les paramètres de transport et d'adaptation doivent être optimisés ensemble avant une comparaison à précision imposée.
+
+\section{Contrôle du déplacement par un budget de transfert}
+Le contrôleur propose les mêmes partitions d'énergie, puis réduit leur déplacement par facteurs de deux jusqu'à respecter un budget de distance de mémoire. La projection augmentée relie cette distance à la perte d'énergie. Le budget total est réparti entre les occasions de changement; neuf essais au plus sont autorisés, après quoi l'ancien support est conservé. Une marge empirique pour les arrondis accompagne le diagnostic.
+
+Dans le modèle ambiant exact, la somme des distances de compression borne leur effet cumulé pour la même suite d'opérateurs de transport figée. Ce budget ne borne pas l'erreur totale vis-à-vis de l'EDP. En particulier, ralentir le maillage peut augmenter l'erreur du transport; les courbes examinent ce compromis.
+
+L'allocation uniforme échoue dans ces essais : elle peut empêcher tous les changements et laisser un budget inutilisé, avec une erreur physique finale élevée. Le contrôle du défaut de compression seul ne sélectionne donc pas un support adapté à l'advection.
+
+Une ablation autorise chaque changement à utiliser toute la fraction encore disponible du budget total. Elle isole le rôle de l'allocation uniforme; le même suivi de la somme des distances est conservé.
+
+\begin{center}\small\begin{tabular}{llllllll}\toprule
+Allocation & Pas / contrôle & Budget & Dépensé & Changements & Essais & L2 max & Temps (s)\\\midrule
+uniform & 128 / 4 & 0.003 & 0 & 0 & 567 & 0.5718 & 206\\
+uniform & 128 / 4 & 0.01 & 0.0002906 & 2 & 561 & 0.5634 & 204\\
+uniform & 128 / 4 & 0.03 & 0.01058 & 34 & 341 & 0.2215 & 124.6\\
+uniform & 512 / 16 & 0.01 & 0.0002947 & 2 & 562 & 0.5671 & 204.4\\
+remaining & 128 / 4 & 0.01 & 0.009988 & 30 & 335 & 0.284 & 122.6\\
+remaining & 128 / 4 & 0.03 & 0.02364 & 63 & 63 & 0.0007918 & 24.14\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-remap-budget.pdf}\caption{La colonne de droite expose les réductions et rejets du déplacement. Le respect du budget porte sur la mesure de compression; l'erreur L2 physique est présentée séparément dans le tableau.}\end{figure}
 \section{Apparition d'une structure par une source FE}
 Une nouvelle bosse centrée en (0,8; 0,75) est ajoutée par une source FE impulsionnelle à t=0,125, après un début de transport d'une autre bosse. Le maillage triangulaire est perturbé, sans graduation. L'adaptation compare l'énergie de l'état auxiliaire à celle du champ FE observé. Le second moniteur peut voir une structure créée par la physique FE avant qu'elle soit bien représentée dans l'auxiliaire. La référence transporte séparément les deux profils analytiques.
 
@@ -218,6 +393,59 @@ FE n & Aux. n & Largeur & Moniteur & L2 & Plancher FE\\\midrule
 256 & 64 & 0.006 & auxiliary & 0.0004428 & 5.457e-05\\
 256 & 64 & 0.006 & fe & 0.000418 & 5.457e-05\\
 \bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-source-fields.pdf}\caption{Structure ajoutée par la source FE, observée à la fin du transport. Même maillage FE n=256 et même moniteur FE; seule la résolution auxiliaire passe de 32 à 64. Les erreurs ponctuelles partagent une échelle logarithmique. Le panneau de projection mesure la limite FE locale.}\end{figure}
+Un raffinement emboîté peut être déclenché par la part de la source FE absente de l'auxiliaire. Après le changement de partition à l'injection, le diagnostic est la racine de la différence entre l'énergie FE de la source et l'énergie de sa projection auxiliaire. Les intervalles sont bisectés jusqu'à satisfaction du seuil ou épuisement du budget n=128. La mémoire est transférée par l'injection emboîtée, dont la perte d'énergie est contrôlée. Ce seuil porte sur la source projetée à cet instant; il ne borne pas l'erreur EDP finale.
+
+\begin{center}\small\begin{tabular}{lllllll}\toprule
+Largeur & Aux. initial & Aux. final & Seuil & Atteint & L2 max & Temps (s)\\\midrule
+0.003 & 32 & 32 & 0.002 & oui & 0.005018 & 15.04\\
+0.003 & 32 & 128 & 0.0002 & oui & 0.001895 & 24.07\\
+0.006 & 32 & 32 & 0.002 & oui & 0.003039 & 15.7\\
+0.006 & 32 & 64 & 0.0002 & oui & 0.0009983 & 18.66\\
+0.003 & 128 & 128 & n/a & fixe & 0.001608 & 29.11\\
+0.006 & 128 & 128 & n/a & fixe & 8.364e-05 & 31.19\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-source-refinement.pdf}\caption{Coût de préparation et d'évolution. Les simulations à résolution fixe gardent un nombre de cellules constant mais leurs partitions se déplacent. Chaque point représente une exécution; aucun gain robuste de performance n'est conclu de cette seule mesure.}\end{figure}
+\section{Diffusion implicite dans l'espace FE}
+Une diffusion SIPG est assemblée sur les triangles perturbés DG P4. Chaque demi-pas Crank–Nicolson est résolu par gradient conjugué préconditionné sur GPU; les blocs de raideur et le préconditionneur diagonal sont réutilisés. Le transport intermédiaire est une translation périodique de vitesse (1; 0,37). Une solution analytique de l'équation advection–chaleur fournit la référence à t=0,23, avec diffusivité 0,002. Le contrôle efface la mémoire après chaque transport.
+
+L'opérateur symétrique, son noyau constant, son spectre et la résolution CN sont contrôlés sur de petits maillages par diagonalisation GPU indépendante du solveur itératif. La pénalité vaut huit fois (p+1) au carré, multiplié par l'inverse de la plus petite hauteur adjacente. Ces contrôles ne constituent pas une preuve de coercivité pour des maillages arbitraires. L'ordre deux de CN ne suffit pas à établir celui du couplage avec projections.
+
+Un contrôle sans advection vérifie aussi la décroissance analytique du mode cos(2\(\pi\)x) sin(2\(\pi\)y), jusqu'à t=0,2 avec 32 pas CN. Ce test contrôle le signe et la normalisation de la diffusion indépendamment du transfert semi-lagrangien.
+
+\begin{center}\small\begin{tabular}{lll}\toprule
+FE n & Erreur L2 chaleur seule & Plancher FE\\\midrule
+8 & 2.877e-05 & 1.734e-05\\
+16 & 9.014e-07 & 5.192e-07\\
+32 & 2.857e-08 & 1.682e-08\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-diffusion.pdf}\caption{Diffusion FE implicite entre transports auxiliaires. La solution analytique intègre simultanément translation et élargissement du profil; le plancher FE est calculé par projection indépendante.}\end{figure}
+\begin{center}\small\begin{tabular}{lllllll}\toprule
+FE n & Champs & Pas & Méthode & L2 max & CG max & Temps (s)\\\midrule
+8 & 1 & 4 & memory & 0.01836 & 116 & 0.3494\\
+8 & 1 & 4 & reset & 0.01932 & 116 & 0.3279\\
+8 & 1 & 16 & memory & 0.01725 & 61 & 0.6287\\
+8 & 1 & 16 & reset & 0.01844 & 61 & 0.6391\\
+8 & 1 & 64 & memory & 0.01898 & 29 & 1.237\\
+8 & 1 & 64 & reset & 0.01829 & 29 & 1.26\\
+16 & 1 & 4 & memory & 0.001142 & 192 & 0.5599\\
+16 & 1 & 4 & reset & 0.0008988 & 193 & 0.5524\\
+16 & 1 & 16 & memory & 0.0007547 & 114 & 1.181\\
+16 & 1 & 16 & reset & 0.0008371 & 114 & 1.191\\
+16 & 1 & 64 & memory & 0.0006467 & 58 & 2.381\\
+16 & 1 & 64 & reset & 0.0007199 & 58 & 2.417\\
+32 & 1 & 4 & memory & 0.0001763 & 319 & 0.9579\\
+32 & 1 & 4 & reset & 0.0001741 & 319 & 0.9568\\
+32 & 1 & 16 & memory & 3.324e-05 & 186 & 2.007\\
+32 & 1 & 16 & reset & 3.321e-05 & 187 & 2.008\\
+32 & 1 & 64 & memory & 2.336e-05 & 108 & 4.444\\
+32 & 1 & 64 & reset & 2.583e-05 & 108 & 4.488\\
+32 & 4 & 16 & memory & 5.26e-05 & 204 & 7.982\\
+32 & 4 & 16 & reset & 5.238e-05 & 204 & 8.045\\
+\bottomrule\end{tabular}\end{center}
+Résidu relatif maximal des résolutions : 2e-12. Écart absolu maximal de masse : 8.38e-13. Le maximum du rapport d'énergie augmentée observé après un pas vaut 0.991096. Les temps comprennent un assemblage par cas; aucun graphe CUDA ni solveur multi-second-membre n'est employé pour CG.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-diffusion-fields.pdf}\caption{Champ FE après translation et diffusion, avec et sans mémoire. Maillage perturbé n=16, auxiliaire n=32 et 64 pas. Les erreurs locales sont affichées à échelle commune; leurs valeurs L2 sont intégrées indépendamment sur tout le domaine.}\end{figure}
 \section{Exploration : vitesses issues de produits de fonctions de courant}
 Une fonction de courant somme de produits a(y)b(x) transforme l'advection en somme de commutateurs de cisaillements. Le prototype réutilise une formule publiée de Casas, Escorihuela-Tomàs et Moreno Casares (2025), PCP16. Ses seize cisaillements Fourier sont unitaires; son ordre cinq dans la racine du pas correspond à l'ordre deux dans le temps physique, à grille fixée. Les coefficients et cette théorie de composition sont attribués aux auteurs. L'intérêt recherché ici est une extension des vitesses admissibles dans le couplage FE, dont la nouveauté et l'avantage de coût ne sont pas établis.
 
@@ -298,8 +526,10 @@ adaptive-separated & 12 & 12\\
 memory-stress & 3 & 3\\
 separated-refinement & 12 & 12\\
 roundtrip-smoke & 6 & 6\\
-roundtrip-long & 29 & 48\\
+roundtrip-long & 48 & 48\\
+auxiliary-return & 8 & 8\\
 source-full & 16 & 16\\
+source-refinement & 6 & 6\\
 products & 32 & 32\\
 monitor-stationary & 12 & 12\\
 monitor-return & 12 & 12\\
@@ -308,6 +538,23 @@ compressible & 32 & 32\\
 warm-return & 6 & 6\\
 material-monitor & 4 & 4\\
 monitor-fe & 3 & 3\\
+material-phase & 2 & 2\\
+phase-return & 3 & 3\\
+galerkin & 3 & 3\\
+budgeted-return & 4 & 4\\
+budgeted-remaining & 2 & 2\\
+joint-return & 5 & 5\\
+frozen-transfer & 8 & 8\\
+krylov & 16 & 16\\
+krylov-tuned & 4 & 4\\
+krylov-fine & 0 & 8\\
+block-frozen & 5 & 5\\
+gram & 12 & 12\\
+fast-return & 7 & 8\\
+system-coupling & 0 & 12\\
+material-minimax & 2 & 2\\
+minimax-return & 3 & 3\\
+diffusion & 20 & 20\\
 \bottomrule\end{tabular}\end{center}
 \begin{center}\small\begin{tabular}{lll}\toprule
 Exécution séquentielle & État & Code de sortie\\\midrule
@@ -320,7 +567,7 @@ svd & completed & 0\\
 source-smoke & completed & 0\\
 source-full & completed & 0\\
 monitor-return & completed & 0\\
-roundtrip-long & running & en cours\\
+roundtrip-long & completed & 0\\
 \bottomrule\end{tabular}\end{center}
 \begin{center}\small\begin{tabular}{lll}\toprule
 Reprise et diagnostics & État & Code de sortie\\\midrule
@@ -341,10 +588,23 @@ chebyshev-sanitizer : ========= ERROR SUMMARY: 0 errors
 
 energy-mesh-sanitizer : ========= ERROR SUMMARY: 0 errors
 
+late-sanitizer : ========= ERROR SUMMARY: 0 errors
+
+coupled-sanitizer : ========= ERROR SUMMARY: 0 errors
+
+krylov-sanitizer : ========= ERROR SUMMARY: 0 errors
+
+reduction-sanitizer : ========= ERROR SUMMARY: 0 errors
+
 Les validations indépendantes couvrent les degrés 1, 2 et 4, les projections, les adjoints en masse, les constantes, les changements de support et les identités de Gram. Toutes les opérations numériques — recouvrements, quadrature, réductions, matrices denses de contrôle — sont exécutées sur CUDA. Le processeur pilote les expériences et dessine les figures. Il s'agit de prototypes isolés dans experiments/slfe, pas d'une intégration de production au langage variationnel Rodin.
 
 La piste d'article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d'énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture.
 
+\noindent\href{https://epubs.siam.org/doi/10.1137/0729014}{Saad (1992), approximation de l'action exponentielle par Krylov}\par
+\noindent\href{https://doi.org/10.1007/s10915-021-01451-w}{Simon et Behrens (2021), reconstruction semi-lagrangienne des sous-échelles}\par
+\noindent\href{https://www-users.cse.umn.edu/~arnold/papers/dgerr.pdf}{Arnold, Brezzi, Cockburn et Marini (2002), méthodes DG elliptiques}\par
+\noindent\href{https://people.math.ethz.ch/~mhg/pub/defl-GGLN1-SIMAX.pdf}{Gaul, Gutknecht, Liesen et Nabben (2013), espaces de Krylov augmentés}\par
+\noindent\href{https://doi.org/10.1016/j.cma.2007.01.002}{Codina, Principe, Guasch et Badia (2007), sous-échelles dynamiques}\par
 \noindent\href{https://doi.org/10.1007/s11128-025-04659-z}{Casas, Escorihuela-Tomàs et Moreno Casares (2025), formules de commutateurs}\par
 \noindent\href{https://arxiv.org/abs/2501.13681}{Adams, Finn, Knepley et Pusztay, rééchantillonnage par projection FE}\par
 \noindent\href{https://gdz.sub.uni-goettingen.de/download/pdf/PPN362160546_0003/PPN362160546_0003.pdf}{Golub et Varga (1961), semi-itérations de Chebyshev}\par

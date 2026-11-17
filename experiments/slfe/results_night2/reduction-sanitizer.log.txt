@@ -1,0 +1,3 @@
+========= COMPUTE-SANITIZER
+{"products": [{"points": 1, "absolute_error": 4.440892098500626e-16, "relative_error": 1.7724726739881813e-16}, {"points": 17, "absolute_error": 8.881784197001252e-16, "relative_error": 1.3900670209815516e-16}, {"points": 1025, "absolute_error": 4.263256414560601e-14, "relative_error": 8.542327993943817e-16}, {"points": 8193, "absolute_error": 6.110667527536862e-13, "relative_error": 5.144034658765057e-15}]}
+========= ERROR SUMMARY: 0 errors

@@ -1,5 +1,5 @@
 {
-  "generated": "17/11/2026 \u00e0 01:24",
+  "generated": "17/11/2026 \u00e0 03:18",
   "matched": [
     {
       "fields": 1,
@@ -73,9 +73,11 @@
     "memory-stress": 3,
     "separated-refinement": 12,
     "roundtrip-smoke": 6,
-    "roundtrip-long": 29,
+    "roundtrip-long": 48,
+    "auxiliary-return": 8,
     "source-smoke": 2,
     "source-full": 16,
+    "source-refinement": 6,
     "product-pilot": 6,
     "products": 32,
     "monitor-stationary": 12,
@@ -86,6 +88,22 @@
     "material-monitor": 4,
     "material-phase": 2,
     "monitor-fe": 3,
+    "phase-return": 3,
+    "galerkin": 3,
+    "budgeted-return": 4,
+    "budgeted-remaining": 2,
+    "joint-return": 5,
+    "frozen-transfer": 8,
+    "krylov": 16,
+    "krylov-tuned": 4,
+    "krylov-fine": 0,
+    "block-frozen": 5,
+    "gram": 12,
+    "fast-return": 7,
+    "system-coupling": 0,
+    "material-minimax": 2,
+    "minimax-return": 3,
+    "diffusion": 20,
     "moving-resolution": 36,
     "moving-fields": 18
   }
