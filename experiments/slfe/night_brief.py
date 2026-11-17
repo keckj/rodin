@@ -198,7 +198,7 @@ def main():
         "La piste défendable pour un article est la compatibilité entre mémoire physique, observation FE, compression dépendant de l’état et physique dissipative. Les briques de projection, de sous-échelles, de cisaillement et de composition ont des antécédents : les preuves seules n’établissent pas la nouveauté bibliographique."
     )
     r.paragraph(
-        "Les prochaines expériences décisives doivent établir un bénéfice à précision et coût comparables dans un problème couplé où la mémoire est nécessaire, contrôler les défauts pour des vitesses FE générales, puis comparer avec les remaps et méthodes de sous-échelles GPU les plus proches. Le prototype périodique 2D ne couvre encore ni frontières physiques, ni MPI, ni intégration de production dans Rodin."
+        "La sélection numérique de rang doit d’abord protéger le moment cible : un diagnostic a identifié sa perte au deuxième pas du cas P4 presque dépendant. Les prochaines expériences décisives doivent établir un bénéfice à précision et coût comparables dans un problème couplé où la mémoire est nécessaire, contrôler les défauts pour des vitesses FE générales, puis comparer avec les remaps et méthodes de sous-échelles GPU les plus proches. Le prototype périodique 2D ne couvre encore ni frontières physiques, ni MPI, ni intégration de production dans Rodin."
     )
     r.paragraph(
         "Limite établie : les sous-pas négatifs restent contractants mais amplifient la dissipation des projections à maillage fixé. Les ordres quatre et six mesurés avant le plateau spatial ne doivent pas être annoncés comme un théorème d’ordre uniforme."

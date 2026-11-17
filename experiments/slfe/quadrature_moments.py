@@ -111,7 +111,7 @@ class QuadratureMoments:
         )
 
     def apply(self, state, iterations=2, shared=True, target_seed=False):
-        """Project nonlinear moments; a raw target seed retains P_W^Q F(q)."""
+        """Request P_W^Q F(q) as a direction, subject to the Gram rank cutoff."""
         if target_seed and iterations < 1:
             raise ValueError("Target seeding requires at least two moment directions")
         c = self.coupling

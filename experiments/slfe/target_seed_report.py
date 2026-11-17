@@ -123,6 +123,31 @@ def append_target_seed(r, raw, source):
     r.paragraph(
         "La propriété est celle d’une projection sur un espace enrichi qui contient une approximation connue de sa cible. Elle ne constitue pas à elle seule une nouveauté bibliographique. Sa conséquence algorithmique concrète est de choisir une direction disponible qui assure cette propriété, plutôt que d’espérer la récupérer par quelques puissances de R R*. Le cas P4, n = 8 atteint seulement environ 2e−8 avec cette réalisation : le conditionnement et la troncature de Gram restent à contrôler lorsque la cible est presque dans V."
     )
+    rank_file = source / "target-seed-rank.json"
+    if rank_file.exists():
+        rank_data = json.loads(rank_file.read_text())
+        r.paragraph(
+            "Le diagnostic instrumenté P4, n = 8 isole cette limite. Au deuxième pas, une valeur propre de Gram voisine de 3,1e−13 passe sous le seuil 1e−12 : le rang conservé devient un. Une projection indépendante utilisant exactement les mêmes directions ne reproduit alors plus leur moment cible, avec une erreur physique relative de 1,24e−7. L’observation FE reste préservée à ce pas, mais l’erreur apparaît dans les étapes suivantes. Le problème de rang est donc mesuré, et la garantie de meilleure approximation reste conditionnelle à la rétention effective du moment. Ces calculs instrumentés ne figurent pas dans les chronométrages."
+        )
+        r.table(
+            [
+                "Pas",
+                "Rang",
+                "Petite valeur propre",
+                "Défaut cible W",
+                "Erreur observation",
+            ],
+            [
+                [
+                    x["step"],
+                    x["retained_rank"],
+                    min(x["gram_eigenvalues"]),
+                    x["physical_relative_target_retention_error"],
+                    x["relative_observation_error"],
+                ]
+                for x in rank_data["controls"]
+            ],
+        )
     refined = [
         x["result"]
         for x in raw.get("unresolved-target-quadrature", [])

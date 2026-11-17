@@ -98,8 +98,10 @@ class ReactionMoments:
     ):
         """Compress physical moments, optionally retaining their raw W moment.
 
-        With target_seed, the retained ambient space contains P_W(f), so
-        the projection error cannot exceed ||f-P_W(f)||. Incoming memory
+        Before numerical rank truncation, target_seed puts P_W(f) in the
+        retained ambient space, so its projection error is at most
+        ||f-P_W(f)||. This bound requires that the direction survive the
+        Gram cutoff. Incoming memory
         is also retained. This option requires at least two directions and
         applies only to full targets, not additive increment updates.
         """

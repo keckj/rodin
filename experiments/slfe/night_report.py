@@ -3834,6 +3834,9 @@ def main():
         r.tex.append(r"\noindent\href{" + url + "}{" + tex_escape(label) + "}\\par")
     r.section("Reproduction")
     r.paragraph(
+        "Les dernières campagnes utilisent hamiltonian_study.py pour les ordres, hamiltonian_benchmark.py et hamiltonian_tuned_campaign.py pour les comparaisons capturées, broad_hamiltonian_study.py pour le filtrage spectral, hamiltonian_reaction_study.py pour la physique intermédiaire et unresolved_reaction_study.py pour la fermeture sous-résolue. target_seed_validation.py vérifie le nouveau choix de direction; target_seed_rank_diagnostic.py mesure sa limite numérique. Les paramètres de lancement et empreintes des sources accompagnent les données."
+    )
+    r.paragraph(
         "Les sources sont dans experiments/slfe : matched_benchmark.py, adaptive_study.py, moving_study.py, refinement_study.py, nested_validation.py et ambient_validation.py. Les fichiers results_night2 contiennent les paramètres, erreurs, historiques et empreintes du code. night_fields.py reproduit les champs; night_report.py reconstruit ce rapport sans simulation; restart_theory.tex fournit les hypothèses et preuves. Publication exclusivement sur la branche SLFE du fork keckj/rodin."
     )
     title = "SLFE : supports mobiles et transfert de mémoire"
