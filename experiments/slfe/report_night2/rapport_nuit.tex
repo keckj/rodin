@@ -4,11 +4,14 @@
 \geometry{margin=2cm}\hypersetup{colorlinks=true,urlcolor=blue,hypertexnames=false}
 \setlength{\emergencystretch}{3em}
 \title{SLFE : supports mobiles\\et transfert de mémoire}
-\author{Recherche GPU sur le fork keckj/rodin}\date{17/11/2026 à 04:47}
+\author{Recherche GPU sur le fork keckj/rodin}\date{17/11/2026 à 05:34}
 \begin{document}\maketitle
-Résultats disponibles le 17/11/2026 à 04:47 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test.
+Résultats disponibles le 17/11/2026 à 05:34 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test.
 
 \section{Résultat et portée}
+Trois résultats structurent désormais l'étude : une identité d'énergie relative autorise une borne d'erreur malgré les transferts non linéaires; les réactions appliquées au champ complet évitent une mémoire artificiellement persistante; une réalisation linéaire par réflexion orthogonale conserve une précision P4 proche de l'ordre cinq dans le test de translation à changements fréquents. Le rapport détaille aussi les cas où ces méthodes perdent en coût ou en précision.
+
+\noindent\href{memory_paper_draft.pdf}{Ébauche d'article avec preuves et expériences principales.}\par
 Un support auxiliaire mobile résout le défaut observé lorsque la bosse quitte la zone fine d'une grille fixe. Le couplage FE avec mémoire accepte désormais un changement de support contractant, et un raffinement exactement emboîté sans perte d'énergie. Les transferts polynomiaux évitent une inversion globale; la variante de Galerkin diagonalise une petite matrice par champ. Les propriétés sont établies sous les hypothèses de restart\_theory.pdf; elles n'établissent ni une nouveauté bibliographique, ni une convergence générale vers l'EDP.
 
 Deux méthodes sont distinguées : le couplage avec mémoire maintient le champ FE à chaque changement; la référence d'advection pure transporte uniquement le champ DG auxiliaire entre une projection FE initiale et une projection FE finale. Cette seconde méthode est la plus rapide ici, mais elle n'offre pas les opérations physiques FE intermédiaires du couplage.
@@ -350,11 +353,11 @@ Le retour long utilise FE n = 256, auxiliaire n = 128, quatre champs, deux traje
 
 \begin{center}\small\begin{tabular}{llllllll}\toprule
 Construction & Transfert & N & Médiane (s) & Min. (s) & Max. (s) & L2 min. & L2 max.\\\midrule
-tiled & block & 1 & 57.76 & 57.76 & 57.76 & 0.02348 & 0.02348\\
-tiled & chebyshev & 1 & 55.83 & 55.83 & 55.83 & 0.02868 & 0.02868\\
-tiled & galerkin & 2 & 55.07 & 54.88 & 55.27 & 0.02331 & 0.02332\\
-warp & chebyshev & 1 & 255.7 & 255.7 & 255.7 & 0.02868 & 0.02868\\
-warp & galerkin & 1 & 255.5 & 255.5 & 255.5 & 0.02331 & 0.02331\\
+tiled & block & 3 & 57.86 & 57.76 & 57.99 & 0.02348 & 0.02351\\
+tiled & chebyshev & 3 & 55.83 & 55.65 & 55.84 & 0.02868 & 0.02868\\
+tiled & galerkin & 3 & 55.1 & 54.88 & 55.27 & 0.02331 & 0.02332\\
+warp & chebyshev & 3 & 255.8 & 255.7 & 255.9 & 0.02868 & 0.02868\\
+warp & galerkin & 2 & 255.4 & 255.3 & 255.5 & 0.02331 & 0.02331\\
 \bottomrule\end{tabular}\end{center}
 Les réductions atomiques et les petits Grams proches d'un défaut de rang peuvent amplifier les différences d'arrondi dans le calcul adaptatif. Les intervalles d'erreur des répétitions sont donc conservés à côté des temps; un accord à l'arrondi des blocs n'implique pas un accord à l'arrondi du champ après 255 changements non linéaires.
 
@@ -692,8 +695,95 @@ Degré & Raffinement & Défaut Gram & Défaut observation\\\midrule
 Le premier contrôleur raffine selon la partie du générateur FE non représentée par le support. Les sélections par énergie et par détail hiérarchique atteignent toutes deux la limite de 96 intervalles dès le deuxième contrôle. L'erreur finale reste proche de 0,148. La conservation de l'énergie lors du raffinement ne répare donc pas ce contrôleur : le budget est épuisé tôt, et aucun déraffinement ne libère les cellules derrière la structure. L'indicateur utilisé ne mesure qu'un terme du défaut de consistance.
 
 \begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-refinement.pdf}\caption{Résultat négatif conservé : changer le classement des cellules ne suffit pas à rendre le contrôleur efficace.}\end{figure}
+\section{Stabilité par rapport à une référence FE, même avec un transfert non linéaire}
+Une identité permet de dépasser la seule décroissance d'énergie. Si le transfert conserve l'observation FE et diminue l'énergie augmentée, sa distance à toute référence FE minimale diminue exactement de l'énergie dissipée, en norme au carré. Cette propriété reste vraie lorsque l'espace de compression dépend de l'état. Elle n'affirme pas la contraction entre deux états possédant des mémoires différentes et ne contredit donc pas le contre-exemple précédent.
+
+La preuve résulte du développement des deux normes et de la conservation du terme croisé avec la référence. Si l'évolution entre transferts est non expansive entre deux états, la récurrence borne l'erreur finale par l'erreur initiale et la somme des défauts locaux de transport. Aucun terme supplémentaire proportionnel au nombre de changements de support n'apparaît. Les supports réalisés modifient cependant ces défauts : cette borne ne rend pas le choix du maillage indifférent.
+
+\begin{center}\small\begin{tabular}{lll}\toprule
+Contrôles GPU & Défaut relatif d'identité & Excès relatif de distance\\\midrule
+135 & 9.656e-16 & 1.843e-16\\
+\bottomrule\end{tabular}\end{center}
+Les contrôles utilisent une réalisation dense indépendante de l'espace augmenté, les degrés FE 1, 2 et 4, trois mouvements, cinq transferts et trois références d'amplitudes différentes. Une borne de convergence en fonction du pas et des maillages requiert encore une estimation des défauts locaux des noyaux de transport.
+
+\section{Mémoire à énergie positive par réflexion sur le graphe du couplage}
+Une seconde réalisation remplace les différences de normes mal conditionnées par une somme de deux normes positives. Elle construit un réflecteur orthogonal à partir du graphe de R, la projection FE vers le support auxiliaire. Les seules inversions portent sur I+R*R, dont le spectre appartient à [1,2]. Le transfert obtenu est linéaire et contractant pour des supports prescrits; il préserve l'observation FE et devient l'identité à support inchangé.
+
+Cette construction change l'injection FE : son premier bloc devient 2R multiplié par l'inverse de I+R*R. Elle définit donc un autre couplage, auquel les résultats de réaction par moments physiques ne sont pas automatiquement applicables. L'inverse est évalué par un polynôme fixe de degré 16 ou 20 sur GPU; aucun critère d'arrêt dépendant des données n'intervient.
+
+\begin{center}\small\begin{tabular}{llll}\toprule
+Degré inverse & Erreur état / oracle & Défaut observation & Résidu inverse\\\midrule
+12 & 3.211e-09 & 1.327e-08 & 1.065e-09\\
+16 & 2.798e-12 & 1.144e-11 & 9.195e-13\\
+20 & 3.307e-15 & 1.066e-14 & 8.255e-16\\
+\bottomrule\end{tabular}\end{center}
+\begin{center}\small\begin{tabular}{lllllll}\toprule
+FE & Durée aller & Pas & Contrôle & Degré inverse & L2 max. & Coût (s)\\\midrule
+128 & 0.25 & 128 & 4 & 16 & 0.0008283 & 6.679\\
+128 & 0.25 & 128 & 4 & 20 & 0.0008294 & 7.318\\
+128 & 0.25 & 512 & 4 & 16 & 0.001319 & 23.14\\
+128 & 0.25 & 512 & 4 & 20 & 0.001317 & 25.98\\
+128 & 0.25 & 512 & 16 & 16 & 0.0008301 & 13.66\\
+128 & 0.25 & 512 & 16 & 20 & 0.0008303 & 16.02\\
+256 & 1 & 512 & 4 & 16 & 0.02793 & 99.37\\
+256 & 1 & 512 & 4 & 20 & 0.02793 & 111.3\\
+\bottomrule\end{tabular}\end{center}
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-graph-return.pdf}\caption{Comparaison exploratoire à une exécution par configuration. Chaque méthode adapte son propre support; les tableaux précisent le pas et la fréquence de contrôle. L'amélioration du conditionnement ne garantit pas une meilleure précision de transport.}\end{figure}
+\begin{center}\small\begin{tabular}{lllll}\toprule
+Supports prescrits & L2 max. & Écart FE / graphe 20 & Transport (s) & Transferts (s)\\\midrule
+graph12 & 0.0008841 & 4.67e-08 & 0.5307 & 0.5453\\
+graph16 & 0.0008841 & 4.043e-11 & 0.6761 & 0.6896\\
+graph20 & 0.0008841 & 0 & 0.8253 & 0.8353\\
+galerkin2 & 0.0009425 & 0.000822 & 0.1232 & 0.3832\\
+\bottomrule\end{tabular}\end{center}
+Cette dernière comparaison partage exactement 63 changements de support prescrits par les trajectoires matérielles. Le coût géométrique commun est exclu des deux dernières colonnes. Elle sépare les différences entre inverses polynomiaux des rétroactions du contrôleur sur la géométrie.
+
+\section{Translation exacte avec changements de support à chaque pas}
+Quatre champs sinus et cosinus sont transportés à la vitesse constante (1; 0,37) jusqu'au temps 0,2. Le maillage triangulaire est légèrement perturbé. Deux partitions auxiliaires, distantes d'au plus 0,24 cellule par direction, alternent à chaque pas. Le nombre de transferts augmente donc lorsque le pas diminue, sans changement de résolution spatiale. La référence FE exacte est obtenue par rotation des composantes initiales; la référence physique est analytique.
+
+La norme du défaut local est mesurée indépendamment sur l'injection de cette référence, pour chacun des deux supports. La somme de ces défauts donne la borne issue de la preuve; aucun coefficient n'est ajusté à l'erreur finale. La norme de Frobenius sur les quatre champs sert à ce contrôle, tandis que les courbes d'erreur physique affichent le maximum des quatre normes L2. Les valeurs restent des calculs en double précision, sans certification par intervalles.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-remap-consistency.pdf}\caption{L'erreur physique et la borne de consistance sont distinguées. Une augmentation du nombre de pas accroît ici le nombre de changements de support; elle ne constitue pas une étude temporelle à opérateurs de transfert fixés.}\end{figure}
+\begin{center}\small\begin{tabular}{llll}\toprule
+Cas contrôlés & Rapport erreur / borne max. & Défaut masse max. & Excès énergie max.\\\midrule
+78 & 0.1997 & 3.49e-13 & 1.511e-12\\
+\bottomrule\end{tabular}\end{center}
+\begin{center}\small\begin{tabular}{llllll}\toprule
+Degré FE & Méthode & n & Pas & L2 max. & Plancher FE\\\midrule
+4 & reset & 32 & 256 & 4.689e-07 & 1.745e-07\\
+4 & galerkin & 32 & 256 & 4.116e-07 & 1.745e-07\\
+4 & graph & 32 & 256 & 2.629e-07 & 1.745e-07\\
+1 & reset & 32 & 256 & 0.009317 & 0.004398\\
+1 & galerkin & 32 & 256 & 0.009231 & 0.004398\\
+1 & graph & 32 & 256 & 0.008414 & 0.004398\\
+1 & reset & 64 & 256 & 0.002561 & 0.001087\\
+1 & galerkin & 64 & 256 & 0.002543 & 0.001087\\
+1 & graph & 64 & 256 & 0.002207 & 0.001087\\
+2 & reset & 32 & 256 & 0.000337 & 0.0001875\\
+2 & galerkin & 32 & 256 & 0.0003064 & 0.0001875\\
+2 & graph & 32 & 256 & 0.0002679 & 0.0001875\\
+2 & reset & 64 & 256 & 4.257e-05 & 2.309e-05\\
+2 & galerkin & 64 & 256 & 4.212e-05 & 2.309e-05\\
+2 & graph & 64 & 256 & 3.382e-05 & 2.309e-05\\
+4 & reset & 64 & 256 & 1.503e-08 & 5.351e-09\\
+4 & galerkin & 64 & 256 & 1.367e-08 & 5.351e-09\\
+4 & graph & 64 & 256 & 8.346e-09 & 5.351e-09\\
+\bottomrule\end{tabular}\end{center}
+\section{Mesurer les petites énergies sans soustraction de grands termes}
+Un nouveau diagnostic CUDA intègre directement le carré de la différence FE–auxiliaire sur leurs intersections, avec des poids positifs. L'ordre de quadrature intègre exactement le carré du polynôme Pp–Qq sur chaque intersection affine. Le résidu est formé aux points de quadrature avant d'être élevé au carré. Cette mesure évite la soustraction de deux énergies presque égales; elle ne modifie pas l'évolution numérique.
+
+Les 6 contrôles couvrent P1, P2 et P4, des partitions uniformes et décalées. Sur des champs aléatoires, l'écart relatif maximal à l'identité bilinéaire indépendante vaut 1.07e-15. Pour deux constantes séparées de 1e-12, l'énergie physique est de l'ordre de 1e-24 : la quadrature positive la résout, alors que la formule soustractive retourne une valeur de l'ordre de l'arrondi absolu, parfois négative.
+
+\begin{center}\small\begin{tabular}{llll}\toprule
+Mise à jour & Énergie positive & Énergie soustractive & Énergie FE visible\\\midrule
+Addition & 9.001e-16 & 8.465e-16 & 4.29e-20\\
+Reprojection & 1.768e-27 & 1.768e-27 & 1.768e-27\\
+\bottomrule\end{tabular}\end{center}
+La mesure positive confirme une mémoire résiduelle physique dans le calcul additif à réaction forte : ce n'est donc pas seulement un défaut du diagnostic soustractif. La reprojection du champ complet ramène aussi cette énergie cachée à l'échelle du champ amorti. Le seuil de rang peut exclure une direction de faible énergie absolue qui reste déterminante relativement à une solution presque nulle.
+
+\begin{figure}[htbp]\centering\includegraphics[width=.95\linewidth]{night-positive-energy.pdf}\caption{Même problème de réaction de force 100 et même discrétisation. Les diagnostics sont ajoutés à des répétitions instrumentées, exclues des comparaisons de temps.}\end{figure}
 \section{Contrôles et limites pour un article}
-La note établit également une borne d'erreur pour des supports variables : une transition contractante qui envoie l'état minimal J\_n v sur J\_(n+1) v n'ajoute pas de terme explicite dépendant du nombre de remaillages. Les défauts locaux de transport restent dans la borne, notamment le commutateur entre projection et générateur. Ce résultat conditionnel ne fournit ni un ordre de convergence pour les noyaux actuels ni une garantie d'efficacité du contrôleur.
+La borne d'erreur pour des supports variables repose sur la conservation de l'observation et la décroissance de l'énergie lors du transfert, ainsi que sur la non-expansivité de l'évolution entre transferts. Les défauts locaux de transport restent dans la borne, notamment le commutateur entre projection et générateur. Ce résultat conditionnel ne fournit ni un ordre de convergence pour les noyaux actuels ni une garantie d'efficacité du contrôleur.
 
 \begin{center}\small\begin{tabular}{lll}\toprule
 Campagne & Enregistrés & Prévus\\\midrule
@@ -743,7 +833,7 @@ reaction-moments-quadrature & 1 & 1\\
 reaction-projection & 90 & 90\\
 spectral-reaction & 36 & 36\\
 tiled-return-pilot & 1 & 1\\
-long-return-benchmark & 6 & 15\\
+long-return-benchmark & 14 & 15\\
 residual-return & 12 & 12\\
 reaction-increment-projection & 90 & 90\\
 reaction-residual-projection & 90 & 90\\
@@ -753,6 +843,15 @@ increment-conditioning & 2 & 2\\
 \bottomrule\end{tabular}\end{center}
 \begin{center}\small\begin{tabular}{lll}\toprule
 Campagne & Enregistrés & Prévus\\\midrule
+increment-conditioning-positive & 2 & 2\\
+graph-return & 6 & 6\\
+graph-return-long & 2 & 2\\
+graph-frozen & 4 & 4\\
+remap-consistency & 27 & 27\\
+remap-consistency-orders & 24 & 24\\
+remap-consistency-fine & 9 & 9\\
+remap-consistency-smallstep & 6 & 6\\
+remap-consistency-interval & 12 & 12\\
 material-minimax & 2 & 2\\
 minimax-return & 3 & 3\\
 diffusion & 20 & 20\\
@@ -797,10 +896,17 @@ krylov-sanitizer : ========= ERROR SUMMARY: 0 errors
 
 reduction-sanitizer : ========= ERROR SUMMARY: 0 errors
 
+graph-sanitizer : ========= ERROR SUMMARY: 0 errors
+
+residual-energy-sanitizer : ========= ERROR SUMMARY: 0 errors
+
 Les validations indépendantes couvrent les degrés 1, 2 et 4, les projections, les adjoints en masse, les constantes, les changements de support et les identités de Gram. Toutes les opérations numériques — recouvrements, quadrature, réductions, matrices denses de contrôle — sont exécutées sur CUDA. Le processeur pilote les expériences et dessine les figures. Il s'agit de prototypes isolés dans experiments/slfe, pas d'une intégration de production au langage variationnel Rodin.
 
 La piste d'article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d'énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture.
 
+\noindent\href{https://doi.org/10.1016/j.geomphys.2017.08.011}{Macías-Virgós, Pereira-Sáez et Tanré (2018), paramétrisations de Cayley sur les variétés de Stiefel}\par
+\noindent\href{https://rtg.hufs.ac.kr/publications/SIGRAPHASIA26_lowres.pdf}{Kim et Um (2026), reconstruction semi-lagrangienne presque orthogonale par noyau de Lanczos}\par
+\noindent\href{https://doi.org/10.1016/j.compfluid.2022.105474}{Ouardghi, El-Amrani et Seaid (2022), enrichissement adaptatif semi-lagrangien FE}\par
 \noindent\href{https://arxiv.org/html/2611.05327v1}{Keith et al. (2026), interpolation et optimisation pour le remap ALE FE}\par
 \noindent\href{https://arxiv.org/abs/astro-ph/9807241}{Plewa et Müller (1999), cohérence du transport des fractions de mélange}\par
 \noindent\href{https://epubs.siam.org/doi/10.1137/0729014}{Saad (1992), approximation de l'action exponentielle par Krylov}\par

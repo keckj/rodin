@@ -1,0 +1,2056 @@
+{
+  "results": [
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "reset",
+      "reference": 0,
+      "relative_identity_defect": 1.014636210481029e-16,
+      "relative_distance_excess": -0.0032971389816286133,
+      "energy_loss": [
+        0.0077792233152640215,
+        0.012069846446496342,
+        0.009357021005814412,
+        0.006507947818537498
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "reset",
+      "reference": 1,
+      "relative_identity_defect": 1.7662749393439945e-16,
+      "relative_distance_excess": -0.0012509332887392745,
+      "energy_loss": [
+        0.0077792233152640215,
+        0.012069846446496342,
+        0.009357021005814412,
+        0.006507947818537498
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "reset",
+      "reference": 2,
+      "relative_identity_defect": 1.2308723175098362e-16,
+      "relative_distance_excess": -2.559278686727062e-07,
+      "energy_loss": [
+        0.0077792233152640215,
+        0.012069846446496342,
+        0.009357021005814412,
+        0.006507947818537498
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "chebyshev",
+      "reference": 0,
+      "relative_identity_defect": 1.1966090090999093e-16,
+      "relative_distance_excess": -8.3193451059713e-05,
+      "energy_loss": [
+        0.00020501096858332535,
+        0.00021900595689831545,
+        0.0002220327559319211,
+        0.0001939514868860216
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "chebyshev",
+      "reference": 1,
+      "relative_identity_defect": 5.745996966263133e-17,
+      "relative_distance_excess": -3.1171957082023724e-05,
+      "energy_loss": [
+        0.00020501096858332535,
+        0.00021900595689831545,
+        0.0002220327559319211,
+        0.0001939514868860216
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "chebyshev",
+      "reference": 2,
+      "relative_identity_defect": 8.523306281003428e-17,
+      "relative_distance_excess": -6.699851556860031e-09,
+      "energy_loss": [
+        0.00020501096858332535,
+        0.00021900595689831545,
+        0.0002220327559319211,
+        0.0001939514868860216
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "warm",
+      "reference": 0,
+      "relative_identity_defect": 1.024602986549203e-16,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        -1.1179484944997078e-16,
+        1.8262797304666674e-16,
+        -2.2175322559117583e-16,
+        -7.504513389326088e-17
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "warm",
+      "reference": 1,
+      "relative_identity_defect": 1.0042369876029154e-16,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        -1.1179484944997078e-16,
+        1.8262797304666674e-16,
+        -2.2175322559117583e-16,
+        -7.504513389326088e-17
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "warm",
+      "reference": 2,
+      "relative_identity_defect": 7.326008274176619e-21,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        -1.1179484944997078e-16,
+        1.8262797304666674e-16,
+        -2.2175322559117583e-16,
+        -7.504513389326088e-17
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "galerkin",
+      "reference": 0,
+      "relative_identity_defect": 1.0961586457354092e-16,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        -2.3149505739666594e-16,
+        -1.3437853453389354e-16,
+        -2.0270091350858485e-16,
+        1.66582263967359e-17
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "galerkin",
+      "reference": 1,
+      "relative_identity_defect": 4.711463839064603e-17,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        -2.3149505739666594e-16,
+        -1.3437853453389354e-16,
+        -2.0270091350858485e-16,
+        1.66582263967359e-17
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "galerkin",
+      "reference": 2,
+      "relative_identity_defect": 1.0168614618995721e-20,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        -2.3149505739666594e-16,
+        -1.3437853453389354e-16,
+        -2.0270091350858485e-16,
+        1.66582263967359e-17
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "block",
+      "reference": 0,
+      "relative_identity_defect": 1.7090596982054941e-16,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        -6.037386150232636e-17,
+        1.4481314002856417e-16,
+        -3.698891236705859e-16,
+        -1.678957209009748e-16
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "block",
+      "reference": 1,
+      "relative_identity_defect": 6.822766915692318e-17,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        -6.037386150232636e-17,
+        1.4481314002856417e-16,
+        -3.698891236705859e-16,
+        -1.678957209009748e-16
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.0,
+      "method": "block",
+      "reference": 2,
+      "relative_identity_defect": 1.5979861936953608e-16,
+      "relative_distance_excess": 1.5980127134205585e-16,
+      "energy_loss": [
+        -6.037386150232636e-17,
+        1.4481314002856417e-16,
+        -3.698891236705859e-16,
+        -1.678957209009748e-16
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "reset",
+      "reference": 0,
+      "relative_identity_defect": 2.0198376735908994e-16,
+      "relative_distance_excess": -0.003297138981628237,
+      "energy_loss": [
+        0.00777922331526372,
+        0.012069846446496071,
+        0.0093570210058136,
+        0.006507947818538676
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "reset",
+      "reference": 1,
+      "relative_identity_defect": 4.518139529631139e-16,
+      "relative_distance_excess": -0.0012509332887399574,
+      "energy_loss": [
+        0.00777922331526372,
+        0.012069846446496071,
+        0.0093570210058136,
+        0.006507947818538676
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "reset",
+      "reference": 2,
+      "relative_identity_defect": 8.78322101862188e-16,
+      "relative_distance_excess": -2.559278696741618e-07,
+      "energy_loss": [
+        0.00777922331526372,
+        0.012069846446496071,
+        0.0093570210058136,
+        0.006507947818538676
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "chebyshev",
+      "reference": 0,
+      "relative_identity_defect": 1.6431219170084698e-16,
+      "relative_distance_excess": -0.0006677713504974433,
+      "energy_loss": [
+        0.0015755303273532755,
+        0.0034811712115005236,
+        0.0026255632782535617,
+        0.001953398862325384
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "chebyshev",
+      "reference": 1,
+      "relative_identity_defect": 5.740204575837643e-16,
+      "relative_distance_excess": -0.0003206571340294448,
+      "energy_loss": [
+        0.0015755303273532755,
+        0.0034811712115005236,
+        0.0026255632782535617,
+        0.001953398862325384
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "chebyshev",
+      "reference": 2,
+      "relative_identity_defect": 7.578454994450202e-16,
+      "relative_distance_excess": -6.920649137528257e-08,
+      "energy_loss": [
+        0.0015755303273532755,
+        0.0034811712115005236,
+        0.0026255632782535617,
+        0.001953398862325384
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "warm",
+      "reference": 0,
+      "relative_identity_defect": 1.865550812961403e-16,
+      "relative_distance_excess": -0.0006019342419369709,
+      "energy_loss": [
+        0.0014201951798888213,
+        0.003258787186013745,
+        0.00237759444395137,
+        0.0017861313231200939
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "warm",
+      "reference": 1,
+      "relative_identity_defect": 2.379108896230124e-16,
+      "relative_distance_excess": -0.00028904281195940053,
+      "energy_loss": [
+        0.0014201951798888213,
+        0.003258787186013745,
+        0.00237759444395137,
+        0.0017861313231200939
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "warm",
+      "reference": 2,
+      "relative_identity_defect": 9.118441488109425e-16,
+      "relative_distance_excess": -6.23832647312652e-08,
+      "energy_loss": [
+        0.0014201951798888213,
+        0.003258787186013745,
+        0.00237759444395137,
+        0.0017861313231200939
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "galerkin",
+      "reference": 0,
+      "relative_identity_defect": 2.1480813354061945e-16,
+      "relative_distance_excess": -0.0006144408645049078,
+      "energy_loss": [
+        0.001449703129179439,
+        0.0033582476643688047,
+        0.00252186539850683,
+        0.0018495496096307745
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "galerkin",
+      "reference": 1,
+      "relative_identity_defect": 3.2427237583515004e-16,
+      "relative_distance_excess": -0.00029504836722323886,
+      "energy_loss": [
+        0.001449703129179439,
+        0.0033582476643688047,
+        0.00252186539850683,
+        0.0018495496096307745
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "galerkin",
+      "reference": 2,
+      "relative_identity_defect": 7.890898927913922e-16,
+      "relative_distance_excess": -6.36794262664274e-08,
+      "energy_loss": [
+        0.001449703129179439,
+        0.0033582476643688047,
+        0.00252186539850683,
+        0.0018495496096307745
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "block",
+      "reference": 0,
+      "relative_identity_defect": 1.842405021237316e-16,
+      "relative_distance_excess": -0.0006093371932304996,
+      "energy_loss": [
+        0.0014376615989948032,
+        0.003345024843532024,
+        0.0024983049041433893,
+        0.0018403183909784116
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "block",
+      "reference": 1,
+      "relative_identity_defect": 4.504801848362856e-16,
+      "relative_distance_excess": -0.00029259763524331717,
+      "energy_loss": [
+        0.0014376615989948032,
+        0.003345024843532024,
+        0.0024983049041433893,
+        0.0018403183909784116
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.02,
+      "method": "block",
+      "reference": 2,
+      "relative_identity_defect": 7.979175699245199e-16,
+      "relative_distance_excess": -6.315049188854749e-08,
+      "energy_loss": [
+        0.0014376615989948032,
+        0.003345024843532024,
+        0.0024983049041433893,
+        0.0018403183909784116
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "reset",
+      "reference": 0,
+      "relative_identity_defect": 1.8274721808679566e-16,
+      "relative_distance_excess": -0.003297138981628237,
+      "energy_loss": [
+        0.007779223315263487,
+        0.012069846446496273,
+        0.009357021005813197,
+        0.006507947818537738
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "reset",
+      "reference": 1,
+      "relative_identity_defect": 4.1853036606194656e-16,
+      "relative_distance_excess": -0.001250933288738933,
+      "energy_loss": [
+        0.007779223315263487,
+        0.012069846446496273,
+        0.009357021005813197,
+        0.006507947818537738
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "reset",
+      "reference": 2,
+      "relative_identity_defect": 2.954107498310985e-16,
+      "relative_distance_excess": -2.5592786895883636e-07,
+      "energy_loss": [
+        0.007779223315263487,
+        0.012069846446496273,
+        0.009357021005813197,
+        0.006507947818537738
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "chebyshev",
+      "reference": 0,
+      "relative_identity_defect": 1.2503757026991283e-16,
+      "relative_distance_excess": -0.0016538127335269017,
+      "energy_loss": [
+        0.0039019824907044025,
+        0.008407868831342917,
+        0.0056800326630363565,
+        0.004549240264624416
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "chebyshev",
+      "reference": 1,
+      "relative_identity_defect": 5.70852758282547e-16,
+      "relative_distance_excess": -0.0007941443593808215,
+      "energy_loss": [
+        0.0039019824907044025,
+        0.008407868831342917,
+        0.0056800326630363565,
+        0.004549240264624416
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "chebyshev",
+      "reference": 2,
+      "relative_identity_defect": 2.4271653726413232e-16,
+      "relative_distance_excess": -1.7139531998554666e-07,
+      "energy_loss": [
+        0.0039019824907044025,
+        0.008407868831342917,
+        0.0056800326630363565,
+        0.004549240264624416
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "warm",
+      "reference": 0,
+      "relative_identity_defect": 3.5908225308282656e-16,
+      "relative_distance_excess": -0.0016391510898223708,
+      "energy_loss": [
+        0.003867390014869552,
+        0.008391229856172008,
+        0.005578756815308172,
+        0.0045318008337949175
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "warm",
+      "reference": 1,
+      "relative_identity_defect": 5.161682650825834e-16,
+      "relative_distance_excess": -0.0007871039844876026,
+      "energy_loss": [
+        0.003867390014869552,
+        0.008391229856172008,
+        0.005578756815308172,
+        0.0045318008337949175
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "warm",
+      "reference": 2,
+      "relative_identity_defect": 3.5770740882520864e-16,
+      "relative_distance_excess": -1.68339315437649e-07,
+      "energy_loss": [
+        0.003867390014869552,
+        0.008391229856172008,
+        0.005578756815308172,
+        0.0045318008337949175
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "galerkin",
+      "reference": 0,
+      "relative_identity_defect": 1.2124987271880536e-16,
+      "relative_distance_excess": -0.001686554746830168,
+      "energy_loss": [
+        0.003979233536139933,
+        0.008447232885728032,
+        0.0056985842821515795,
+        0.0045799042587355634
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "galerkin",
+      "reference": 1,
+      "relative_identity_defect": 4.281395687119102e-16,
+      "relative_distance_excess": -0.0008098667472017617,
+      "energy_loss": [
+        0.003979233536139933,
+        0.008447232885728032,
+        0.0056985842821515795,
+        0.0045799042587355634
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "galerkin",
+      "reference": 2,
+      "relative_identity_defect": 4.367114577630081e-16,
+      "relative_distance_excess": -1.7195511637766785e-07,
+      "energy_loss": [
+        0.003979233536139933,
+        0.008447232885728032,
+        0.0056985842821515795,
+        0.0045799042587355634
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "block",
+      "reference": 0,
+      "relative_identity_defect": 1.962763138202568e-16,
+      "relative_distance_excess": -0.0016658179342843886,
+      "energy_loss": [
+        0.00393030739243205,
+        0.008429947616281505,
+        0.005675075696080369,
+        0.004559685605138496
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "block",
+      "reference": 1,
+      "relative_identity_defect": 5.268384100972103e-16,
+      "relative_distance_excess": -0.0007999091368984759,
+      "energy_loss": [
+        0.00393030739243205,
+        0.008429947616281505,
+        0.005675075696080369,
+        0.004559685605138496
+      ]
+    },
+    {
+      "degree": 1,
+      "motion": 0.1,
+      "method": "block",
+      "reference": 2,
+      "relative_identity_defect": 3.1974130258239027e-16,
+      "relative_distance_excess": -1.712457432930741e-07,
+      "energy_loss": [
+        0.00393030739243205,
+        0.008429947616281505,
+        0.005675075696080369,
+        0.004559685605138496
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "reset",
+      "reference": 0,
+      "relative_identity_defect": 2.5943971493796026e-16,
+      "relative_distance_excess": -0.007331824346085627,
+      "energy_loss": [
+        0.0855797947158966,
+        0.04897151313408819,
+        0.06016296145966216,
+        0.03255171904235317
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "reset",
+      "reference": 1,
+      "relative_identity_defect": 1.7832626547155148e-16,
+      "relative_distance_excess": -0.003399742521911017,
+      "energy_loss": [
+        0.0855797947158966,
+        0.04897151313408819,
+        0.06016296145966216,
+        0.03255171904235317
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "reset",
+      "reference": 2,
+      "relative_identity_defect": 1.6181106294010157e-16,
+      "relative_distance_excess": -5.851323487254794e-07,
+      "energy_loss": [
+        0.0855797947158966,
+        0.04897151313408819,
+        0.06016296145966216,
+        0.03255171904235317
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "chebyshev",
+      "reference": 0,
+      "relative_identity_defect": 9.788424480587199e-17,
+      "relative_distance_excess": -0.000235665800216797,
+      "energy_loss": [
+        0.0020477923033923183,
+        0.0011348982773018235,
+        0.0014726247405603891,
+        0.001046305333357167
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "chebyshev",
+      "reference": 1,
+      "relative_identity_defect": 8.186399392848429e-17,
+      "relative_distance_excess": -0.00010927744639504733,
+      "energy_loss": [
+        0.0020477923033923183,
+        0.0011348982773018235,
+        0.0014726247405603891,
+        0.001046305333357167
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "chebyshev",
+      "reference": 2,
+      "relative_identity_defect": 1.0723490507802998e-16,
+      "relative_distance_excess": -1.8807826896055432e-08,
+      "energy_loss": [
+        0.0020477923033923183,
+        0.0011348982773018235,
+        0.0014726247405603891,
+        0.001046305333357167
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "warm",
+      "reference": 0,
+      "relative_identity_defect": 1.8759144514447607e-16,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        1.6593412494403186e-16,
+        -1.1302474790682892e-16,
+        1.7951110074659365e-15,
+        -1.0235202027486143e-16
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "warm",
+      "reference": 1,
+      "relative_identity_defect": 2.015292358942032e-16,
+      "relative_distance_excess": 1.8431215667042503e-16,
+      "energy_loss": [
+        1.6593412494403186e-16,
+        -1.1302474790682892e-16,
+        1.7951110074659365e-15,
+        -1.0235202027486143e-16
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "warm",
+      "reference": 2,
+      "relative_identity_defect": 3.3054282985212974e-20,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        1.6593412494403186e-16,
+        -1.1302474790682892e-16,
+        1.7951110074659365e-15,
+        -1.0235202027486143e-16
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "galerkin",
+      "reference": 0,
+      "relative_identity_defect": 7.860048410063898e-17,
+      "relative_distance_excess": 1.837123018240324e-16,
+      "energy_loss": [
+        -1.601102440360665e-16,
+        7.640744080513162e-17,
+        -5.081752676899861e-16,
+        1.8760297474025057e-17
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "galerkin",
+      "reference": 1,
+      "relative_identity_defect": 1.6769935471038699e-16,
+      "relative_distance_excess": 1.8431215667042503e-16,
+      "energy_loss": [
+        -1.601102440360665e-16,
+        7.640744080513162e-17,
+        -5.081752676899861e-16,
+        1.8760297474025057e-17
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "galerkin",
+      "reference": 2,
+      "relative_identity_defect": 9.357287117314887e-21,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        -1.601102440360665e-16,
+        7.640744080513162e-17,
+        -5.081752676899861e-16,
+        1.8760297474025057e-17
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "block",
+      "reference": 0,
+      "relative_identity_defect": 1.3499480935306722e-16,
+      "relative_distance_excess": 1.7914828718715448e-16,
+      "energy_loss": [
+        -2.1890338324013874e-16,
+        -8.864403941191431e-17,
+        1.3635374919244157e-16,
+        9.835735995605095e-17
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "block",
+      "reference": 1,
+      "relative_identity_defect": 1.6159906559967783e-16,
+      "relative_distance_excess": 1.8431215667042503e-16,
+      "energy_loss": [
+        -2.1890338324013874e-16,
+        -8.864403941191431e-17,
+        1.3635374919244157e-16,
+        9.835735995605095e-17
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.0,
+      "method": "block",
+      "reference": 2,
+      "relative_identity_defect": 1.305555395072312e-16,
+      "relative_distance_excess": 1.3055713010354856e-16,
+      "energy_loss": [
+        -2.1890338324013874e-16,
+        -8.864403941191431e-17,
+        1.3635374919244157e-16,
+        9.835735995605095e-17
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "reset",
+      "reference": 0,
+      "relative_identity_defect": 1.9067256158091054e-16,
+      "relative_distance_excess": -0.007331824346085226,
+      "energy_loss": [
+        0.08557979471589311,
+        0.04897151313408911,
+        0.0601629614596602,
+        0.0325517190423517
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "reset",
+      "reference": 1,
+      "relative_identity_defect": 3.762334542105674e-16,
+      "relative_distance_excess": -0.003399742521911017,
+      "energy_loss": [
+        0.08557979471589311,
+        0.04897151313408911,
+        0.0601629614596602,
+        0.0325517190423517
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "reset",
+      "reference": 2,
+      "relative_identity_defect": 9.018395293386906e-16,
+      "relative_distance_excess": -5.851323476791695e-07,
+      "energy_loss": [
+        0.08557979471589311,
+        0.04897151313408911,
+        0.0601629614596602,
+        0.0325517190423517
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "chebyshev",
+      "reference": 0,
+      "relative_identity_defect": 6.243347757301101e-17,
+      "relative_distance_excess": -0.002462995756773783,
+      "energy_loss": [
+        0.01744233968090028,
+        0.013616720985335857,
+        0.015452118135940242,
+        0.01093517003306474
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "chebyshev",
+      "reference": 1,
+      "relative_identity_defect": 5.066563895456433e-16,
+      "relative_distance_excess": -0.0011420829264767137,
+      "energy_loss": [
+        0.01744233968090028,
+        0.013616720985335857,
+        0.015452118135940242,
+        0.01093517003306474
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "chebyshev",
+      "reference": 2,
+      "relative_identity_defect": 9.655862155916173e-16,
+      "relative_distance_excess": -1.9656478614304508e-07,
+      "energy_loss": [
+        0.01744233968090028,
+        0.013616720985335857,
+        0.015452118135940242,
+        0.01093517003306474
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "warm",
+      "reference": 0,
+      "relative_identity_defect": 1.1482018864002027e-16,
+      "relative_distance_excess": -0.0022966970558268274,
+      "energy_loss": [
+        0.015722721254183593,
+        0.012937433323634402,
+        0.014453442769575608,
+        0.010196839661958654
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "warm",
+      "reference": 1,
+      "relative_identity_defect": 6.825350396087617e-16,
+      "relative_distance_excess": -0.0010649707729035796,
+      "energy_loss": [
+        0.015722721254183593,
+        0.012937433323634402,
+        0.014453442769575608,
+        0.010196839661958654
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "warm",
+      "reference": 2,
+      "relative_identity_defect": 8.973911636909336e-16,
+      "relative_distance_excess": -1.8329295305515067e-07,
+      "energy_loss": [
+        0.015722721254183593,
+        0.012937433323634402,
+        0.014453442769575608,
+        0.010196839661958654
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "galerkin",
+      "reference": 0,
+      "relative_identity_defect": 1.2654577665014686e-16,
+      "relative_distance_excess": -0.0023826316366249295,
+      "energy_loss": [
+        0.016364948093935572,
+        0.013400044187607256,
+        0.01477619092881442,
+        0.010578370669537984
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "galerkin",
+      "reference": 1,
+      "relative_identity_defect": 4.493122571194974e-16,
+      "relative_distance_excess": -0.001104818351712057,
+      "energy_loss": [
+        0.016364948093935572,
+        0.013400044187607256,
+        0.01477619092881442,
+        0.010578370669537984
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "galerkin",
+      "reference": 2,
+      "relative_identity_defect": 9.495524418341063e-16,
+      "relative_distance_excess": -1.901511510057098e-07,
+      "energy_loss": [
+        0.016364948093935572,
+        0.013400044187607256,
+        0.01477619092881442,
+        0.010578370669537984
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "block",
+      "reference": 0,
+      "relative_identity_defect": 1.3597141686507555e-16,
+      "relative_distance_excess": -0.0023722674859381785,
+      "energy_loss": [
+        0.01631143875291262,
+        0.01334389994019667,
+        0.014711115343337664,
+        0.010532356075441847
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "block",
+      "reference": 1,
+      "relative_identity_defect": 6.290371599672963e-16,
+      "relative_distance_excess": -0.001100012529568752,
+      "energy_loss": [
+        0.01631143875291262,
+        0.01334389994019667,
+        0.014711115343337664,
+        0.010532356075441847
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.02,
+      "method": "block",
+      "reference": 2,
+      "relative_identity_defect": 8.636226751054071e-16,
+      "relative_distance_excess": -1.8932401727798617e-07,
+      "energy_loss": [
+        0.01631143875291262,
+        0.01334389994019667,
+        0.014711115343337664,
+        0.010532356075441847
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "reset",
+      "reference": 0,
+      "relative_identity_defect": 2.031756803731014e-16,
+      "relative_distance_excess": -0.007331824346085027,
+      "energy_loss": [
+        0.0855797947158949,
+        0.04897151313409142,
+        0.06016296145966374,
+        0.032551719042350755
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "reset",
+      "reference": 1,
+      "relative_identity_defect": 7.356832599061653e-16,
+      "relative_distance_excess": -0.0033997425219106456,
+      "energy_loss": [
+        0.0855797947158949,
+        0.04897151313409142,
+        0.06016296145966374,
+        0.032551719042350755
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "reset",
+      "reference": 2,
+      "relative_identity_defect": 3.866928166725952e-16,
+      "relative_distance_excess": -5.851323482023245e-07,
+      "energy_loss": [
+        0.0855797947158949,
+        0.04897151313409142,
+        0.06016296145966374,
+        0.032551719042350755
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "chebyshev",
+      "reference": 0,
+      "relative_identity_defect": 2.000499006750537e-16,
+      "relative_distance_excess": -0.004747932928139637,
+      "energy_loss": [
+        0.03635904014235314,
+        0.026555116537341023,
+        0.034024130876263575,
+        0.021079798343948575
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "chebyshev",
+      "reference": 1,
+      "relative_identity_defect": 6.797377648562668e-16,
+      "relative_distance_excess": -0.0022016006801354776,
+      "energy_loss": [
+        0.03635904014235314,
+        0.026555116537341023,
+        0.034024130876263575,
+        0.021079798343948575
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "chebyshev",
+      "reference": 2,
+      "relative_identity_defect": 4.2538000698408164e-16,
+      "relative_distance_excess": -3.789192172821817e-07,
+      "energy_loss": [
+        0.03635904014235314,
+        0.026555116537341023,
+        0.034024130876263575,
+        0.021079798343948575
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "warm",
+      "reference": 0,
+      "relative_identity_defect": 2.0630146007114912e-16,
+      "relative_distance_excess": -0.00480582729976763,
+      "energy_loss": [
+        0.036467177552683916,
+        0.027089068254138565,
+        0.03485813907229886,
+        0.021336836869479264
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "warm",
+      "reference": 1,
+      "relative_identity_defect": 6.699473032225345e-16,
+      "relative_distance_excess": -0.0022284461073732564,
+      "energy_loss": [
+        0.036467177552683916,
+        0.027089068254138565,
+        0.03485813907229886,
+        0.021336836869479264
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "warm",
+      "reference": 2,
+      "relative_identity_defect": 3.6391126126955113e-16,
+      "relative_distance_excess": -3.8353960479943774e-07,
+      "energy_loss": [
+        0.036467177552683916,
+        0.027089068254138565,
+        0.03485813907229886,
+        0.021336836869479264
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "galerkin",
+      "reference": 0,
+      "relative_identity_defect": 3.06326410408676e-16,
+      "relative_distance_excess": -0.004895475151614291,
+      "energy_loss": [
+        0.03742512337398139,
+        0.027116645605419282,
+        0.03482082376386417,
+        0.02173485399977479
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "galerkin",
+      "reference": 1,
+      "relative_identity_defect": 7.07710512381216e-16,
+      "relative_distance_excess": -0.0022700155175956666,
+      "energy_loss": [
+        0.03742512337398139,
+        0.027116645605419282,
+        0.03482082376386417,
+        0.02173485399977479
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "galerkin",
+      "reference": 2,
+      "relative_identity_defect": 3.8411140333343686e-16,
+      "relative_distance_excess": -3.906941485749436e-07,
+      "energy_loss": [
+        0.03742512337398139,
+        0.027116645605419282,
+        0.03482082376386417,
+        0.02173485399977479
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "block",
+      "reference": 0,
+      "relative_identity_defect": 1.1877962852581312e-16,
+      "relative_distance_excess": -0.004873613821233744,
+      "energy_loss": [
+        0.037278534597941365,
+        0.026967355012715976,
+        0.03454884386984228,
+        0.021637794407121907
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "block",
+      "reference": 1,
+      "relative_identity_defect": 7.356832599061653e-16,
+      "relative_distance_excess": -0.0022598784915334844,
+      "energy_loss": [
+        0.037278534597941365,
+        0.026967355012715976,
+        0.03454884386984228,
+        0.021637794407121907
+      ]
+    },
+    {
+      "degree": 2,
+      "motion": 0.1,
+      "method": "block",
+      "reference": 2,
+      "relative_identity_defect": 3.8789172073033405e-16,
+      "relative_distance_excess": -3.8894945705759484e-07,
+      "energy_loss": [
+        0.037278534597941365,
+        0.026967355012715976,
+        0.03454884386984228,
+        0.021637794407121907
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "reset",
+      "reference": 0,
+      "relative_identity_defect": 1.0902719956861801e-16,
+      "relative_distance_excess": -0.021572622511403777,
+      "energy_loss": [
+        0.3080357128722431,
+        0.29187956979567875,
+        0.24357501655949593,
+        0.32953660029726656
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "reset",
+      "reference": 1,
+      "relative_identity_defect": 3.0102797215654575e-17,
+      "relative_distance_excess": -0.008805785465511405,
+      "energy_loss": [
+        0.3080357128722431,
+        0.29187956979567875,
+        0.24357501655949593,
+        0.32953660029726656
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "reset",
+      "reference": 2,
+      "relative_identity_defect": 3.2143251413806407e-16,
+      "relative_distance_excess": -1.7451583321041815e-06,
+      "energy_loss": [
+        0.3080357128722431,
+        0.29187956979567875,
+        0.24357501655949593,
+        0.32953660029726656
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "chebyshev",
+      "reference": 0,
+      "relative_identity_defect": 2.463096630474079e-16,
+      "relative_distance_excess": -0.000599229179585461,
+      "energy_loss": [
+        0.007848809119000415,
+        0.007889081701226559,
+        0.006765855994710369,
+        0.008183196037242027
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "chebyshev",
+      "reference": 1,
+      "relative_identity_defect": 5.560679562813388e-17,
+      "relative_distance_excess": -0.0002446009333039234,
+      "energy_loss": [
+        0.007848809119000415,
+        0.007889081701226559,
+        0.006765855994710369,
+        0.008183196037242027
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "chebyshev",
+      "reference": 2,
+      "relative_identity_defect": 4.081982726025699e-16,
+      "relative_distance_excess": -4.8475784544596353e-08,
+      "energy_loss": [
+        0.007848809119000415,
+        0.007889081701226559,
+        0.006765855994710369,
+        0.008183196037242027
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "warm",
+      "reference": 0,
+      "relative_identity_defect": 7.404113389442569e-17,
+      "relative_distance_excess": -1.516900167911207e-16,
+      "energy_loss": [
+        2.6131624262992717e-15,
+        9.800342467478084e-16,
+        1.0342195126567468e-15,
+        1.9859985515964358e-15
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "warm",
+      "reference": 1,
+      "relative_identity_defect": 1.7147972845045125e-16,
+      "relative_distance_excess": 1.344037627747011e-16,
+      "energy_loss": [
+        2.6131624262992717e-15,
+        9.800342467478084e-16,
+        1.0342195126567468e-15,
+        1.9859985515964358e-15
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "warm",
+      "reference": 2,
+      "relative_identity_defect": 1.8802592142977466e-16,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        2.6131624262992717e-15,
+        9.800342467478084e-16,
+        1.0342195126567468e-15,
+        1.9859985515964358e-15
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "galerkin",
+      "reference": 0,
+      "relative_identity_defect": 1.515579970504268e-16,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        8.278068544511793e-16,
+        1.8213890275764895e-15,
+        1.2451768202616889e-15,
+        1.1107724666162183e-15
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "galerkin",
+      "reference": 1,
+      "relative_identity_defect": 2.0330927020233208e-16,
+      "relative_distance_excess": 1.344037627747011e-16,
+      "energy_loss": [
+        8.278068544511793e-16,
+        1.8213890275764895e-15,
+        1.2451768202616889e-15,
+        1.1107724666162183e-15
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "galerkin",
+      "reference": 2,
+      "relative_identity_defect": 1.8803745679350469e-16,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        8.278068544511793e-16,
+        1.8213890275764895e-15,
+        1.2451768202616889e-15,
+        1.1107724666162183e-15
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "block",
+      "reference": 0,
+      "relative_identity_defect": 1.4720624498363561e-16,
+      "relative_distance_excess": -1.516900167911207e-16,
+      "energy_loss": [
+        1.1264638887720227e-16,
+        2.230499287259469e-15,
+        1.6711560752702054e-15,
+        2.6804206550258133e-15
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "block",
+      "reference": 1,
+      "relative_identity_defect": 1.2642310748732204e-16,
+      "relative_distance_excess": -1.2843860145345953e-16,
+      "energy_loss": [
+        1.1264638887720227e-16,
+        2.230499287259469e-15,
+        1.6711560752702054e-15,
+        2.6804206550258133e-15
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.0,
+      "method": "block",
+      "reference": 2,
+      "relative_identity_defect": 1.8804207751792833e-16,
+      "relative_distance_excess": 0.0,
+      "energy_loss": [
+        1.1264638887720227e-16,
+        2.230499287259469e-15,
+        1.6711560752702054e-15,
+        2.6804206550258133e-15
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "reset",
+      "reference": 0,
+      "relative_identity_defect": 9.718753659083912e-17,
+      "relative_distance_excess": -0.021572622511403936,
+      "energy_loss": [
+        0.30803571287224,
+        0.2918795697956813,
+        0.24357501655949929,
+        0.32953660029726206
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "reset",
+      "reference": 1,
+      "relative_identity_defect": 3.6121011245700924e-16,
+      "relative_distance_excess": -0.008805785465511664,
+      "energy_loss": [
+        0.30803571287224,
+        0.2918795697956813,
+        0.24357501655949929,
+        0.32953660029726206
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "reset",
+      "reference": 2,
+      "relative_identity_defect": 4.009691952257378e-16,
+      "relative_distance_excess": -1.7451583321041815e-06,
+      "energy_loss": [
+        0.30803571287224,
+        0.2918795697956813,
+        0.24357501655949929,
+        0.32953660029726206
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "chebyshev",
+      "reference": 0,
+      "relative_identity_defect": 1.0428688654389549e-16,
+      "relative_distance_excess": -0.005556339616866504,
+      "energy_loss": [
+        0.07870394169570333,
+        0.09224541608620816,
+        0.06273625348392453,
+        0.08378767114028507
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "chebyshev",
+      "reference": 1,
+      "relative_identity_defect": 4.3208709673273053e-16,
+      "relative_distance_excess": -0.0022680568676241384,
+      "energy_loss": [
+        0.07870394169570333,
+        0.09224541608620816,
+        0.06273625348392453,
+        0.08378767114028507
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "chebyshev",
+      "reference": 2,
+      "relative_identity_defect": 4.104696473148839e-16,
+      "relative_distance_excess": -4.4949066223526526e-07,
+      "energy_loss": [
+        0.07870394169570333,
+        0.09224541608620816,
+        0.06273625348392453,
+        0.08378767114028507
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "warm",
+      "reference": 0,
+      "relative_identity_defect": 1.0690629024992303e-16,
+      "relative_distance_excess": -0.005060219691042041,
+      "energy_loss": [
+        0.07308502451571902,
+        0.08719318207225568,
+        0.05713459707500522,
+        0.07753306812690444
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "warm",
+      "reference": 1,
+      "relative_identity_defect": 4.2421187625765037e-16,
+      "relative_distance_excess": -0.0020655443715348184,
+      "energy_loss": [
+        0.07308502451571902,
+        0.08719318207225568,
+        0.05713459707500522,
+        0.07753306812690444
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "warm",
+      "reference": 2,
+      "relative_identity_defect": 3.106179386551449e-16,
+      "relative_distance_excess": -4.0935609707318633e-07,
+      "energy_loss": [
+        0.07308502451571902,
+        0.08719318207225568,
+        0.05713459707500522,
+        0.07753306812690444
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "galerkin",
+      "reference": 0,
+      "relative_identity_defect": 1.279884516675081e-16,
+      "relative_distance_excess": -0.0054320403257824895,
+      "energy_loss": [
+        0.07616434072172908,
+        0.09092820017534602,
+        0.06133279862496445,
+        0.08197321306417366
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "galerkin",
+      "reference": 1,
+      "relative_identity_defect": 4.551877434596323e-16,
+      "relative_distance_excess": -0.0022173188133970665,
+      "energy_loss": [
+        0.07616434072172908,
+        0.09092820017534602,
+        0.06133279862496445,
+        0.08197321306417366
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "galerkin",
+      "reference": 2,
+      "relative_identity_defect": 3.676082996079607e-16,
+      "relative_distance_excess": -4.3943523460003686e-07,
+      "energy_loss": [
+        0.07616434072172908,
+        0.09092820017534602,
+        0.06133279862496445,
+        0.08197321306417366
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "block",
+      "reference": 0,
+      "relative_identity_defect": 8.295547793264414e-17,
+      "relative_distance_excess": -0.005371221308779079,
+      "energy_loss": [
+        0.07563607111909991,
+        0.09053998404543773,
+        0.060646095231999785,
+        0.08112128238154445
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "block",
+      "reference": 1,
+      "relative_identity_defect": 3.6961034763042803e-16,
+      "relative_distance_excess": -0.0021924929390431517,
+      "energy_loss": [
+        0.07563607111909991,
+        0.09053998404543773,
+        0.060646095231999785,
+        0.08112128238154445
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.02,
+      "method": "block",
+      "reference": 2,
+      "relative_identity_defect": 4.3668904292857026e-16,
+      "relative_distance_excess": -4.345151645166219e-07,
+      "energy_loss": [
+        0.07563607111909991,
+        0.09053998404543773,
+        0.060646095231999785,
+        0.08112128238154445
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "reset",
+      "reference": 0,
+      "relative_identity_defect": 1.327437864737134e-16,
+      "relative_distance_excess": -0.02157262251140425,
+      "energy_loss": [
+        0.30803571287224263,
+        0.29187956979567925,
+        0.2435750165595006,
+        0.32953660029726217
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "reset",
+      "reference": 1,
+      "relative_identity_defect": 5.951497945646148e-16,
+      "relative_distance_excess": -0.008805785465512049,
+      "energy_loss": [
+        0.30803571287224263,
+        0.29187956979567925,
+        0.2435750165595006,
+        0.32953660029726217
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "reset",
+      "reference": 2,
+      "relative_identity_defect": 6.975209941189474e-16,
+      "relative_distance_excess": -1.7451583321041815e-06,
+      "energy_loss": [
+        0.30803571287224263,
+        0.29187956979567925,
+        0.2435750165595006,
+        0.32953660029726217
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "chebyshev",
+      "reference": 0,
+      "relative_identity_defect": 1.178799562133396e-16,
+      "relative_distance_excess": -0.009613650256868469,
+      "energy_loss": [
+        0.14269219330818883,
+        0.15149529266588252,
+        0.10854707253492651,
+        0.1432008655009453
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "chebyshev",
+      "reference": 1,
+      "relative_identity_defect": 5.609688942011065e-16,
+      "relative_distance_excess": -0.003924221158447524,
+      "energy_loss": [
+        0.14269219330818883,
+        0.15149529266588252,
+        0.10854707253492651,
+        0.1432008655009453
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "chebyshev",
+      "reference": 2,
+      "relative_identity_defect": 8.978200379057343e-16,
+      "relative_distance_excess": -7.777145237982654e-07,
+      "energy_loss": [
+        0.14269219330818883,
+        0.15149529266588252,
+        0.10854707253492651,
+        0.1432008655009453
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "warm",
+      "reference": 0,
+      "relative_identity_defect": 1.5550005854534259e-16,
+      "relative_distance_excess": -0.00939580483480964,
+      "energy_loss": [
+        0.14128262502732214,
+        0.15014918701265323,
+        0.1060873946604649,
+        0.14218692520669385
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "warm",
+      "reference": 1,
+      "relative_identity_defect": 6.353626185216833e-16,
+      "relative_distance_excess": -0.003835298263223211,
+      "energy_loss": [
+        0.14128262502732214,
+        0.15014918701265323,
+        0.1060873946604649,
+        0.14218692520669385
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "warm",
+      "reference": 2,
+      "relative_identity_defect": 7.741651653451295e-16,
+      "relative_distance_excess": -7.600915040586643e-07,
+      "energy_loss": [
+        0.14128262502732214,
+        0.15014918701265323,
+        0.1060873946604649,
+        0.14218692520669385
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "galerkin",
+      "reference": 0,
+      "relative_identity_defect": 2.112015882155668e-16,
+      "relative_distance_excess": -0.0098852390801476,
+      "energy_loss": [
+        0.14644878775516607,
+        0.15563716547298312,
+        0.11161356350479401,
+        0.1472010338962596
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "galerkin",
+      "reference": 1,
+      "relative_identity_defect": 6.635115952916313e-16,
+      "relative_distance_excess": -0.004035081713828088,
+      "energy_loss": [
+        0.14644878775516607,
+        0.15563716547298312,
+        0.11161356350479401,
+        0.1472010338962596
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "galerkin",
+      "reference": 2,
+      "relative_identity_defect": 8.31474880113527e-16,
+      "relative_distance_excess": -7.996852181658103e-07,
+      "energy_loss": [
+        0.14644878775516607,
+        0.15563716547298312,
+        0.11161356350479401,
+        0.1472010338962596
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "block",
+      "reference": 0,
+      "relative_identity_defect": 1.588004863282045e-16,
+      "relative_distance_excess": -0.009791935232788415,
+      "energy_loss": [
+        0.14543530377487662,
+        0.15537510929361015,
+        0.11056007609715252,
+        0.14707588981784533
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "block",
+      "reference": 1,
+      "relative_identity_defect": 6.464211451098772e-16,
+      "relative_distance_excess": -0.003996995771216324,
+      "energy_loss": [
+        0.14543530377487662,
+        0.15537510929361015,
+        0.11056007609715252,
+        0.14707588981784533
+      ]
+    },
+    {
+      "degree": 4,
+      "motion": 0.1,
+      "method": "block",
+      "reference": 2,
+      "relative_identity_defect": 7.19195369213098e-16,
+      "relative_distance_excess": -7.921372261032723e-07,
+      "energy_loss": [
+        0.14543530377487662,
+        0.15537510929361015,
+        0.11056007609715252,
+        0.14707588981784533
+      ]
+    }
+  ],
+  "provenance": {
+    "utc": "2026-11-17T03:56:10Z",
+    "git": "e502bbe15920a50ade0f6dbba60fadd3efa11dec",
+    "source_sha256": {
+      "graph_return_study.py": "53326523aa5f9302d1ebc3e27ccf8f879e84fe17242c6a8f6596644866881574",
+      "validate_day.py": "b738c0efaaf9b2bf970d5b0de6918c9b31431c4e7aa96cf5d62f75ff20a2cfa4",
+      "adaptive_study.py": "e29b8c2fb6870cf8fa6441bc226c2d9872273c80610dbcc56cc7056185e987ce",
+      "campaign.py": "e6a291611f732588ba743f379a1eb458dc4e0a242f52f02fecff270e5f817900",
+      "report.py": "95ec606f2dcf21a1f911fbc1d42bd4b0e7aaa5855515d7b1f0090a4ccd0f0328",
+      "warm_validation.py": "4b77134fb140957f900e31ffacaec86d5ba2609d6e25a3863fd18151dfea3442",
+      "local_operator.cu": "85e3a46780114fdcc3930178ee6fb05874200ef66059134656a302c7ff1a0ec6",
+      "spectral_reference.py": "8adfd247a5dc6c98aabc502ea6b072a1880430e9ac64143245de417bdd908764",
+      "symbolic.py": "1aeea1bb6bfa89c3a1cbcaf18d712b4551d3abc0656d5cd2b0fdfddd60791354",
+      "spectral_reaction_study.py": "6019cc56a93cc689b987c366b7efe403a7ca04d9d6cb6093eb57e389c24f5e95",
+      "transfer.cu": "816b5c16ccf51e8476bd362188a2b76cca17c4baac84de3c83aff9016beb1fe8",
+      "day_report.py": "7d3dd047b63be0e193334edb5f8b7bf5df17a111b8e5ecc5f5452bc1d7a261be",
+      "diffusion_study.py": "e0b780c4050d07b7965eb8bb79b182247335a97c8a0fe600b5c4a7c751350d70",
+      "mode_study.py": "03df17c3ccad09d88370f08b9447bf288f956ca22200570676084748a770acf1",
+      "long_return_benchmark.py": "12370c452cd5f1ee7ce0be50abf60c4f525681249242e3641dbdbf72dd2b6069",
+      "graph_validation.py": "3b063f18d2539b1057208ca7848b8885aa0d8cea5d51f7b17d94ccc7da3aee60",
+      "block_validation.py": "10d7026e68c6b54a6cc4d32e6f2878ee7e10d64eceee4de00f2769fe7843d203",
+      "eulerian_dg.cu": "26babd6b8fc0f53952da3b3efda271de348e816b7f5323e0709147487d49b20c",
+      "carrier.cu": "952222615887263979eeb9dc3a2a0d95304f8c369ab1a464a8b9702a8b8b17ab",
+      "day_finalize.py": "3969ce97da218141cdd2ee39ce7029f14680a54efe5e652d741fff22cba2f438",
+      "nested_validation.py": "26a5e646b9b0e465daa2c182764e109a0f6c5161db6b8bedcd18774fa27f44c1",
+      "residual_return_study.py": "b34f8b16438a20bde97a4ad9e2718c7f587c8fe229103e2f748ec5a36f00e005",
+      "coupled_benchmark.py": "0fee0f17a07a5bd2e681c5f48acf927be8217533243b594bd7fff7415f13b37a",
+      "remap_controller.py": "02f0177beb40d071d1140bceabf2d68bc7a462cd4fd380eb4384519ea94ef36a",
+      "validate_graph_lifetime.py": "6a8dfa690914ff5796ab5de658f15444d4895a61abde0d2f1e0fed56c056149e",
+      "separated_fields.py": "eaf642f01669d44368d45f400fa2d1ef3e01148eb85bb2f6da2242ab6304c1c0",
+      "carrier_study.py": "2c5c214a15cf5ca1ea4e12ee1df02441c606a2a53f9f3a2987c7c5e0fc752736",
+      "weighted_products.py": "5bfa66e56281f76e3caf3185f3c471fabf8f0b27c15644c7b8e313f75c68d494",
+      "warm_study.py": "2a16126240baad8607a5c4e0b7f8b638cf79fd0824dfeb224e4d6c82149e56c1",
+      "carrier_build_study.py": "4650308fc730c75404eccf347b8fa315de9ce8e299be258bffb41c4c2e57036d",
+      "product_study.py": "61b45f046d6ec33957251ffcd9b6959bc43bf95eb93ced5c9ad5d376da47e21b",
+      "memory_study.py": "72e805affdf81cab5dc9fe64b231de3ebd877f990c986bbfae6289e8f4a8c196",
+      "source_refinement.py": "5693bcd06e69f46b81ffd19543fa01e3ab1dfb227d2461e744e3fbd7f2c2f031",
+      "night_fields.py": "d1a6aeb719f6c1efc4205454baab70ef95f2959f429a10709d9b2c3e33ad44dd",
+      "reduction_validation.py": "6c0f7bd7c1686dec04dd28879cf0feae405e63312c84e80316ec0d338c37ee4f",
+      "fourier_carrier.py": "3bc27d0e0b02e03fbe50e41188255ad83089273b91eb71ce4a16883994acde6c",
+      "fourier_modes.py": "12b1e8a86390c312621aba1eb8212637a498ca2fc48a74d602d1aa9a01be0fcc",
+      "source_study.py": "22dbf94d3704517c6a92e50453d6c8a8d56dbeba4d306244e623406f988c60fe",
+      "carrier.py": "68a6bb540398bcb2cfe1b5c0d59fa438d06692ea085d7a2e777297581f24d163",
+      "night_dg_benchmark.py": "6d6d3c1f935c9fe73e3649b0fccb722a0c001b3c12c5a6484212333de3a0bf82",
+      "tensor_report.py": "19f4ed44eccb44f0177912a2ed2029f48aa122c5d8d5a40fd0c6604fb06f4764",
+      "moments.py": "ff0e0ad6508686b627cee867a11b490494c3389b285c1b0d1b873d4fc4e5510f",
+      "tensor_study.py": "83b1a38eb7a0b68e5a1fa2d7dca86b443832a1b98eade9717d10eb7d3b8d91a5",
+      "hamiltonian_commutator.py": "84de92682132d642f23328e9183e1e8fa848f99e30339fe3030e70b3f15f8781",
+      "tensor_projection.py": "0d019b1d21dc78fd4bec6406d8de47b58f601f698999007ceaefda8a9987c589",
+      "reaction_study.py": "09e5a789d15582b54a24e5eb99649da3b0adf07f7b525069849918a4cbf8d71c",
+      "geometry_control.py": "2fea76b0032bcb6a22f98d4651d844c3c309eb90102250dcc5ac5675eb5f1f1a",
+      "reaction_fields.py": "31d9f3ddd13f6c19bd45487a7c7576deaa8dafc85f0a468d653b7f99a060ec49",
+      "joint_study.py": "227d748b8be8923e21febf883be59d1439a80d3df3304783ab074a9d14d1062f",
+      "memory_stress.py": "3114e75c1b261db3df233d4d121f25335c69bedf82da458d4785a47df43cc1bc",
+      "memory_transport.py": "e7cf1740a859b496bbb098fc3d2a6d1214dd816a746a5f908e7fa49bf03e41b4",
+      "basis.cuh": "067d7dde2ffed83d1159eefcfb434a94fbbb562bea7d30768f5db1ac1f77dbd2",
+      "spectral_reaction_moments.py": "b94e687113f98f21554f239b7a32b540ba09e7ffd821162ce890df994521a0b7",
+      "mixture_study.py": "db29fe26de17e2da6eb21a92c8ff41c867191cfdfcbc044826a5467ac8327f38",
+      "tensor_time_defect.py": "5923b717befb8834ced7b1e9b044b62d31b5a502834ebd1008f777394dd6fa85",
+      "galerkin_study.py": "3ca2303c50d40452d888a78617470f3cd1645ca9239bc16cc1c071aa34b1ec0e",
+      "cellular_reference.cu": "5b92154658c8dd49d916074c45d759d12477cfc34774230f4ac6e593a4c81710",
+      "spectral_reaction_validation.py": "523cbae25326eb397e2f3794da281b328e52aeaaf051d4a2be1bb481a3f474da",
+      "tensor_cellular.py": "f48dae315aa034f9875e4b78723aeb4e130b668d2fe5803b6083924c0a607a7b",
+      "restart_study.py": "fff7a6836dbb1df7c9812e1dfdd614f5c83f5c86671461d22b48b814fb726230",
+      "krylov_study.py": "ff1cf79b23e906604b3ed7c5140c4d4262c063c7f84f442649de3257b55c786e",
+      "validate.py": "3d6296852c6d19234614a1d9775e71031042a7686617367f97b421ceaffd271d",
+      "relaxation_study.py": "48d5e2c2a1a6ee69824b9867ae304dca15475bd8fb5d5f97c7602a5c38801d88",
+      "night_report.py": "07548201e89ccd073616c9bde8b5691ca73cef130dad8a51f6ecaf11d628a5cb",
+      "coupled_validation.py": "ee8b11e26bdd50010e23688d10ca5ef6107d4f67b24f9f84f99b3c9440195983",
+      "reaction_projection_study.py": "e7ae334024d08793e8a6c552c9f48ce8498b1694994ab5ee389b524eb4a0850c",
+      "overnight.py": "d7a5a85e3485e188657adf2381349db9f06b2b47c0c39311b8a05ddb612622ee",
+      "gpu.py": "63659f9a5fbfbd3d806b588e16e3eb70aeb03a68b3062f8663a3e5e442504800",
+      "ensemble_study.py": "549b5b2fb7d4ce077fef2866edf526dafb3597d9d4271e9bb2018023d4cbc3f6",
+      "reference_relative_validation.py": "bfbc322404f03f53517ceb07328a3096780b9a2fd1937bee3dcef817a759a3b5",
+      "day_artifacts.json": "2ae00743eed8581dd108651aaf75c9960a98ed90cdaac3409031311dddd57296",
+      "galerkin_stability.py": "c63a2a8903f2ea02677e67fc74b207d5c3e785561f1d62971631ccc0a327016f",
+      "symbolic.json": "3fe2f294f613777861bf03ba2a26ece3cae8cda67e5a7b3f486285ec85907f64",
+      "increment_moments_validation.py": "81c5d4a9debf9315ffa3ee22dd7deae5f447c6e3d2d6b6d5c637a04d51fa3fe4",
+      "refinement_study.py": "aecca3c2c89286164252a228b324e29dd5812d5bf922a93f844ec551ee4ad9e5",
+      "normalized.py": "1c7eabc8c7fbdfa7055ac902f22795d54346bb59a026c53b7a2dc8958e687c94",
+      "finalize.py": "bb13fa4a9a44840f8662677370093e9bf0f59ae88ced60683e0a41733dbab8a4",
+      "incremental_report.py": "080475751509b8ff8e80eb2d6ce3304359c83e1d9b086a39ea7f580d2e8ee281",
+      "fourier_carrier.cu": "c1483ef0083d5f889a7ae99aa0cdee44ef78b56344389741baeb8e179c0e274f",
+      "phase_study.py": "2baaebcf7526be7fd0e3762b5c2e8d6aa589530065a6f2588734547708f0bcc9",
+      "basis_gradient.cuh": "90d4971421cbae591dd9701dcb9d1ae9ce81c17562e47c7d5cf1a3ada329fa93",
+      "compressible_study.py": "36426df34df9e209d35909d0123d395d66d6e21a96a4ae453dffd87683d5279a",
+      "arnoldi_transport.py": "a12d3e036cad5c4a2873bf02a2f26027acadf46cebd7ba34e68640971e73a40e",
+      "night_queue.py": "e94b8f45bd9c034ebedae2f4b1eb6546a5de5e4e24dcebec5a514ef09dc5b584",
+      "cfl_study.py": "869eb81f610b52d5fc20df90227cefd0a28519f64c6b6ee0ca32af19725c4f66",
+      "night2_artifacts.json": "69f206387d204c5c7b0424a1830f05dd129463f4a4f79180b78a36d2eee54ea4",
+      "energy_mesh_validation.py": "13d0de87141a8fb5d33683fbe3adaf8b909a0c66ae9fb19ccb275ad24a19d886",
+      "field_report.py": "851cb5fc65e45aa15368e68ad5b2e6b82c748a4e294634f85d22e6a925d56245",
+      "validate_tensor.py": "fedd2276354cb3a9d88989afb54de094b44da2cd6207577d7fbe8eb70f07a161",
+      "system_coupling_study.py": "b0dee26c59d51a5779ffa5d3bea30421733ffd621594a8c61e13a2143e7dd9f1",
+      "fe_diffusion.py": "f66c307eb3eaeac0ed622922b52ee92a724c613986390a7cc276cbeed2bdc92b",
+      "reaction_moments.py": "0b7991a5cd7420330fcaa73d3763ae08de2603cd5531a0f85233ecc190632d4c",
+      "fast_return_study.py": "2f397b7d39b94405b5fd308a2bd3cfc25e779cfe772359be9f03aee36a218a4f",
+      "fourier_study.py": "ce8f3324d279478ebb0b71ae692412ab018737be252d0f2255d625229cc9065c",
+      "carrier_tiled_study.py": "b6ca2966c6725cd887ab4eb25f791e949fbb325d8090c3731c6fe4252e5f891c",
+      "flows.py": "5ee21e0f2a569630e345b202f497e1a48458a9770192021b957fb444deaf88e3",
+      "product_reference.cu": "9e9ed013ebb4027b8acdf62e512e4fb2a7c039921d13284bbd39ecab230620e5",
+      "svd_study.py": "83382af46cd780ce9322d5cb7aeb500a23138019f7e39b9b7c8a3fe1e017cfa0",
+      "research.py": "90fc9ad028fdb311156d020fb9bcee86c47959167d2f658fc84aedab546e5067",
+      "dg_study.py": "05a051126d81fdbfdd259286f7f82e787a3114f3610b6af23914dc363dc3a474",
+      "night_finalize.py": "da22121d1319a386bea011b80e701cb9fb2b55afa2a69847d4a37567994032e5",
+      "flux.py": "2a62349b1a0402c04a86bc360dbf48a2527fd29c0130b045ca066291696c0a2d",
+      "eulerian_dg.py": "14874da90ca91e9a1ff66485512612dceb992678fe23e15f092d5fc55723280a",
+      "symbolic_gradient.py": "5cc885cf9fc7c682db3f13c079ec68eaa5ca154a6247d0fa88c54e70c0bcd4e8",
+      "scale_study.py": "b2ba5395f1faf57859030a152839ecc6c2c38dcbdf7e26d6f80382f596176fe6",
+      "increment_conditioning_study.py": "b976c977ede60e62bdc990ff4b101a1d9a667817cf3a44b37d2a39df3d260b86",
+      "gpu_graph.py": "277fa5ad444a6a467fce728dff6036f6d68f77ba4c18a6e647f265524dc38ede",
+      "carrier_polynomials.json": "9130f39e95d5bcca65d02b452972d851f835caaebb855a918217d1c8aa1de50e",
+      "reaction_moments_study.py": "c438d0e3541139e858fcf9a19b366288c89ca060b13709ca363f80d991922344",
+      "small_gram.py": "9de90f8666ba1cce18cf7851706b335c025359587e4a1b555570e21b4628ea2e",
+      "mixture_figures.py": "b1df84d6056ba2b2a53ecd202cd1217b1a08d2681281cdf0be3d60a2f6a094c3",
+      "references.json": "3e41af93b0ed3f789e8625c9863470ecbf8e86c4167dc2961025563d249b3123",
+      "graph_memory.py": "c4aad56644114929457cd0bb09ebc9be886137506b8dc121d137c114ac996330",
+      "day_study.py": "d7e2475c2af15b35d3685bf33db0332d3399ce6508a9e8f5bbcaa151df72f0f1",
+      "material_monitor.py": "51a6c70769880e500d98cc1e0af3a5390615a0cea415ef226e4c03f2cdc9d42c",
+      "tensor_intervals.cuh": "27f24db4c976a83eaad78335295a07042d30e6fcded8009f794563a4fa8ded9b",
+      "reaction_reference.cu": "8149303457db5d7b98a8912cd3efb8932acbd36aadb1ec7652caa162e8b34141",
+      "tensor_remap.cu": "ff2537cc9c118378785064d4c86a65901e722d141b7bd0d284d2f5fb0ace08df",
+      "budgeted_roundtrip.py": "1ed8ad70a45f1dc22a8150ab433bead42ca0b8f5857fc7fb624bb5061e0d8d11",
+      "field_sample.cu": "ad6c5fb4c75be65a7ded791bc1de43484329e5d9be1299cefffa651aeaea3802",
+      "monitor_study.py": "883222344a6f7bb00f6654e69ca406b0d3f0abd2d018eedc98857a5fe5d31b8a",
+      "late_validation.py": "a7c28a9b3c991edb9aab5bea2b9dbe5884359b6778cd777a775b532c562ef51e",
+      "graded_study.py": "72c6d0c31c04ceece1571ca9c475f1e916b3ef2ff08108484b580947f84fc9db",
+      "memory_transfer_study.py": "cbf8342c4809d3b80716d465f0f6edcbe42f5cd40f3e72dcb94aee01af716adb",
+      "tensor_remap.py": "6f5eab932d6e3f3d480b42b2d4ba40b86453c38c5642946d1e4ecb319ba22cc0",
+      "physics_fields.py": "302675226056f7bdfe18d964486bd15a891241ddfbe1d573c85a923260f240aa",
+      "validate_comparisons.py": "019215fb038c1306175da5d817677ceea5643a55e0c59e9c085b3cad1fc65464",
+      "reaction_moments_validation.py": "85fe1dc2da05e8bece8f7c09b1d0beee2fb6fc100c9221fc508c1749b8b36c69",
+      "fourier_reference.cu": "ff222b62b56c963602be923e84f867228d2ddc89d06601df87d5da83cfea0d7e",
+      "transfer_profile.py": "5cd1fb6c56f65d899c9631cb1fee8d368ac6e1703d0f9d06d7e6d4e04b301398",
+      "rotation_dg.py": "e34896c738c59209dfc2383147196c3e0a9201f9c57d8c51d88fb4846336aa7b",
+      "matched_benchmark.py": "db70ec8578144543c1a1740d9643b1dea57c0591ba08291f107c6ddf30745fcd",
+      "cartesian.py": "a27d6a2b8996333ab260b0553c75c3e6eccbffc95f5fd1d3c38bbffd53e95cc2",
+      "roundtrip_auxiliary.py": "2477d70ca410bd56bfb62360103fcdf80613c22fcb7de9af7a2f78f5c8c991e7",
+      "validate_moments.py": "1c255dbec9db3cfbbcd9c5897bbf325c73dc92719d467437f9ed29610a75a709",
+      "gram_study.py": "eb25a92d564a64ab15825a01ea633e406f2514f5d4b82091716d7e39c6ba6c80",
+      "fourier_flow.py": "0ce1f24ede2c44497b5c688e595a2f893f6edb04a5b0e469b866582cd31bebfb",
+      "frozen_transfer_study.py": "f5b59c9a9ac6fd5579364c8f8b8bb69ecb5a269c69dc742136a8fe5e9923d5cd",
+      "ambient_validation.py": "93e1bbbb22133253fb0482d438cba57e54c327e64c04b89d9915c4946fe98531",
+      "symbolic_carrier.py": "f872956e57ae551640bdacab505f991b708b80b062ea2b5ea1b876563bd41b0b",
+      "energy_mesh.py": "6d4d791906892daf15435c2d633ca0f680147e0d54ad47227a6accd4d25b5737",
+      "carrier_tiled.cu": "fa02d5e415c3cc82c7d97bb23f91c8867c3da0e97d65e70d16ebd05d27cb50e1",
+      "ray_flux.cu": "909d47a1c0fb0d940f9b0877f84c8cdb82c388f56a6511ee451f88480221226c",
+      "moving_validation.py": "bdd60d702cefd1bf900abde5f3cdaebb7662ee16f18bcd7c0dd638dc2bd2b6f1",
+      "separated_refinement.py": "45e45ea368b89e6fb13676efb1e52e292b0cb1eb2979f8d3567cff71e3068746",
+      "moving_study.py": "d871483f479310dc98436246efb2ab38750ef2f0ca0a3db0dfe59052fbe4ce31",
+      "tensor_grid.py": "480360fb44f440ae503f4411ef6d5e3429596207120f627db7af0d4995dcbc5b",
+      "roundtrip_study.py": "290947d8a59480657baf18f6617eb5fd3f1c26b547ebf5d5c94e6c0f0a87a1d5",
+      "rotation_dg.cu": "50e34d67cd351d6c5a58cd187462fc8a78a6807220b06b5a0134f12237c5684a",
+      "svd_reference.cu": "a2fe4a040f40a46bf991310806571660729c353ad5ec018855ba8d75f481200b",
+      "rotation_study.py": "99eaceda9f6508926980a1eaeec38bba86e3d68c5079ed8fa5af55d56f73875b"
+    },
+    "python": "3.10.12",
+    "cupy": "13.6.0",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "cuda_driver": 13020,
+    "cuda_runtime": 12090
+  }
+}
