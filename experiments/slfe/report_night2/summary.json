@@ -1,5 +1,5 @@
 {
-  "generated": "17/11/2026 \u00e0 03:18",
+  "generated": "17/11/2026 \u00e0 03:59",
   "matched": [
     {
       "fields": 1,
@@ -96,11 +96,18 @@
     "frozen-transfer": 8,
     "krylov": 16,
     "krylov-tuned": 4,
-    "krylov-fine": 0,
+    "krylov-fine": 8,
     "block-frozen": 5,
     "gram": 12,
-    "fast-return": 7,
-    "system-coupling": 0,
+    "fast-return": 8,
+    "system-coupling": 12,
+    "mixture": 12,
+    "relaxation": 36,
+    "reaction-moments": 36,
+    "reaction-moments-controls": 24,
+    "reaction-moments-fine": 27,
+    "reaction-moments-quadrature": 1,
+    "reaction-projection": 90,
     "material-minimax": 2,
     "minimax-return": 3,
     "diffusion": 20,

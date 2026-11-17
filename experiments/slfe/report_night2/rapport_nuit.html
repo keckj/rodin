@@ -1,8 +1,9 @@
-<!doctype html><html lang='fr'><meta charset='utf-8'><title>SLFE : supports mobiles et transfert de mémoire</title><style>body{max-width:1080px;margin:40px auto;padding:0 24px;font:17px/1.6 system-ui;color:#152c3a}h2{margin-top:2em}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #ccd6df;padding:8px;text-align:left}img{max-width:100%}figcaption{font-size:14px}</style><h1>SLFE : supports mobiles et transfert de mémoire</h1><p>Résultats disponibles le 17/11/2026 à 03:18 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test.</p>
+<!doctype html><html lang='fr'><meta charset='utf-8'><title>SLFE : supports mobiles et transfert de mémoire</title><style>body{max-width:1080px;margin:40px auto;padding:0 24px;font:17px/1.6 system-ui;color:#152c3a}h2{margin-top:2em}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid #ccd6df;padding:8px;text-align:left}img{max-width:100%}figcaption{font-size:14px}</style><h1>SLFE : supports mobiles et transfert de mémoire</h1><p>Résultats disponibles le 17/11/2026 à 03:59 (Europe/Paris). Calculs en double précision sur une RTX 5090. Les références sont obtenues par caractéristiques indépendantes, par retour exact du flot ou par solution analytique, selon le test.</p>
 <h2>Résultat et portée</h2>
 <p>Un support auxiliaire mobile résout le défaut observé lorsque la bosse quitte la zone fine d&#x27;une grille fixe. Le couplage FE avec mémoire accepte désormais un changement de support contractant, et un raffinement exactement emboîté sans perte d&#x27;énergie. Les transferts polynomiaux évitent une inversion globale; la variante de Galerkin diagonalise une petite matrice par champ. Les propriétés sont établies sous les hypothèses de restart_theory.pdf; elles n&#x27;établissent ni une nouveauté bibliographique, ni une convergence générale vers l&#x27;EDP.</p>
 <p>Deux méthodes sont distinguées : le couplage avec mémoire maintient le champ FE à chaque changement; la référence d&#x27;advection pure transporte uniquement le champ DG auxiliaire entre une projection FE initiale et une projection FE finale. Cette seconde méthode est la plus rapide ici, mais elle n&#x27;offre pas les opérations physiques FE intermédiaires du couplage.</p>
 <p>Les contre-tests exposent deux limites importantes : un transfert itératif tronqué peut dissiper même à support inchangé, et un contrôle de maillage tous les quatre pas modifie le problème d&#x27;adaptation lorsque le pas diminue. Une variante corrige le premier défaut au prix d&#x27;une non-linéarité; une ablation à intervalle physique fixé isole le second. La composition hamiltonienne par SVD perd la comparaison de coût et de précision contre Fourier/RK4 sur le vortex résolu. Ces résultats orientent la suite de la recherche.</p>
+<p>Le résultat nouveau de la fin de nuit concerne la physique de la mémoire : une contraction de l&#x27;énergie ne suffit pas à reproduire une réaction forte. Le prototype applique désormais la réaction spatiale au champ complet, puis conserve exactement ses moments FE et comprime sa composante cachée dans trois directions. Sur le cas de réaction forte testé, l&#x27;erreur relative passe de 32,7 pour un amortissement uniforme de la mémoire à 0,00240 pour ces moments complets, avec un plancher FE de 0,00237. C&#x27;est une correction de modèle démontrée sur ce test, à un coût supérieur; ce résultat ne constitue pas à lui seul une avancée bibliographique établie.</p>
 <h2>Construction étudiée</h2>
 <p>Le maillage triangulaire FE reste fixe et porte les opérations de physique. Un second maillage transporte le champ par cisaillements semi-lagrangiens. Après ce transport, le champ FE reçoit l&#x27;incrément projeté; l&#x27;état auxiliaire est conservé pour le pas suivant. Cette mémoire évite de reconstruire entièrement le champ transporté à chaque pas. Le problème étudié cette nuit est de modifier le support auxiliaire en préservant le champ FE, la masse et un bilan d&#x27;énergie contrôlé.</p>
 <figure><img src='night-coupling.svg' alt='Schéma des deux mises à jour. Les flèches correspondent à des sous-pas successifs. L&#x27;ancre FE supplémentaire conserve la relation entre les états quand le support et son opérateur de projection changent.'><figcaption>Schéma des deux mises à jour. Les flèches correspondent à des sous-pas successifs. L&#x27;ancre FE supplémentaire conserve la relation entre les états quand le support et son opérateur de projection changent.</figcaption></figure>
@@ -47,8 +48,16 @@
 <tr><td>upwind</td><td>48</td><td>1024</td><td>0.0002865</td><td>oui</td><td>29.78</td></tr>
 <tr><td>upwind</td><td>96</td><td>256</td><td>0.0002865</td><td>oui</td><td>20.12</td></tr>
 <tr><td>upwind</td><td>96</td><td>1024</td><td>0.0002865</td><td>oui</td><td>79.93</td></tr>
+<tr><td>upwind</td><td>32</td><td>128</td><td>1.244</td><td>non</td><td>2.394</td></tr>
+<tr><td>upwind</td><td>32</td><td>192</td><td>1.284</td><td>non</td><td>3.551</td></tr>
+<tr><td>upwind</td><td>48</td><td>128</td><td>1.061</td><td>non</td><td>3.78</td></tr>
+<tr><td>upwind</td><td>48</td><td>192</td><td>0.0002927</td><td>oui</td><td>5.65</td></tr>
+<tr><td>upwind</td><td>64</td><td>128</td><td>0.02112</td><td>non</td><td>5.595</td></tr>
+<tr><td>upwind</td><td>64</td><td>192</td><td>0.0002865</td><td>oui</td><td>8.36</td></tr>
+<tr><td>upwind</td><td>96</td><td>128</td><td>0.0002865</td><td>oui</td><td>10.11</td></tr>
+<tr><td>upwind</td><td>96</td><td>192</td><td>0.0002865</td><td>oui</td><td>15.11</td></tr>
 </tbody></table></div>
-<p>Le meilleur coût accepté dans cette exploration vaut 7.554 s, pour une erreur 0.0002865. Une seule mesure par configuration est disponible ici; la sélection et les répétitions de chronométrage sont distinctes.</p>
+<p>Le meilleur coût accepté dans cette exploration vaut 5.65 s, pour une erreur 0.0002927. Une seule mesure par configuration est disponible ici; la sélection et les répétitions de chronométrage sont distinctes.</p>
 <h2>Mémoire : changement d&#x27;espace sans changer le champ FE</h2>
 <p>L&#x27;état est représenté par trois tableaux (v,w,a), avec v=R*w+(I−R*R)a. Son énergie est ||w||²+||a||²−||Ra||². La remise à zéro conserve v mais perd toute la mémoire invisible dans ce champ. Le transfert contractant conserve une partie de cette mémoire. En cas de raffinement exactement emboîté, l&#x27;injection corrige w par les nouveaux modes de a et préserve toute l&#x27;énergie augmentée.</p>
 <div class='table'><table><thead><tr><th>FE n</th><th>Remise à zéro L2</th><th>Mémoire L2</th><th>Plancher FE</th></tr></thead><tbody>
@@ -259,8 +268,79 @@
 <tr><td>128 / 64</td><td>0.25</td><td>512 / 16</td><td>galerkin</td><td>63</td><td>0.0008151</td><td>18.46</td></tr>
 <tr><td>128 / 64</td><td>0.25</td><td>512 / 16</td><td>block</td><td>63</td><td>0.0008124</td><td>17.96</td></tr>
 <tr><td>256 / 128</td><td>1</td><td>512 / 4</td><td>galerkin</td><td>255</td><td>0.0233</td><td>255.2</td></tr>
+<tr><td>256 / 128</td><td>1</td><td>512 / 4</td><td>block</td><td>255</td><td>0.02353</td><td>257.8</td></tr>
 </tbody></table></div>
 <figure><img src='night-fast-return.svg' alt='Le gain sur les petits produits de Gram se répercute partiellement sur le coût complet, dominé par les reconstructions des supports. Les points comprennent plusieurs pas et fréquences de contrôle; le tableau conserve leurs paramètres.'><figcaption>Le gain sur les petits produits de Gram se répercute partiellement sur le coût complet, dominé par les reconstructions des supports. Les points comprennent plusieurs pas et fréquences de contrôle; le tableau conserve leurs paramètres.</figcaption></figure>
+<h2>Réaction FE à quatre composantes et changement de base</h2>
+<p>Le système transporte quatre profils et applique la réaction spatiale diagonale de taux (0,5; 1; 2; 4) fois 1+0,5 sin(2πx). Le même problème est résolu après une rotation orthogonale des composantes, où la réaction devient couplée. Les résultats sont ramenés dans la base initiale. Une suite matérielle de supports est imposée à toutes les variantes pour isoler cette propriété du contrôleur. Les demi-pas de réaction sont effectués dans l&#x27;espace FE; le transport et la mémoire auxiliaire restent sur GPU.</p>
+<div class='table'><table><thead><tr><th>FE</th><th>Dispersion</th><th>Méthode</th><th>L2, base initiale</th><th>L2, base tournée</th><th>Écart entre bases</th></tr></thead><tbody>
+<tr><td>64</td><td>0.008</td><td>chebyshev</td><td>0.01229</td><td>0.01229</td><td>1.279e-13</td></tr>
+<tr><td>64</td><td>0.008</td><td>galerkin2</td><td>0.01231</td><td>0.0123</td><td>0.0004145</td></tr>
+<tr><td>64</td><td>0.008</td><td>block2</td><td>0.0123</td><td>0.0123</td><td>1.107e-09</td></tr>
+<tr><td>64</td><td>0.15</td><td>chebyshev</td><td>0.04667</td><td>0.04667</td><td>1.691e-13</td></tr>
+<tr><td>64</td><td>0.15</td><td>galerkin2</td><td>0.04674</td><td>0.04674</td><td>0.000793</td></tr>
+<tr><td>64</td><td>0.15</td><td>block2</td><td>0.04674</td><td>0.04674</td><td>4.537e-10</td></tr>
+<tr><td>128</td><td>0.008</td><td>chebyshev</td><td>0.0002942</td><td>0.0002942</td><td>1.277e-13</td></tr>
+<tr><td>128</td><td>0.008</td><td>galerkin2</td><td>0.000296</td><td>0.0002953</td><td>2.145e-05</td></tr>
+<tr><td>128</td><td>0.008</td><td>block2</td><td>0.0002955</td><td>0.0002955</td><td>1.244e-10</td></tr>
+<tr><td>128</td><td>0.15</td><td>chebyshev</td><td>0.004151</td><td>0.004151</td><td>1.696e-13</td></tr>
+<tr><td>128</td><td>0.15</td><td>galerkin2</td><td>0.004169</td><td>0.004167</td><td>0.0001904</td></tr>
+<tr><td>128</td><td>0.15</td><td>block2</td><td>0.004169</td><td>0.004169</td><td>2.187e-10</td></tr>
+</tbody></table></div>
+<figure><img src='night-system-covariance.svg' alt='Le changement de coordonnées des composantes décrit la même équation physique. L&#x27;écart affiché est une différence entre deux solutions FE, distincte de leur erreur par rapport à la référence caractéristique, donnée dans le tableau.'><figcaption>Le changement de coordonnées des composantes décrit la même équation physique. L&#x27;écart affiché est une différence entre deux solutions FE, distincte de leur erreur par rapport à la référence caractéristique, donnée dans le tableau.</figcaption></figure>
+<h2>Fermeture locale de quatre fractions de mélange</h2>
+<p>Quatre fractions initialement positives ont une somme exactement égale à un. Elles sont transportées, avec ou sans réaction spatiale d&#x27;échange entre espèces définie par le laplacien du graphe cyclique à quatre sommets. Cette réaction conserve la somme. Une projection commune à tous les champs préserve toute relation linéaire dont le second membre appartient à l&#x27;espace FE; elle doit donc conserver cette fermeture jusque dans la mémoire auxiliaire. La positivité des fractions reste un contrôle séparé.</p>
+<div class='table'><table><thead><tr><th>FE / auxiliaire</th><th>Réaction</th><th>Méthode</th><th>L2 max</th><th>Fermeture FE</th><th>Fermeture auxiliaire</th><th>Masse totale</th></tr></thead><tbody>
+<tr><td>64 / 32</td><td>non</td><td>chebyshev</td><td>2.174e-05</td><td>1.726e-13</td><td>1.843e-13</td><td>7.55e-14</td></tr>
+<tr><td>64 / 32</td><td>non</td><td>galerkin2</td><td>2.199e-05</td><td>9.202e-07</td><td>6.651e-07</td><td>7.55e-14</td></tr>
+<tr><td>64 / 32</td><td>non</td><td>block2</td><td>2.196e-05</td><td>1.67e-13</td><td>1.554e-13</td><td>7.55e-14</td></tr>
+<tr><td>64 / 32</td><td>oui</td><td>chebyshev</td><td>1.145e-05</td><td>5.904e-13</td><td>4.975e-13</td><td>4.654e-13</td></tr>
+<tr><td>64 / 32</td><td>oui</td><td>galerkin2</td><td>1.156e-05</td><td>5.893e-07</td><td>3.997e-07</td><td>4.65e-13</td></tr>
+<tr><td>64 / 32</td><td>oui</td><td>block2</td><td>1.155e-05</td><td>5.881e-13</td><td>4.88e-13</td><td>4.652e-13</td></tr>
+<tr><td>128 / 64</td><td>non</td><td>chebyshev</td><td>1.096e-06</td><td>2.791e-13</td><td>2.86e-13</td><td>7.483e-14</td></tr>
+<tr><td>128 / 64</td><td>non</td><td>galerkin2</td><td>1.094e-06</td><td>3.744e-08</td><td>2.048e-08</td><td>7.461e-14</td></tr>
+<tr><td>128 / 64</td><td>non</td><td>block2</td><td>1.094e-06</td><td>2.76e-13</td><td>2.599e-13</td><td>7.461e-14</td></tr>
+<tr><td>128 / 64</td><td>oui</td><td>chebyshev</td><td>5.893e-07</td><td>6.333e-13</td><td>5.465e-13</td><td>4.681e-13</td></tr>
+<tr><td>128 / 64</td><td>oui</td><td>galerkin2</td><td>5.89e-07</td><td>1.895e-08</td><td>9.032e-09</td><td>4.676e-13</td></tr>
+<tr><td>128 / 64</td><td>oui</td><td>block2</td><td>5.889e-07</td><td>6.377e-13</td><td>5.355e-13</td><td>4.681e-13</td></tr>
+</tbody></table></div>
+<figure><img src='night-mixture-closure-128-0.svg' alt='Défaut de fermeture local, sans réaction. Chaque couleur donne la moyenne quadratique exacte par cellule FE de la somme des fractions moins un, en incluant tous les coefficients P4. La même échelle logarithmique est appliquée aux trois méthodes.'><figcaption>Défaut de fermeture local, sans réaction. Chaque couleur donne la moyenne quadratique exacte par cellule FE de la somme des fractions moins un, en incluant tous les coefficients P4. La même échelle logarithmique est appliquée aux trois méthodes.</figcaption></figure>
+<figure><img src='night-mixture-closure-128-1.svg' alt='Défaut de fermeture local, avec réaction d&#x27;échange. Chaque couleur donne la moyenne quadratique exacte par cellule FE de la somme des fractions moins un, en incluant tous les coefficients P4. La même échelle logarithmique est appliquée aux trois méthodes.'><figcaption>Défaut de fermeture local, avec réaction d&#x27;échange. Chaque couleur donne la moyenne quadratique exacte par cellule FE de la somme des fractions moins un, en incluant tous les coefficients P4. La même échelle logarithmique est appliquée aux trois méthodes.</figcaption></figure>
+<p>La cohérence des fractions de mélange est une exigence déjà traitée, notamment par Plewa et Müller dans la méthode CMA. L&#x27;expérience examine ici sa conservation dans un couplage FE à mémoire cachée et supports variables; elle ne revendique pas l&#x27;invention de cette contrainte.</p>
+<h2>Une réaction coercive doit amortir la mémoire cachée</h2>
+<p>Une réaction scalaire uniforme de taux κ commute avec l&#x27;advection et multiplie toute la solution par exp(−κT). Le couplage FE initial applique la réaction à l&#x27;observation et conserve la composante orthogonale. Il est contractant, mais ne reproduit pas nécessairement cette décroissance physique. Une extension impose q nouveau = G(v) + γ(q−v), avec γ = exp(−κΔt) pour un sous-pas de réaction uniforme. Son énergie est exactement la somme de l&#x27;énergie FE après physique et de γ² fois l&#x27;énergie cachée initiale.</p>
+<p>Le contrôle conserve un support auxiliaire uniforme fixe et utilise le même transport numérique sans réaction comme référence de commutation. Les erreurs physiques sont aussi comparées à une référence caractéristique indépendante. Les erreurs divisées par exp(−κT) exposent les écarts que masquerait une solution presque nulle. Cette extension est exacte pour une réaction uniforme; une physique générale requiert un modèle spécifique pour les sous-échelles.</p>
+<div class='table'><table><thead><tr><th>Taux κ</th><th>Amortissement</th><th>Écart de commutation / exp(−κT)</th><th>Erreur L2 physique</th></tr></thead><tbody>
+<tr><td>1</td><td>FE</td><td>9.566e-05</td><td>0.002906</td></tr>
+<tr><td>1</td><td>FE et mémoire</td><td>1.941e-14</td><td>0.002907</td></tr>
+<tr><td>10</td><td>FE</td><td>0.001027</td><td>0.0003164</td></tr>
+<tr><td>10</td><td>FE et mémoire</td><td>2.798e-14</td><td>0.0003064</td></tr>
+<tr><td>100</td><td>FE</td><td>2.471e+04</td><td>3.432e-07</td></tr>
+<tr><td>100</td><td>FE et mémoire</td><td>3.113e-15</td><td>5.183e-14</td></tr>
+</tbody></table></div>
+<figure><img src='night-relaxation.svg' alt='Avec amortissement de la mémoire, les trois intensités de réaction redonnent l&#x27;erreur du même transport sans réaction, après normalisation. Les courbes correspondantes se superposent. La conservation d&#x27;énergie cachée par le couplage FE seul ne décrit pas la physique d&#x27;une relaxation uniforme forte.'><figcaption>Avec amortissement de la mémoire, les trois intensités de réaction redonnent l&#x27;erreur du même transport sans réaction, après normalisation. Les courbes correspondantes se superposent. La conservation d&#x27;énergie cachée par le couplage FE seul ne décrit pas la physique d&#x27;une relaxation uniforme forte.</figcaption></figure>
+<h2>Réagir sur le champ complet, puis en conserver les moments</h2>
+<p>Pour la réaction de taux κ(1 + 0,5 sin(2πx)), amortir uniformément la mémoire à la vitesse minimale assure une borne d&#x27;énergie, mais ne décrit pas son évolution spatiale. La nouvelle opération calcule les moments FE et auxiliaires de gq, où g est l&#x27;exponentielle physique de la réaction et q le champ complet. Trois blocs de masse pondérés suffisent : FE–FE, FE–auxiliaire et auxiliaire–auxiliaire. La projection dans trois directions cachées conserve exactement les moments FE de gq et possède une identité de Pythagore, sous les hypothèses de quadrature et de rang de la note théorique.</p>
+<p>Le test conserve le même transport cellulaire, le même maillage FE P4 gradué et un support auxiliaire uniforme fixe, deux fois plus fin dans chaque direction. Le temps final est 0,25. La référence par caractéristiques est indépendante; l&#x27;écart entre 512 et 1024 sous-pas de référence est inférieur à 3 × 10⁻¹¹ relativement au maximum de la référence. Les erreurs sont divisées par sa norme L2 finale : pour κ = 100 cette norme vaut seulement 4,20 × 10⁻¹⁴. Les écarts relatifs très élevés des modèles incomplets décrivent donc des résidus faibles en valeur absolue, mais très supérieurs au champ physique attendu.</p>
+<div class='table'><table><thead><tr><th>FE n</th><th>Modèle</th><th>L2 physique</th><th>L2 relative</th><th>Plancher relatif</th><th>Évolution (s)</th></tr></thead><tbody>
+<tr><td>32</td><td>Réaction FE</td><td>7.012e-06</td><td>1.668e+08</td><td>0.02895</td><td>0.1614</td></tr>
+<tr><td>32</td><td>Mémoire amortie</td><td>4.046e-11</td><td>962.3</td><td>0.02895</td><td>0.2003</td></tr>
+<tr><td>32</td><td>Moments complets</td><td>1.249e-15</td><td>0.0297</td><td>0.02895</td><td>2.037</td></tr>
+<tr><td>64</td><td>Réaction FE</td><td>2.546e-07</td><td>6.055e+06</td><td>0.002371</td><td>0.1771</td></tr>
+<tr><td>64</td><td>Mémoire amortie</td><td>1.376e-12</td><td>32.73</td><td>0.002371</td><td>0.2385</td></tr>
+<tr><td>64</td><td>Moments complets</td><td>1.009e-16</td><td>0.0024</td><td>0.002371</td><td>2.203</td></tr>
+<tr><td>128</td><td>Réaction FE</td><td>8.55e-09</td><td>2.033e+05</td><td>0.0001375</td><td>0.6857</td></tr>
+<tr><td>128</td><td>Mémoire amortie</td><td>4.377e-14</td><td>1.041</td><td>0.0001375</td><td>0.7246</td></tr>
+<tr><td>128</td><td>Moments complets</td><td>5.826e-18</td><td>0.0001386</td><td>0.0001375</td><td>6.887</td></tr>
+</tbody></table></div>
+<figure><img src='night-reaction-moments.svg' alt='La contraction coercive ne garantit pas la précision de la réaction. Les moments du champ complet restent proches du plancher FE sur les trois maillages et les trois intensités testées; une convergence générale n&#x27;est pas déduite de cette campagne.'><figcaption>La contraction coercive ne garantit pas la précision de la réaction. Les moments du champ complet restent proches du plancher FE sur les trois maillages et les trois intensités testées; une convergence générale n&#x27;est pas déduite de cette campagne.</figcaption></figure>
+<p>Une ablation remplace l&#x27;exponentielle du générateur FE par la projection FE de l&#x27;exponentielle physique, sans traiter spatialement la mémoire. Sur les 24 essais, cette modification change les erreurs relatives d&#x27;au plus 7.68e-07 en proportion : elle n&#x27;explique pas le gain de la nouvelle opération. Les temps sont ceux d&#x27;une exécution par configuration. La construction des masses pondérées ajoute environ 0,5 s pour n = 64 et 1,8 s pour n = 128; les moments complets coûtent davantage par pas que les deux modèles incomplets.</p>
+<p>Les 18 contrôles denses GPU aux degrés 1, 2 et 4 vérifient les Grams pondérés, la limite de réaction uniforme, l&#x27;observation FE et Pythagore. Le défaut de Pythagore maximal est 8.88e-15; la variation maximale du Gram à la subdivision de quadrature est 1.71e-12. Compute Sanitizer ne signale aucune erreur sur cette validation.</p>
+<p>Sur l&#x27;EDP à κ = 100, n = 64 et 256 pas, doubler les subdivisions des intégrales pondérées change l&#x27;erreur relative de 2.91e-13 en valeur absolue.</p>
+<figure><img src='night-reaction-fields-64-256-100.svg' alt='Champs calculés et erreurs, normalisés par le maximum exact dans la fenêtre affichée. Les deux cartes supérieures utilisent la même échelle; la coupe emploie une échelle logarithmique symétrique. Les trois cartes d&#x27;erreur ont une échelle logarithmique commune. Ce calcul pour la visualisation est séparé des mesures de temps.'><figcaption>Champs calculés et erreurs, normalisés par le maximum exact dans la fenêtre affichée. Les deux cartes supérieures utilisent la même échelle; la coupe emploie une échelle logarithmique symétrique. Les trois cartes d&#x27;erreur ont une échelle logarithmique commune. Ce calcul pour la visualisation est séparé des mesures de temps.</figcaption></figure>
+<h2>Compression des moments face à une projection ambiante complète</h2>
+<p>Un oracle supplémentaire résout par diagonalisation GPU le Gram conjoint complet de V et W, avec un seuil relatif de rang de 10⁻¹². Il est comparé aux petits espaces cachés sur des états aléatoires à quatre composantes. Ce contrôle mesure la perte de projection pour une réaction seule; il ne mesure pas une erreur d&#x27;EDP. La référence complète est elle-même soumise au seuil de rang.</p>
+<figure><img src='night-reaction-projection.svg' alt='Enrichir la projection retient davantage de mémoire sur une même entrée. Le calcul partagé réunit les directions des quatre composantes. La distance résiduelle à la projection complète quantifie la limite d&#x27;une compression de petite dimension.'><figcaption>Enrichir la projection retient davantage de mémoire sur une même entrée. Le calcul partagé réunit les directions des quatre composantes. La distance résiduelle à la projection complète quantifie la limite d&#x27;une compression de petite dimension.</figcaption></figure>
 <h2>Association de la projection enrichie et de la phase minimax</h2>
 <p>La projection enrichie et la minimisation du déplacement périodique sont ensuite utilisées ensemble. Les essais courts reprennent les trois fréquences de contrôle. Deux essais plus longs sur FE n=256 et auxiliaire n=128 comparent la projection enrichie avec coupure fixe et avec phase minimax. Les ingrédients ont des contrôles séparés; cette campagne examine leur interaction.</p>
 <div class='table'><table><thead><tr><th>T aller</th><th>FE n</th><th>Phase</th><th>Pas / contrôle</th><th>Changements</th><th>L2 max</th><th>Temps (s)</th></tr></thead><tbody>
@@ -440,11 +520,18 @@
 <tr><td>frozen-transfer</td><td>8</td><td>8</td></tr>
 <tr><td>krylov</td><td>16</td><td>16</td></tr>
 <tr><td>krylov-tuned</td><td>4</td><td>4</td></tr>
-<tr><td>krylov-fine</td><td>0</td><td>8</td></tr>
+<tr><td>krylov-fine</td><td>8</td><td>8</td></tr>
 <tr><td>block-frozen</td><td>5</td><td>5</td></tr>
 <tr><td>gram</td><td>12</td><td>12</td></tr>
-<tr><td>fast-return</td><td>7</td><td>8</td></tr>
-<tr><td>system-coupling</td><td>0</td><td>12</td></tr>
+<tr><td>fast-return</td><td>8</td><td>8</td></tr>
+<tr><td>system-coupling</td><td>12</td><td>12</td></tr>
+<tr><td>mixture</td><td>12</td><td>12</td></tr>
+<tr><td>relaxation</td><td>36</td><td>36</td></tr>
+<tr><td>reaction-moments</td><td>36</td><td>36</td></tr>
+<tr><td>reaction-moments-controls</td><td>24</td><td>24</td></tr>
+<tr><td>reaction-moments-fine</td><td>27</td><td>27</td></tr>
+<tr><td>reaction-moments-quadrature</td><td>1</td><td>1</td></tr>
+<tr><td>reaction-projection</td><td>90</td><td>90</td></tr>
 <tr><td>material-minimax</td><td>2</td><td>2</td></tr>
 <tr><td>minimax-return</td><td>3</td><td>3</td></tr>
 <tr><td>diffusion</td><td>20</td><td>20</td></tr>
@@ -479,6 +566,8 @@
 <p>reduction-sanitizer : ========= ERROR SUMMARY: 0 errors</p>
 <p>Les validations indépendantes couvrent les degrés 1, 2 et 4, les projections, les adjoints en masse, les constantes, les changements de support et les identités de Gram. Toutes les opérations numériques — recouvrements, quadrature, réductions, matrices denses de contrôle — sont exécutées sur CUDA. Le processeur pilote les expériences et dessine les figures. Il s&#x27;agit de prototypes isolés dans experiments/slfe, pas d&#x27;une intégration de production au langage variationnel Rodin.</p>
 <p>La piste d&#x27;article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d&#x27;énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture.</p>
+<p><a href='https://arxiv.org/html/2611.05327v1'>Keith et al. (2026), interpolation et optimisation pour le remap ALE FE</a></p>
+<p><a href='https://arxiv.org/abs/astro-ph/9807241'>Plewa et Müller (1999), cohérence du transport des fractions de mélange</a></p>
 <p><a href='https://epubs.siam.org/doi/10.1137/0729014'>Saad (1992), approximation de l'action exponentielle par Krylov</a></p>
 <p><a href='https://doi.org/10.1007/s10915-021-01451-w'>Simon et Behrens (2021), reconstruction semi-lagrangienne des sous-échelles</a></p>
 <p><a href='https://www-users.cse.umn.edu/~arnold/papers/dgerr.pdf'>Arnold, Brezzi, Cockburn et Marini (2002), méthodes DG elliptiques</a></p>

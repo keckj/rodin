@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-11-17T03:18:54.353417</dc:date>
+    <dc:date>2026-11-17T03:59:52.432107</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1666,6 +1666,11 @@ z
      <use xlink:href="#ma0c85d2d9d" x="628.117189" y="232.121557" style="fill: #2ca02c; stroke: #2ca02c"/>
     </g>
    </g>
+   <g id="PathCollection_12">
+    <g clip-path="url(#pa8130e103d)">
+     <use xlink:href="#m03c7f544aa" x="629.635687" y="229.779507" style="fill: #d62728; stroke: #d62728"/>
+    </g>
+   </g>
    <g id="matplotlib.axis_3">
     <g id="xtick_8">
      <g id="line2d_12">
@@ -1941,14 +1946,14 @@ L 698.413086 26.16
     </g>
    </g>
    <g id="legend_2">
-    <g id="PathCollection_12">
+    <g id="PathCollection_13">
      <g>
-      <use xlink:href="#m1dc72f5b89" x="618.38668" y="35.7675" style="fill: #1f77b4; stroke: #1f77b4"/>
+      <use xlink:href="#m1dc72f5b89" x="594.176524" y="35.7675" style="fill: #1f77b4; stroke: #1f77b4"/>
      </g>
     </g>
     <g id="text_26">
      <!-- Chebyshev -->
-     <g style="fill: #718096" transform="translate(630.98668 37.605) scale(0.07 -0.07)">
+     <g style="fill: #718096" transform="translate(606.776524 37.605) scale(0.07 -0.07)">
       <use xlink:href="#Manrope-Regular-43"/>
       <use xlink:href="#Manrope-Regular-68" transform="translate(71.550003 0)"/>
       <use xlink:href="#Manrope-Regular-65" transform="translate(130.950012 0)"/>
@@ -1960,14 +1965,14 @@ L 698.413086 26.16
       <use xlink:href="#Manrope-Regular-76" transform="translate(471.700058 0)"/>
      </g>
     </g>
-    <g id="PathCollection_13">
+    <g id="PathCollection_14">
      <g>
-      <use xlink:href="#m10cd17a918" x="618.38668" y="46.0925" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+      <use xlink:href="#m10cd17a918" x="594.176524" y="46.0925" style="fill: #ff7f0e; stroke: #ff7f0e"/>
      </g>
     </g>
     <g id="text_27">
      <!-- Galerkin initial -->
-     <g style="fill: #718096" transform="translate(630.98668 47.93) scale(0.07 -0.07)">
+     <g style="fill: #718096" transform="translate(606.776524 47.93) scale(0.07 -0.07)">
       <use xlink:href="#Manrope-Regular-47"/>
       <use xlink:href="#Manrope-Regular-61" transform="translate(70.500015 0)"/>
       <use xlink:href="#Manrope-Regular-6c" transform="translate(126.050018 0)"/>
@@ -1986,14 +1991,14 @@ L 698.413086 26.16
       <use xlink:href="#Manrope-Regular-6c" transform="translate(621.300095 0)"/>
      </g>
     </g>
-    <g id="PathCollection_14">
+    <g id="PathCollection_15">
      <g>
-      <use xlink:href="#ma0c85d2d9d" x="618.38668" y="56.4175" style="fill: #2ca02c; stroke: #2ca02c"/>
+      <use xlink:href="#ma0c85d2d9d" x="594.176524" y="56.4175" style="fill: #2ca02c; stroke: #2ca02c"/>
      </g>
     </g>
     <g id="text_28">
      <!-- Galerkin, réduction -->
-     <g style="fill: #718096" transform="translate(630.98668 58.255) scale(0.07 -0.07)">
+     <g style="fill: #718096" transform="translate(606.776524 58.255) scale(0.07 -0.07)">
       <use xlink:href="#Manrope-Regular-47"/>
       <use xlink:href="#Manrope-Regular-61" transform="translate(70.500015 0)"/>
       <use xlink:href="#Manrope-Regular-6c" transform="translate(126.050018 0)"/>
@@ -2013,6 +2018,41 @@ L 698.413086 26.16
       <use xlink:href="#Manrope-Regular-69" transform="translate(731.350098 0)"/>
       <use xlink:href="#Manrope-Regular-6f" transform="translate(754.700104 0)"/>
       <use xlink:href="#Manrope-Regular-6e" transform="translate(813.850113 0)"/>
+     </g>
+    </g>
+    <g id="PathCollection_16">
+     <g>
+      <use xlink:href="#m03c7f544aa" x="594.176524" y="67.0575" style="fill: #d62728; stroke: #d62728"/>
+     </g>
+    </g>
+    <g id="text_29">
+     <!-- Espace partagé, réduction -->
+     <g style="fill: #718096" transform="translate(606.776524 68.895) scale(0.07 -0.07)">
+      <use xlink:href="#Manrope-Regular-45"/>
+      <use xlink:href="#Manrope-Regular-73" transform="translate(57 0)"/>
+      <use xlink:href="#Manrope-Regular-70" transform="translate(109.5 0)"/>
+      <use xlink:href="#Manrope-Regular-61" transform="translate(168.700012 0)"/>
+      <use xlink:href="#Manrope-Regular-63" transform="translate(224.250015 0)"/>
+      <use xlink:href="#Manrope-Regular-65" transform="translate(279.600021 0)"/>
+      <use xlink:href="#Manrope-Regular-20" transform="translate(338.050034 0)"/>
+      <use xlink:href="#Manrope-Regular-70" transform="translate(358.050034 0)"/>
+      <use xlink:href="#Manrope-Regular-61" transform="translate(417.250046 0)"/>
+      <use xlink:href="#Manrope-Regular-72" transform="translate(472.800049 0)"/>
+      <use xlink:href="#Manrope-Regular-74" transform="translate(508.850052 0)"/>
+      <use xlink:href="#Manrope-Regular-61" transform="translate(548.900055 0)"/>
+      <use xlink:href="#Manrope-Regular-67" transform="translate(604.450058 0)"/>
+      <use xlink:href="#Manrope-Regular-e9" transform="translate(663.65007 0)"/>
+      <use xlink:href="#Manrope-Regular-2c" transform="translate(722.100082 0)"/>
+      <use xlink:href="#Manrope-Regular-20" transform="translate(748.650085 0)"/>
+      <use xlink:href="#Manrope-Regular-72" transform="translate(768.650085 0)"/>
+      <use xlink:href="#Manrope-Regular-e9" transform="translate(804.700089 0)"/>
+      <use xlink:href="#Manrope-Regular-64" transform="translate(863.150101 0)"/>
+      <use xlink:href="#Manrope-Regular-75" transform="translate(922.400101 0)"/>
+      <use xlink:href="#Manrope-Regular-63" transform="translate(981.80011 0)"/>
+      <use xlink:href="#Manrope-Regular-74" transform="translate(1037.150116 0)"/>
+      <use xlink:href="#Manrope-Regular-69" transform="translate(1077.200119 0)"/>
+      <use xlink:href="#Manrope-Regular-6f" transform="translate(1100.550125 0)"/>
+      <use xlink:href="#Manrope-Regular-6e" transform="translate(1159.700134 0)"/>
      </g>
     </g>
    </g>
