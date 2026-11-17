@@ -41,6 +41,10 @@ extern "C" __global__ void build_shear_blocks(const double* velocity,
   blocks[item] = value;
 }
 
+#ifndef CARRIER_WEIGHT
+#define CARRIER_WEIGHT(position) 1.0
+#endif
+
 extern "C" __global__ void carrier_blocks(const double* triangles, int n,
   const double* edges, int first, int cells, int slots, const double* quadrature, int nq,
   const double* nodes, const double* weights, int* destinations, double* blocks,
@@ -115,6 +119,7 @@ extern "C" __global__ void carrier_blocks(const double* triangles, int n,
         nodal_values(NONUNIFORM ? (position.y - y) / hy : n * position.y - iy, nodes, by);
         double w = determinant(t) * det * quadrature[3 * q + 2] *
           (NONUNIFORM ? 1. / (hx * hy) : double(n * n));
+        w *= CARRIER_WEIGHT(position);
         for (int j = 0; j < NP; ++j)
         {
           for (int i = 0; i < NP; ++i)
@@ -223,7 +228,7 @@ extern "C" __global__ void carrier_blocks_warp(const double* triangles, int n,
           nodal_values(NONUNIFORM ? (position.y - y) / hy : n * position.y - iy, nodes,
             basis_y[warp]);
           quadrature_weight[warp] = determinant(t) * det * quadrature[3 * q + 2] *
-            (NONUNIFORM ? 1. / (hx * hy) : double(n * n));
+            (NONUNIFORM ? 1. / (hx * hy) : double(n * n)) * CARRIER_WEIGHT(position);
         }
         __syncwarp();
         const double w = quadrature_weight[warp];

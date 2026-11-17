@@ -67,6 +67,13 @@ def main():
             "gram",
             "fast-return",
             "system-coupling",
+            "mixture",
+            "relaxation",
+            "reaction-moments",
+            "reaction-moments-controls",
+            "reaction-moments-fine",
+            "reaction-moments-quadrature",
+            "reaction-projection",
             "material-minimax",
             "minimax-return",
             "diffusion",
@@ -89,6 +96,10 @@ def main():
     r.paragraph(
         "Les contre-tests exposent deux limites importantes : un transfert itératif tronqué peut dissiper même à support inchangé, et un contrôle de maillage tous les quatre pas modifie le problème d'adaptation lorsque le pas diminue. Une variante corrige le premier défaut au prix d'une non-linéarité; une ablation à intervalle physique fixé isole le second. La composition hamiltonienne par SVD perd la comparaison de coût et de précision contre Fourier/RK4 sur le vortex résolu. Ces résultats orientent la suite de la recherche."
     )
+    if raw["reaction-moments"]:
+        r.paragraph(
+            "Le résultat nouveau de la fin de nuit concerne la physique de la mémoire : une contraction de l'énergie ne suffit pas à reproduire une réaction forte. Le prototype applique désormais la réaction spatiale au champ complet, puis conserve exactement ses moments FE et comprime sa composante cachée dans trois directions. Sur le cas de réaction forte testé, l'erreur relative passe de 32,7 pour un amortissement uniforme de la mémoire à 0,00240 pour ces moments complets, avec un plancher FE de 0,00237. C'est une correction de modèle démontrée sur ce test, à un coût supérieur; ce résultat ne constitue pas à lui seul une avancée bibliographique établie."
+        )
     for path in (args.input / "figures").glob("*"):
         if path.suffix in (".svg", ".pdf", ".png", ".json"):
             shutil.copy2(path, args.output / path.name)
@@ -1428,6 +1439,269 @@ def main():
             "night-system-covariance",
             "Le changement de coordonnées des composantes décrit la même équation physique. L'écart affiché est une différence entre deux solutions FE, distincte de leur erreur par rapport à la référence caractéristique, donnée dans le tableau.",
         )
+    mixtures = [x["result"] for x in raw["mixture"]]
+    if mixtures:
+        r.section("Fermeture locale de quatre fractions de mélange")
+        r.paragraph(
+            "Quatre fractions initialement positives ont une somme exactement égale à un. Elles sont transportées, avec ou sans réaction spatiale d'échange entre espèces définie par le laplacien du graphe cyclique à quatre sommets. Cette réaction conserve la somme. Une projection commune à tous les champs préserve toute relation linéaire dont le second membre appartient à l'espace FE; elle doit donc conserver cette fermeture jusque dans la mémoire auxiliaire. La positivité des fractions reste un contrôle séparé."
+        )
+        r.table(
+            [
+                "FE / auxiliaire",
+                "Réaction",
+                "Méthode",
+                "L2 max",
+                "Fermeture FE",
+                "Fermeture auxiliaire",
+                "Masse totale",
+            ],
+            [
+                [
+                    f"{x['nfe']} / {x['naux']}",
+                    "oui" if x["reactive"] else "non",
+                    x["method"],
+                    max(x["l2"]),
+                    x["fe_closure_l2"],
+                    x["auxiliary_closure_l2"],
+                    x["total_mass_error"],
+                ]
+                for x in mixtures
+            ],
+        )
+        for reactive in (False, True):
+            name = f"night-mixture-closure-128-{int(reactive)}"
+            if (args.output / (name + ".pdf")).exists():
+                caption = (
+                    "Défaut de fermeture local, "
+                    + ("avec réaction d'échange" if reactive else "sans réaction")
+                    + ". Chaque couleur donne la moyenne quadratique exacte par cellule FE de la somme des fractions moins un, en incluant tous les coefficients P4. La même échelle logarithmique est appliquée aux trois méthodes."
+                )
+                r.figure(name, caption)
+        r.paragraph(
+            "La cohérence des fractions de mélange est une exigence déjà traitée, notamment par Plewa et Müller dans la méthode CMA. L'expérience examine ici sa conservation dans un couplage FE à mémoire cachée et supports variables; elle ne revendique pas l'invention de cette contrainte."
+        )
+    relaxation = [x["result"] for x in raw["relaxation"]]
+    if relaxation:
+        r.section("Une réaction coercive doit amortir la mémoire cachée")
+        r.paragraph(
+            "Une réaction scalaire uniforme de taux κ commute avec l'advection et multiplie toute la solution par exp(−κT). Le couplage FE initial applique la réaction à l'observation et conserve la composante orthogonale. Il est contractant, mais ne reproduit pas nécessairement cette décroissance physique. Une extension impose q nouveau = G(v) + γ(q−v), avec γ = exp(−κΔt) pour un sous-pas de réaction uniforme. Son énergie est exactement la somme de l'énergie FE après physique et de γ² fois l'énergie cachée initiale."
+        )
+        r.paragraph(
+            "Le contrôle conserve un support auxiliaire uniforme fixe et utilise le même transport numérique sans réaction comme référence de commutation. Les erreurs physiques sont aussi comparées à une référence caractéristique indépendante. Les erreurs divisées par exp(−κT) exposent les écarts que masquerait une solution presque nulle. Cette extension est exacte pour une réaction uniforme; une physique générale requiert un modèle spécifique pour les sous-échelles."
+        )
+        selected = [x for x in relaxation if x["nfe"] == 64 and x["steps"] == 256]
+        r.table(
+            [
+                "Taux κ",
+                "Amortissement",
+                "Écart de commutation / exp(−κT)",
+                "Erreur L2 physique",
+            ],
+            [
+                [
+                    x["strength"],
+                    "FE" if x["method"] == "visible-only" else "FE et mémoire",
+                    x["normalized_commutation_l2"],
+                    max(x["physical_l2"]),
+                ]
+                for x in selected
+            ],
+        )
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+        for ax, nfe in zip(axes, (32, 64)):
+            for method in ("visible-only", "visible-and-hidden"):
+                for strength in (1.0, 10.0, 100.0):
+                    rows = sorted(
+                        [
+                            x
+                            for x in relaxation
+                            if x["nfe"] == nfe
+                            and x["method"] == method
+                            and x["strength"] == strength
+                        ],
+                        key=lambda x: x["steps"],
+                    )
+                    label = (
+                        "FE" if method == "visible-only" else "FE et mémoire"
+                    ) + f", κ={strength:g}"
+                    ax.loglog(
+                        [x["steps"] for x in rows],
+                        [max(x["normalized_errors"]["l2"]) for x in rows],
+                        "o-" if method == "visible-only" else "s--",
+                        label=label,
+                    )
+            ax.set(
+                xlabel="Nombre de pas",
+                ylabel="Erreur L2 / exp(−κT)",
+                title=f"Résolution FE {nfe}",
+            )
+            ax.grid(alpha=0.2)
+            ax.legend(fontsize=6)
+        r.save_figure(
+            fig,
+            "night-relaxation",
+            "Avec amortissement de la mémoire, les trois intensités de réaction redonnent l'erreur du même transport sans réaction, après normalisation. Les courbes correspondantes se superposent. La conservation d'énergie cachée par le couplage FE seul ne décrit pas la physique d'une relaxation uniforme forte.",
+        )
+    moments = [
+        x["result"]
+        for name in ("reaction-moments", "reaction-moments-fine")
+        for x in raw[name]
+    ]
+    if moments:
+        r.section("Réagir sur le champ complet, puis en conserver les moments")
+        r.paragraph(
+            "Pour la réaction de taux κ(1 + 0,5 sin(2πx)), amortir uniformément la mémoire à la vitesse minimale assure une borne d'énergie, mais ne décrit pas son évolution spatiale. La nouvelle opération calcule les moments FE et auxiliaires de gq, où g est l'exponentielle physique de la réaction et q le champ complet. Trois blocs de masse pondérés suffisent : FE–FE, FE–auxiliaire et auxiliaire–auxiliaire. La projection dans trois directions cachées conserve exactement les moments FE de gq et possède une identité de Pythagore, sous les hypothèses de quadrature et de rang de la note théorique."
+        )
+        r.paragraph(
+            "Le test conserve le même transport cellulaire, le même maillage FE P4 gradué et un support auxiliaire uniforme fixe, deux fois plus fin dans chaque direction. Le temps final est 0,25. La référence par caractéristiques est indépendante; l'écart entre 512 et 1024 sous-pas de référence est inférieur à 3 × 10⁻¹¹ relativement au maximum de la référence. Les erreurs sont divisées par sa norme L2 finale : pour κ = 100 cette norme vaut seulement 4,20 × 10⁻¹⁴. Les écarts relatifs très élevés des modèles incomplets décrivent donc des résidus faibles en valeur absolue, mais très supérieurs au champ physique attendu."
+        )
+        methods = ("fe-only", "coercive-lift", "ambient-moments")
+        labels = dict(
+            zip(methods, ("Réaction FE", "Mémoire amortie", "Moments complets"))
+        )
+        selected = [x for x in moments if x["steps"] == 256 and x["strength"] == 100]
+        r.table(
+            [
+                "FE n",
+                "Modèle",
+                "L2 physique",
+                "L2 relative",
+                "Plancher relatif",
+                "Évolution (s)",
+            ],
+            [
+                [
+                    x["nfe"],
+                    labels[x["method"]],
+                    x["l2"][0],
+                    x["relative_l2"],
+                    x["relative_fe_floor"],
+                    x["evolution_seconds"],
+                ]
+                for x in selected
+            ],
+        )
+        fig, axes = plt.subplots(1, 3, figsize=(11, 3.7), layout="constrained")
+        for ax, nfe in zip(axes, sorted({x["nfe"] for x in moments})):
+            for method in methods:
+                rows = sorted(
+                    [
+                        x
+                        for x in moments
+                        if x["nfe"] == nfe
+                        and x["steps"] == 256
+                        and x["method"] == method
+                    ],
+                    key=lambda x: x["strength"],
+                )
+                ax.loglog(
+                    [x["strength"] for x in rows],
+                    [x["relative_l2"] for x in rows],
+                    "o-",
+                    label=labels[method],
+                )
+            ax.loglog(
+                [x["strength"] for x in rows],
+                [x["relative_fe_floor"] for x in rows],
+                "k--",
+                label="Plancher FE",
+            )
+            ax.set(
+                xlabel="Intensité κ",
+                ylabel="Erreur L2 / norme exacte",
+                title=f"FE n = {nfe}, 256 pas",
+            )
+            ax.grid(alpha=0.2)
+            ax.legend(fontsize=7)
+        r.save_figure(
+            fig,
+            "night-reaction-moments",
+            "La contraction coercive ne garantit pas la précision de la réaction. Les moments du champ complet restent proches du plancher FE sur les trois maillages et les trois intensités testées; une convergence générale n'est pas déduite de cette campagne.",
+        )
+        controls = [x["result"] for x in raw["reaction-moments-controls"]]
+        if controls:
+            discrepancies = []
+            for x in controls:
+                original_method = (
+                    "fe-only" if x["method"] == "fe-projected" else "coercive-lift"
+                )
+                match = next(
+                    y
+                    for y in moments
+                    if (y["nfe"], y["steps"], y["strength"], y["method"])
+                    == (x["nfe"], x["steps"], x["strength"], original_method)
+                )
+                discrepancies.append(abs(x["relative_l2"] / match["relative_l2"] - 1))
+            r.paragraph(
+                f"Une ablation remplace l'exponentielle du générateur FE par la projection FE de l'exponentielle physique, sans traiter spatialement la mémoire. Sur les {len(controls)} essais, cette modification change les erreurs relatives d'au plus {max(discrepancies):.3g} en proportion : elle n'explique pas le gain de la nouvelle opération. Les temps sont ceux d'une exécution par configuration. La construction des masses pondérées ajoute environ 0,5 s pour n = 64 et 1,8 s pour n = 128; les moments complets coûtent davantage par pas que les deux modèles incomplets."
+            )
+        validation = args.input / "reaction-moments.validation.json"
+        if validation.exists():
+            checks = json.loads(validation.read_text())["results"]
+            r.paragraph(
+                f"Les {len(checks)} contrôles denses GPU aux degrés 1, 2 et 4 vérifient les Grams pondérés, la limite de réaction uniforme, l'observation FE et Pythagore. Le défaut de Pythagore maximal est {max(x['pythagoras_error'] for x in checks):.3g}; la variation maximale du Gram à la subdivision de quadrature est {max(x['quadrature_error'] or 0 for x in checks):.3g}. Compute Sanitizer ne signale aucune erreur sur cette validation."
+            )
+        refined = [x["result"] for x in raw["reaction-moments-quadrature"]]
+        if refined:
+            x = refined[0]
+            match = next(
+                y
+                for y in moments
+                if (y["nfe"], y["steps"], y["strength"], y["method"])
+                == (x["nfe"], x["steps"], x["strength"], x["method"])
+            )
+            r.paragraph(
+                f"Sur l'EDP à κ = 100, n = 64 et 256 pas, doubler les subdivisions des intégrales pondérées change l'erreur relative de {abs(x['relative_l2'] - match['relative_l2']):.3g} en valeur absolue."
+            )
+        name = "night-reaction-fields-64-256-100"
+        if (args.output / (name + ".pdf")).exists():
+            r.figure(
+                name,
+                "Champs calculés et erreurs, normalisés par le maximum exact dans la fenêtre affichée. Les deux cartes supérieures utilisent la même échelle; la coupe emploie une échelle logarithmique symétrique. Les trois cartes d'erreur ont une échelle logarithmique commune. Ce calcul pour la visualisation est séparé des mesures de temps.",
+            )
+    projection = [x["result"] for x in raw["reaction-projection"]]
+    if projection:
+        r.section("Compression des moments face à une projection ambiante complète")
+        r.paragraph(
+            "Un oracle supplémentaire résout par diagonalisation GPU le Gram conjoint complet de V et W, avec un seuil relatif de rang de 10⁻¹². Il est comparé aux petits espaces cachés sur des états aléatoires à quatre composantes. Ce contrôle mesure la perte de projection pour une réaction seule; il ne mesure pas une erreur d'EDP. La référence complète est elle-même soumise au seuil de rang."
+        )
+        fig, axes = plt.subplots(1, 3, figsize=(11, 3.6), layout="constrained")
+        for ax, degree in zip(axes, (1, 2, 4)):
+            for shared in (False, True):
+                rows = sorted(
+                    [
+                        x
+                        for x in projection
+                        if x["degree"] == degree
+                        and x["duration"] == 1
+                        and x["shared"] == shared
+                    ],
+                    key=lambda x: x["directions_per_field"],
+                )
+                ax.semilogy(
+                    [x["directions_per_field"] for x in rows],
+                    [sum(x["compressed_projection_loss"]) for x in rows],
+                    "o-",
+                    label="Partagé" if shared else "Séparé",
+                )
+            ax.axhline(
+                sum(rows[0]["full_projection_loss"]),
+                color="black",
+                linestyle="--",
+                label="Projection complète",
+            )
+            ax.set(
+                xlabel="Directions par composante",
+                ylabel="Distance au carré à gq",
+                title=f"Degré {degree}, τ = 1",
+            )
+            ax.legend(fontsize=7)
+            ax.grid(alpha=0.2)
+        r.save_figure(
+            fig,
+            "night-reaction-projection",
+            "Enrichir la projection retient davantage de mémoire sur une même entrée. Le calcul partagé réunit les directions des quatre composantes. La distance résiduelle à la projection complète quantifie la limite d'une compression de petite dimension.",
+        )
     joint = [x["result"] for x in raw["joint-return"]]
     if joint:
         r.section("Association de la projection enrichie et de la phase minimax")
@@ -2065,6 +2339,13 @@ def main():
         "gram": 12,
         "fast-return": 8,
         "system-coupling": 12,
+        "mixture": 12,
+        "relaxation": 36,
+        "reaction-moments": 36,
+        "reaction-moments-controls": 24,
+        "reaction-moments-fine": 27,
+        "reaction-moments-quadrature": 1,
+        "reaction-projection": 90,
         "material-minimax": 2,
         "minimax-return": 3,
         "diffusion": 20,
@@ -2122,6 +2403,14 @@ def main():
         "La piste d'article est le couplage FE avec mémoire sur supports variables, accompagné de garanties d'énergie et de coût mesuré. Les conditions manquantes sont une erreur contrôlée pour des vitesses FE générales, un problème couplé où la mémoire apporte un bénéfice indispensable, un contrôleur robuste pour plusieurs structures et une comparaison avec des concurrents GPU plus proches. Le résultat actuel ne justifie pas une revendication de rupture."
     )
     references = [
+        (
+            "Keith et al. (2026), interpolation et optimisation pour le remap ALE FE",
+            "https://arxiv.org/html/2611.05327v1",
+        ),
+        (
+            "Plewa et Müller (1999), cohérence du transport des fractions de mélange",
+            "https://arxiv.org/abs/astro-ph/9807241",
+        ),
         (
             "Saad (1992), approximation de l'action exponentielle par Krylov",
             "https://epubs.siam.org/doi/10.1137/0729014",
@@ -2201,6 +2490,11 @@ def main():
     )
     tex = preamble + "\n".join(r.tex) + r"\end{document}"
     for char, replacement in {
+        "κ": r"\ensuremath{\kappa}",
+        "γ": r"\ensuremath{\gamma}",
+        "τ": r"\ensuremath{\tau}",
+        "10⁻¹¹": r"\(10^{-11}\)",
+        "10⁻¹⁴": r"\(10^{-14}\)",
         "10⁻¹²": r"\(10^{-12}\)",
         "π": r"\(\pi\)",
         "≤": r"\(\leq\)",

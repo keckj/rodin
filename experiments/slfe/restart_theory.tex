@@ -44,6 +44,32 @@ Cette formule ne requiert ni $D_k$, ni résolution linéaire. Les opérations
 d'advection et de physique considérées restent contractantes sous les
 hypothèses établies pour le couplage à support fixé.
 
+Une contraction de la seule observation FE ne garantit pas une
+décroissance coercive de toute la mémoire. Pour $0\leq\gamma\leq1$,
+une extension de l'opération $v^+=G(v)$ est
+\[
+ Z^+=J_kG(v)+\gamma(I-J_kJ_k^*)Z.
+\]
+Elle se réalise sans racine de matrice par
+\[
+ \delta=G(v)-\gamma v,\qquad
+ a^+=\gamma a+\delta,\qquad
+ w^+=\gamma w+R_k\delta.
+\]
+L'orthogonalité des deux composantes donne
+\[
+ E^+=\|G(v)\|^2+\gamma^2(E-\|v\|^2).
+\]
+Si $\|G(v)\|\leq\gamma\|v\|$, alors $E^+\leq\gamma^2E$.
+Pour une réaction uniforme $-\kappa u$ sur un sous-pas $\tau$,
+$G(v)=e^{-\kappa\tau}v$ et $\gamma=e^{-\kappa\tau}$ donnent
+exactement $Z^+=e^{-\kappa\tau}Z$. Cette réaction commute donc
+avec tout transport linéaire à support fixé. Le choix initial
+$\gamma=1$ conserve au contraire les composantes cachées malgré
+la réaction; il représente une réaction projetée dans $V$.
+Pour une réaction spatiale ou une autre physique, une borne de norme
+ne définit pas à elle seule un modèle précis de l'évolution cachée.
+
 \begin{proposition}
 La remise à zéro $a^+=v$, $w^+=R_{k+1}v$ préserve exactement les coefficients
 FE au changement de support. La transition augmentée est
@@ -410,6 +436,100 @@ La famille demeure dépendante de l'ensemble des états; cette covariance
 ne démontre pas une non-expansivité entre deux ensembles différents.
 La construction utilise l'algèbre classique des projections par blocs.
 
+La projection commune préserve aussi les relations linéaires entre
+composantes dont le second membre appartient à $V$. En effet, si
+$\sum_f c_fq_f=b\in V$, alors
+\[
+ \sum_f c_fq_f^+
+ =P_{V\oplus\operatorname{im}(HX)}\left(\sum_f c_fq_f\right)
+ =P_{V\oplus\operatorname{im}(HX)}b=b.
+\]
+Cette propriété s'applique en particulier à la fermeture
+$\sum_fY_f=1$ de fractions de mélange, puisque les constantes
+appartiennent à $V$. La projection FE seule ne suffit pas : même si
+$\sum_fv_f=1$ immédiatement après le remaillage, un défaut de somme
+dans la mémoire cachée peut modifier les champs FE au transport suivant.
+Lorsque l'advection préserve les constantes et que la réaction FE
+préserve la somme des composantes, la fermeture est conservée par
+la composition avec le transfert partagé, en arithmétique exacte.
+Les bornes de positivité des fractions sont une propriété distincte
+et ne sont pas établies par cette identité.
+
+La cohérence du transport multicomposant est une exigence classique;
+Plewa et Müller proposent déjà une méthode conservatrice imposant la
+somme des fractions dans
+\href{https://arxiv.org/abs/astro-ph/9807241}{\emph{The Consistent Multi-fluid Advection method}}.
+Le point examiné ici est sa compatibilité avec une mémoire implicite,
+une projection non linéaire dépendante de l'ensemble des champs et
+des changements de support.
+
+\subsection{Moments d'une réaction sur le champ complet}
+La coercivité d'une extension des opérations FE ne garantit pas sa
+consistance physique. Pour une réaction spatiale positive $r(x)$, on
+considère le multiplicateur exact $g(x)=\exp(-\tau r(x))$. L'état
+entrant est $q=a+d$, avec $d=w-Ra\in W$. Les trois blocs pondérés
+\[
+ F_g=P_Vg|_V,\qquad R_g=P_Wg|_V,\qquad A_g=P_Wg|_W
+\]
+fournissent les moments exacts de $gq$ :
+\[
+ v_g=F_ga+R_g^*d,\qquad m_g=R_ga+A_gd,
+ \qquad h_g=m_g-Rv_g.
+\]
+Le bloc pondéré $R_g$ n'est pas le couplage $R$ et ne le remplace pas
+dans les identités d'observation. Sa construction utilise les mêmes
+intersections géométriques, avec un poids de réaction dans les intégrales.
+Les blocs $F_g,A_g$ sont locaux dans chacun des deux maillages.
+
+La famille $X=[d,h_g,RR^*h_g,\ldots]$ permet d'appliquer la petite
+projection de Galerkin au nouvel état cible. Avec $K=I-RR^*$,
+\[
+ x=X(X^*KX)^\dagger X^*h_g,\qquad
+ a^+=v_g-R^*x,\qquad w^+=Ra^++x.
+\]
+On obtient $q^+=v_g+(I-P_V)x$, donc
+\[
+ q^+=P_{V\oplus\operatorname{im}((I-P_V)X)}(gq),\qquad
+ P_Vq^+=P_V(gq).
+\]
+L'observation FE inclut ainsi le retour de la mémoire sous l'action
+de la réaction, au lieu de réagir uniquement à $v=P_Vq$.
+
+\begin{proposition}
+Si $0\leq g\leq\gamma$, alors $\|q^+\|\leq\gamma\|q\|$.
+La perte par compression satisfait
+\[
+ \|gq-q^+\|^2=\|gq\|^2-\|q^+\|^2.
+\]
+Si $g$ est constant et si la direction $d$ est retenue, alors
+$q^+=gq$ exactement. Ces propriétés valent pour tout nombre
+de directions, sous les hypothèses de projection et de rang exactes.
+\end{proposition}
+\begin{proof}
+Les formules précédentes donnent la projection orthogonale de $gq$ sur
+un espace contenant $V$. La contraction et Pythagore en découlent.
+Pour $g$ constant, $gq=gv+g(I-P_V)d$ appartient déjà à cet espace.
+\end{proof}
+
+Le calcul du diagnostic $\|gq\|^2$ utilise les mêmes blocs avec le
+poids $g^2$ :
+\[
+ \|gq\|^2=\langle a,F_{g^2}a\rangle
+  +2\langle R_{g^2}a,d\rangle+\langle d,A_{g^2}d\rangle.
+\]
+Les poids exponentiels ne sont pas polynomiaux. Les contrôles GPU
+aux degrés 1, 2 et 4 comparent la quadrature à sa subdivision,
+vérifient la positivité des Grams conjoints pondérés et l'identité
+de Pythagore par un oracle dense indépendant. Ils ne remplacent
+pas une borne universelle d'erreur de quadrature. La troncature
+numérique de rang reste celle de la projection augmentée.
+Le sous-espace dépendant de l'état interdit de déduire de cette
+proposition une stabilité entre deux données différentes.
+Les expériences de réaction spatiale portent sur
+$r(x)=\kappa(1+\tfrac12\sin(2\pi x))$ et un support fixe.
+Elles ne démontrent ni un ordre temporel général, ni un avantage
+sur une méthode spécialisée d'advection--réaction.
+
 \subsection{Énergie et stabilité entre deux états}
 La distinction précédente admet un contre-exemple explicite, y compris
 pour la variante à trois directions. Dans $\mathbb R^6$, soient
@@ -660,6 +780,20 @@ nouveau fixé; elle ne constitue pas une optimisation de l'erreur EDP
 ni de la trajectoire future du maillage.
 
 \section{Antécédents et revendications}
+Keith, Kim, Lazarov, Mittal, Petra, Schmidt et Tomov (prépublication du
+3 novembre 2026) combinent une interpolation physique compatible GPU
+et une optimisation rétablissant les conservations globales sous
+contraintes de bornes, pour le remap ALE d'ordre élevé
+\href{https://arxiv.org/html/2611.05327v1}{(article)}.
+Leur remarque 2.0.1 conserve également une énergie initiale aux points
+de quadrature et lui ajoute un incrément FE pendant la phase lagrangienne.
+Ce précédent interdit d'identifier le seul stockage d'un fond augmenté
+d'incréments FE à une nouveauté. Leur formulation étudiée est
+mono-matériau; les contraintes de plusieurs matériaux sont explicitement
+laissées hors de ce cadre. La présente projection de mémoire orthogonale
+et ses relations linéaires entre champs définissent une autre construction,
+dont l'apport doit être évalué face à ces méthodes et à leurs références.
+
 Simon et Behrens (2021) reconstruisent une base multiéchelle dans les
 cellules de départ, puis la propagent pour obtenir un problème global
 eulérien. Leur méthode traite déjà des équations d'advection--diffusion

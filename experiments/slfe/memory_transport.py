@@ -19,11 +19,28 @@ class MemoryTransport:
         self.auxiliary = new
         return self.value
 
-    def apply_physics(self, operation):
+    def apply_physics(self, operation, hidden_decay=None):
+        """Update FE physics, optionally damping the orthogonal hidden state.
+
+        A scalar gamma in [0,1] gives q_new=G(v)+gamma*(q-v), hence
+        E_new=||G(v)||^2+gamma^2*(E_old-||v||^2). The default leaves the
+        hidden state unchanged. Uniform scalar reaction is represented
+        exactly when G(v)=gamma*v; a generic FE operation does not determine
+        a physically appropriate hidden decay by itself.
+        """
         new = operation(self.value)
-        increment = new - self.value
-        self.auxiliary = self.auxiliary + self.coupling.project(increment)
-        self.anchor = self.anchor + increment
+        if hidden_decay is None:
+            increment = new - self.value
+            self.auxiliary = self.auxiliary + self.coupling.project(increment)
+            self.anchor = self.anchor + increment
+        else:
+            if not 0 <= float(hidden_decay) <= 1:
+                raise ValueError("Hidden damping must lie between zero and one")
+            increment = new - hidden_decay * self.value
+            self.auxiliary = hidden_decay * self.auxiliary + self.coupling.project(
+                increment
+            )
+            self.anchor = hidden_decay * self.anchor + increment
         self.value = new
         return self.value
 
@@ -228,8 +245,6 @@ class MemoryTransport:
         positive-semidefinite loss of the full field Gram matrix. Direction
         normalization uses one scalar per block to retain this covariance.
         """
-        from gpu import cp
-
         if coupling.space is not self.coupling.space:
             raise ValueError("Memory projection requires the same FE space")
         if not isinstance(iterations, int) or iterations < 0:
@@ -237,10 +252,51 @@ class MemoryTransport:
         if gram_backend not in ("einsum", "reduction"):
             raise ValueError("Expected einsum or reduction Gram assembly")
         before = self.energy()
-        visible = coupling.space.energy(self.value)
         d = self.auxiliary - self.coupling.project(self.anchor)
         mapped = cross_projection(d)
         h = mapped + coupling.project(self.anchor - self.value)
+        return self.project_moments(
+            coupling,
+            self.value,
+            h,
+            mapped,
+            before,
+            iterations=iterations,
+            shared=shared,
+            gram_backend=gram_backend,
+        )
+
+    def project_moments(
+        self,
+        coupling,
+        observation,
+        hidden_moment,
+        incoming_direction,
+        target_energy=None,
+        iterations=2,
+        shared=False,
+        gram_backend="einsum",
+    ):
+        """Project ambient moments onto V plus a small hidden subspace.
+
+        The caller supplies P_V(q), P_W(q-P_V(q)), and a direction in W.
+        These moments must describe the same ambient target q. If supplied,
+        target_energy is its squared norm and enables Pythagorean diagnostics.
+        This interface also permits physical multiplication of the complete
+        ambient state before projection, including the hidden memory.
+        """
+        from gpu import cp
+
+        if coupling.space is not self.coupling.space:
+            raise ValueError("Moment projection requires the same FE space")
+        if not isinstance(iterations, int) or iterations < 0:
+            raise ValueError("A nonnegative Krylov size is required")
+        if gram_backend not in ("einsum", "reduction"):
+            raise ValueError("Expected einsum or reduction Gram assembly")
+        before = target_energy
+        self.value = observation
+        visible = coupling.space.energy(observation)
+        h, mapped = hidden_moment, incoming_direction
         vectors, images = [], []
         candidate = mapped
         for index in range(iterations + 1):
@@ -330,8 +386,11 @@ class MemoryTransport:
         after = self.energy()
         cross = cp.einsum("cfi,ci,cfi->f", h, mass, x)
         return dict(
-            energy_loss=before - after,
-            ambient_change_squared=before + after - 2 * visible - 2 * cross,
+            energy=after,
+            energy_loss=None if before is None else before - after,
+            ambient_change_squared=(
+                None if before is None else before + after - 2 * visible - 2 * cross
+            ),
             gram_eigenvalues=eigen,
             retained_rank=cp.sum(keep, axis=-1),
         )

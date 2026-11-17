@@ -7,6 +7,7 @@ All numerical construction and applications execute on CUDA.
 
 import time
 import json
+import math
 
 from gpu import cp, HERE, quadrature, launch
 from flux import gauss_interval
@@ -14,9 +15,18 @@ from flux import gauss_interval
 
 class Carrier:
     def __init__(
-        self, space, n=None, degree=None, qdegree=None, builder="auto", edges=None
+        self,
+        space,
+        n=None,
+        degree=None,
+        qdegree=None,
+        builder="auto",
+        edges=None,
+        reaction_weight=None,
+        subdivisions=1,
     ):
         self.space = space
+        self.reaction_weight = reaction_weight
         self.n = n or space.mesh.n
         self.nonuniform = edges is not None
         self.edges = cp.ascontiguousarray(
@@ -49,6 +59,23 @@ class Carrier:
             )
         code = f"#define NB {space.nb}\n#define NP {self.np}\n#define NC {self.nc}\n#define M_SQRT2 1.41421356237309504880\n"
         code += f"#define NONUNIFORM {int(self.nonuniform)}\n"
+        if reaction_weight is not None:
+            duration, amplitude = map(float, reaction_weight)
+            if (
+                not math.isfinite(duration)
+                or not duration >= 0
+                or not -1 <= amplitude <= 1
+            ):
+                raise ValueError(
+                    "Expected nonnegative reaction duration and amplitude in [-1,1]"
+                )
+            # Weighted cross mass for reaction experiments. Such an object
+            # supplies P_W g|_V and its mass adjoint, not an unweighted
+            # projection coupling for MemoryTransport.
+            code += (
+                "#define CARRIER_WEIGHT(position) "
+                f"exp(-({duration:.17g})*(1+({amplitude:.17g})*sin(6.28318530717958647693*(position).x)))\n"
+            )
         code += (
             (HERE / "basis.cuh").read_text()
             + (HERE / "transfer.cu").read_text()
@@ -96,7 +123,9 @@ class Carrier:
         self.polynomials[1, :, :, 0] = cp.eye(self.np)
         self.polynomials[0, :, :, -1] = cp.eye(self.np)
         self.polynomials[1, :, :, -1] = 0
-        q = quadrature(qdegree or max(1, space.degree + 2 * (self.np - 1)))
+        q = quadrature(
+            qdegree or max(1, space.degree + 2 * (self.np - 1)), subdivisions
+        )
         bounds = cp.floor(space.mesh.triangles * self.n)
         if self.nonuniform:
             for axis in (0, 1):
