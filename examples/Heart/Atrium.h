@@ -18,7 +18,9 @@
  *   wall    : no slip, endothelial thrombin flux weighted by the cycle
  *             wall-shear indices.
  *
- * Equal order P1/P1, stabilised with VMS (convection, grad-div) and PSPG.
+ * Velocity of degree one or two and pressure of degree one, stabilised with
+ * VMS (convection, grad-div) and PSPG; one Oseen solve or Newton passes on the
+ * convective term at each step.
  * Runs under MPI; the mesh is partitioned on the root rank and scaled by
  * Config::meshScale.
  */
@@ -44,60 +46,19 @@
 
 namespace Rodin::Examples::Heart
 {
-  class Atrium
+  /**
+   * @brief Parameters of the atrium example.
+   *
+   * The types of this class do not depend on the velocity degree, so that a
+   * configuration is read before the discretisation is chosen.
+   */
+  class AtriumBase
   {
     public:
       using Real = Rodin::Real;
       using Model = Rodin::Heart::CCMLC2014T<>;
       using Attribute = Rodin::Geometry::Attribute;
       using MeshType = Rodin::Geometry::Mesh<Rodin::Context::MPI>;
-
-      using VectorFESType =
-        Rodin::Variational::H1<1, Rodin::Math::SpatialVector<Real>, MeshType>;
-      using ScalarFESType = Rodin::Variational::H1<1, Real, MeshType>;
-
-      using VectorGridFunctionType =
-        Rodin::PETSc::Variational::GridFunction<VectorFESType>;
-      using ScalarGridFunctionType =
-        Rodin::PETSc::Variational::GridFunction<ScalarFESType>;
-
-      using VectorTrialFunctionType =
-        Rodin::PETSc::Variational::TrialFunction<VectorGridFunctionType, VectorFESType>;
-      using ScalarTrialFunctionType =
-        Rodin::PETSc::Variational::TrialFunction<ScalarGridFunctionType, ScalarFESType>;
-      using VectorTestFunctionType =
-        Rodin::PETSc::Variational::TestFunction<VectorFESType>;
-      using ScalarTestFunctionType =
-        Rodin::PETSc::Variational::TestFunction<ScalarFESType>;
-
-      using LinearSystemType = Rodin::PETSc::Math::LinearSystem;
-
-      using FlowProblemType =
-        Rodin::Variational::Problem<LinearSystemType, VectorTrialFunctionType,
-          ScalarTrialFunctionType, VectorTestFunctionType, ScalarTestFunctionType>;
-
-      using SpeciesProblemType = Rodin::Variational::Problem<LinearSystemType,
-        ScalarTrialFunctionType, ScalarTrialFunctionType, ScalarTrialFunctionType,
-        ScalarTestFunctionType, ScalarTestFunctionType, ScalarTestFunctionType>;
-
-      using VectorProblemType = Rodin::Variational::Problem<LinearSystemType,
-        VectorTrialFunctionType, VectorTestFunctionType>;
-
-      using ScalarProblemType = Rodin::Variational::Problem<LinearSystemType,
-        ScalarTrialFunctionType, ScalarTestFunctionType>;
-
-      using FluxFormType = Rodin::Variational::LinearForm<ScalarFESType, ::Vec>;
-
-      /// @brief A scalar coefficient evaluated pointwise.
-      /// @details The stabilisation parameters are element-local quantities and
-      ///          are evaluated where they are used, never L2-projected onto a
-      ///          continuous field: the projection of a positive function that
-      ///          varies by a decade between neighbouring cells overshoots, and
-      ///          a tau that comes out negative at a node turns a
-      ///          positive-semidefinite stabilisation into an indefinite one.
-      ///          It is also five mass solves per step cheaper.
-      using ScalarCoefficientType = Rodin::Variational::RealFunction<
-        std::function<Real(const Rodin::Geometry::Point&)>>;
 
       /// @brief Carreau-Yasuda blood viscosity.
       struct CarreauYasuda
@@ -257,6 +218,33 @@ namespace Rodin::Examples::Heart
           ///          other MPI example in the tree exercises.
           bool useVMS = true;
 
+        /**
+         * @brief Solves the convective term by Newton passes at each step.
+         *
+         * Each pass linearises rho (u . grad) u about the previous iterate,
+         * the first one being the velocity of the previous step, and
+         * evaluates the viscosity, the stabilisation parameters, the
+         * projections and the backflow terms at that iterate. Disabled, one
+         * pass is solved with the convecting velocity of the previous step
+         * (Oseen).
+         */
+        bool newton = false;
+
+        /**
+         * @brief Largest number of Newton passes of one step, a policy
+         * bound past which the step is reported as not converged.
+         */
+        int newtonMaxIterations = 25;
+
+        /**
+         * @brief Relative Euclidean update of the velocity coefficients
+         * under which the Newton passes stop.
+         */
+        Real newtonRelativeTolerance = 1.0e-6;
+
+        /// @brief Number of steps solved, all of them when empty.
+        Rodin::Optional<int> maxSteps;
+
           ThrombosisParameters thrombosis;
           /// @brief Codina crosswind constant. 0 disables it.
           Real crosswindC = 0.7;
@@ -283,6 +271,68 @@ namespace Rodin::Examples::Heart
           Real output = 0.0;
           Real total = 0.0;
       };
+  };
+
+  /**
+   * @brief Atrium flow with a velocity of degree @f$ K @f$ and a pressure of
+   * degree one.
+   *
+   * The pair is the stabilised equal-order one for @f$ K = 1 @f$ and the
+   * Taylor-Hood one for @f$ K = 2 @f$. The species, the stabilisation
+   * projections of scalar range and the wall-shear indices stay of degree one.
+   *
+   * @tparam K Degree of the velocity space.
+   */
+  template <size_t K>
+  class Atrium : public AtriumBase
+  {
+    public:
+      using VectorFESType =
+        Rodin::Variational::H1<K, Rodin::Math::SpatialVector<Real>, MeshType>;
+      using ScalarFESType = Rodin::Variational::H1<1, Real, MeshType>;
+
+      using VectorGridFunctionType =
+        Rodin::PETSc::Variational::GridFunction<VectorFESType>;
+      using ScalarGridFunctionType =
+        Rodin::PETSc::Variational::GridFunction<ScalarFESType>;
+
+      using VectorTrialFunctionType =
+        Rodin::PETSc::Variational::TrialFunction<VectorGridFunctionType, VectorFESType>;
+      using ScalarTrialFunctionType =
+        Rodin::PETSc::Variational::TrialFunction<ScalarGridFunctionType, ScalarFESType>;
+      using VectorTestFunctionType =
+        Rodin::PETSc::Variational::TestFunction<VectorFESType>;
+      using ScalarTestFunctionType =
+        Rodin::PETSc::Variational::TestFunction<ScalarFESType>;
+
+      using LinearSystemType = Rodin::PETSc::Math::LinearSystem;
+
+      using FlowProblemType =
+        Rodin::Variational::Problem<LinearSystemType, VectorTrialFunctionType,
+          ScalarTrialFunctionType, VectorTestFunctionType, ScalarTestFunctionType>;
+
+      using SpeciesProblemType = Rodin::Variational::Problem<LinearSystemType,
+        ScalarTrialFunctionType, ScalarTrialFunctionType, ScalarTrialFunctionType,
+        ScalarTestFunctionType, ScalarTestFunctionType, ScalarTestFunctionType>;
+
+      using VectorProblemType = Rodin::Variational::Problem<LinearSystemType,
+        VectorTrialFunctionType, VectorTestFunctionType>;
+
+      using ScalarProblemType = Rodin::Variational::Problem<LinearSystemType,
+        ScalarTrialFunctionType, ScalarTestFunctionType>;
+
+      using FluxFormType = Rodin::Variational::LinearForm<ScalarFESType, ::Vec>;
+
+      /// @brief A scalar coefficient evaluated pointwise.
+      /// @details The stabilisation parameters are element-local quantities and
+      ///          are evaluated where they are used, never L2-projected onto a
+      ///          continuous field: the projection of a positive function that
+      ///          varies by a decade between neighbouring cells overshoots, and
+      ///          a tau that comes out negative at a node turns a
+      ///          positive-semidefinite stabilisation into an indefinite one.
+      ///          It is also five mass solves per step cheaper.
+      using ScalarCoefficientType = Rodin::Variational::RealFunction<
+        std::function<Real(const Rodin::Geometry::Point&)>>;
 
       Atrium(const Rodin::Context::MPI& context, const Config& cfg);
       ~Atrium();
@@ -394,6 +444,12 @@ namespace Rodin::Examples::Heart
       ScalarTestFunctionType m_q;
       VectorGridFunctionType m_uOld;
 
+      /**
+       * @brief Velocity the step is linearised about, which is that of the
+       * previous step under Oseen and the previous iterate under Newton.
+       */
+      VectorGridFunctionType m_uLin;
+
       // ---- Reusable mass projections ---------------------------------------
       ScalarTrialFunctionType m_sTrial;
       ScalarTestFunctionType m_sTest;
@@ -469,6 +525,18 @@ namespace Rodin::Examples::Heart
       Real m_speed = 0.0;
       bool m_valveOpen = true;
       bool m_flowFieldSplitsSet = false;
+
+      /// @brief Linear solves of the last step.
+      int m_nonlinearIterations = 0;
+
+      /// @brief Krylov iterations of the last step, summed over its solves.
+      int m_linearIterations = 0;
+
+      /// @brief Residual norm of the last linear solve.
+      PetscReal m_residual = 0.0;
+
+      /// @brief Relative velocity update of the last linear solve.
+      Real m_update = 0.0;
       bool m_initialized = false;
 
       /// @brief Index of the step being solved; the first ones are traced
