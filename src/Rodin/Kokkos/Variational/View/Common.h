@@ -34,6 +34,10 @@
 #include "Rodin/Variational/Dot.h"
 #include "Rodin/Variational/UnaryMinus.h"
 #include "Rodin/Variational/Transpose.h"
+#include "Rodin/Variational/Sqrt.h"
+#include "Rodin/Variational/Pow.h"
+#include "Rodin/Variational/Max.h"
+#include "Rodin/Variational/Division.h"
 #include "Rodin/Variational/BoundaryNormal.h"
 #include "Rodin/Variational/Zero.h"
 #include "Rodin/Variational/P1/Div.h"
@@ -543,6 +547,13 @@ namespace Rodin::Kokkos::Variational
    * | `View<Mult<FunctionBase<L>, FunctionBase<R>>>` | Product of functions. |
    * | `View<Dot<FunctionBase<L>, FunctionBase<R>>>` | Dot product of functions. |
    * | `View<UnaryMinus<FunctionBase<N>>>` | Negated function. |
+   * | `View<Transpose<FunctionBase<N>>>` | Transpose of a matrix function. |
+   * | `View<Sqrt<FunctionBase<N>>>` | Square root of a real function. |
+   * | `View<Pow<FunctionBase<B>, Number>>` | Power of a real function. |
+   * | `View<Division<FunctionBase<L>, FunctionBase<R>>>` | Quotient by a real function. |
+   * | `View<Max<FunctionBase<L>, FunctionBase<R>>>` | Maximum of real functions. |
+   * | `View<Max<FunctionBase<N>, Real>>` | Maximum of a real function and a constant. |
+   * | `View<Max<Real, FunctionBase<N>>>` | Maximum of a constant and a real function. |
    * | `View<RealFunction<Integer>>` | Integer constant. |
    * | `View<VectorFunctionBase<Scalar, Derived>>` | Forwards to the derived function. |
    * | `View<MatrixFunctionBase<Scalar, Derived>>` | Forwards to the derived function. |

@@ -291,6 +291,52 @@ namespace Rodin::Tests::Unit
     expectSameSystem(hs, ds);
   }
 
+  /**
+   * @brief Shear-thinning coefficient of a velocity, of Carreau-Yasuda shape.
+   * @param g Velocity, a vector grid function.
+   * @return Coefficient built from the symmetric gradient of the velocity.
+   */
+  template <class Velocity>
+  auto shearThinning(const Velocity& g)
+  {
+    const auto sym = 0.5 * (Jacobian(g) + Transpose(Jacobian(g)));
+    const auto shear = Sqrt(1.0 + 2.0 * Dot(sym, sym));
+    return 0.5 + 1.5 * Pow(1.0 + Pow(0.3 * shear, 1.25), -0.4);
+  }
+
+  /// @brief Forms of coefficients nonlinear in a grid function match the host.
+  template <size_t K = 2>
+  void checkNonlinearCoefficients(const HostMesh& source)
+  {
+    constexpr std::integral_constant<size_t, K> degree{};
+    const DeviceMesh mesh(TestContext{}, source);
+    const size_t d = source.getSpaceDimension();
+    H1 hfes(degree, source, d);
+    H1 dfes(degree, mesh, d);
+    ASSERT_EQ(hfes.getSize(), dfes.getSize());
+    TrialFunction hu(hfes);
+    TestFunction hv(hfes);
+    TrialFunction du(dfes);
+    TestFunction dv(dfes);
+
+    GridFunction hg(hfes);
+    fillCoefficients(hg.getData());
+    GridFunction dg(dfes);
+    dg.getData().upload(hg.getData());
+
+    expectSameForm(hu, hv, Integral(shearThinning(hg) * Jacobian(hu), Jacobian(hv)), du,
+      dv, Integral(shearThinning(dg) * Jacobian(du), Jacobian(dv)));
+    expectSameForm(hu, hv, Integral(Max(Div(hg), 0.0) * hu, hv), du, dv,
+      Integral(Max(Div(dg), 0.0) * du, dv));
+    expectSameForm(hu, hv, Integral(Max(Div(hg), Dot(hg, hg)) * hu, hv), du, dv,
+      Integral(Max(Div(dg), Dot(dg, dg)) * du, dv));
+    expectSameForm(hu, hv, Integral((1.0 / (1.0 + Sqrt(Dot(hg, hg)))) * hu, hv), du, dv,
+      Integral((1.0 / (1.0 + Sqrt(Dot(dg, dg)))) * du, dv));
+
+    expectSameLinearForm(hv, Integral(Dot(shearThinning(hg) * hg, hv)), dv,
+      Integral(Dot(shearThinning(dg) * dg, dv)));
+  }
+
   TEST(Kokkos_Variational_H1, ScalarFormsOnTriangles)
   {
     checkScalarForms(withClosure(makeTriangleMesh()));
@@ -309,6 +355,16 @@ namespace Rodin::Tests::Unit
   TEST(Kokkos_Variational_H1, VectorFormsOnTetrahedra)
   {
     checkVectorForms(withClosure(makeTetrahedronMesh()));
+  }
+
+  TEST(Kokkos_Variational_H1, NonlinearCoefficientsOnTriangles)
+  {
+    checkNonlinearCoefficients(withClosure(makeTriangleMesh()));
+  }
+
+  TEST(Kokkos_Variational_H1, NonlinearCoefficientsOnTetrahedra)
+  {
+    checkNonlinearCoefficients(withClosure(makeTetrahedronMesh()));
   }
 
   TEST(Kokkos_Variational_H1, LinearElasticityOnTriangles)

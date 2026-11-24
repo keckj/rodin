@@ -206,6 +206,176 @@ namespace Rodin::Kokkos::Variational
     View<::Rodin::Variational::FunctionBase<NestedDerived>> operand;
   };
 
+  /// @brief Transpose of a matrix function.
+  template <class NestedDerived>
+  struct View<
+    ::Rodin::Variational::Transpose<::Rodin::Variational::FunctionBase<NestedDerived>>>
+  {
+    /// @param node Function expression.
+    View(const ::Rodin::Variational::Transpose<
+      ::Rodin::Variational::FunctionBase<NestedDerived>>& node)
+      : operand(node.getOperand())
+    {}
+
+    /// @param p Device or integration point. @return Function value.
+    template <class Point>
+    KOKKOS_INLINE_FUNCTION Geometry::Matrix getValue(const Point& p) const
+    {
+      return transpose(evaluate(operand, p));
+    }
+
+    /// @brief Operand.
+    View<::Rodin::Variational::FunctionBase<NestedDerived>> operand;
+  };
+
+  /// @brief Square root of a real function.
+  template <class NestedDerived>
+  struct View<
+    ::Rodin::Variational::Sqrt<::Rodin::Variational::FunctionBase<NestedDerived>>>
+  {
+    /// @param node Function expression.
+    View(const ::Rodin::Variational::Sqrt<
+      ::Rodin::Variational::FunctionBase<NestedDerived>>& node)
+      : operand(node.getOperand())
+    {}
+
+    /// @param p Device or integration point. @return Function value.
+    template <class Point>
+    KOKKOS_INLINE_FUNCTION Real getValue(const Point& p) const
+    {
+      return ::Kokkos::sqrt(evaluate(operand, p));
+    }
+
+    /// @brief Operand.
+    View<::Rodin::Variational::FunctionBase<NestedDerived>> operand;
+  };
+
+  /// @brief Power of a real function, of constant exponent.
+  template <class BaseDerived, class Number>
+  struct View<
+    ::Rodin::Variational::Pow<::Rodin::Variational::FunctionBase<BaseDerived>, Number>>
+  {
+    /// @param node Function expression.
+    View(
+      const ::Rodin::Variational::Pow<::Rodin::Variational::FunctionBase<BaseDerived>,
+        Number>& node)
+      : base(node.getBase()),
+        exponent(node.getExponent())
+    {}
+
+    /// @param p Device or integration point. @return Function value.
+    template <class Point>
+    KOKKOS_INLINE_FUNCTION Real getValue(const Point& p) const
+    {
+      return ::Kokkos::pow(evaluate(base, p), exponent);
+    }
+
+    /// @brief Base.
+    View<::Rodin::Variational::FunctionBase<BaseDerived>> base;
+
+    /// @brief Exponent.
+    Number exponent;
+  };
+
+  /// @brief Quotient of a function by a real function.
+  template <class LHSDerived, class RHSDerived>
+  struct View<
+    ::Rodin::Variational::Division<::Rodin::Variational::FunctionBase<LHSDerived>,
+      ::Rodin::Variational::FunctionBase<RHSDerived>>>
+  {
+    /// @param node Function expression.
+    View(const ::Rodin::Variational::Division<
+      ::Rodin::Variational::FunctionBase<LHSDerived>,
+      ::Rodin::Variational::FunctionBase<RHSDerived>>& node)
+      : lhs(node.getLHS()),
+        rhs(node.getRHS())
+    {}
+
+    /// @param p Device or integration point. @return Function value.
+    template <class Point>
+    KOKKOS_INLINE_FUNCTION auto getValue(const Point& p) const
+    {
+      return mult(evaluate(lhs, p), Real(1) / evaluate(rhs, p));
+    }
+
+    /// @brief Numerator.
+    View<::Rodin::Variational::FunctionBase<LHSDerived>> lhs;
+
+    /// @brief Denominator.
+    View<::Rodin::Variational::FunctionBase<RHSDerived>> rhs;
+  };
+
+  /// @brief Maximum of two real functions.
+  template <class LHSDerived, class RHSDerived>
+  struct View<::Rodin::Variational::Max<::Rodin::Variational::FunctionBase<LHSDerived>,
+    ::Rodin::Variational::FunctionBase<RHSDerived>>>
+  {
+    /// @param node Function expression.
+    View(const ::Rodin::Variational::Max<::Rodin::Variational::FunctionBase<LHSDerived>,
+      ::Rodin::Variational::FunctionBase<RHSDerived>>& node)
+      : lhs(node.getLHS()),
+        rhs(node.getRHS())
+    {}
+
+    /// @param p Device or integration point. @return Function value.
+    template <class Point>
+    KOKKOS_INLINE_FUNCTION Real getValue(const Point& p) const
+    {
+      const Real a = evaluate(lhs, p);
+      const Real b = evaluate(rhs, p);
+      return a < b ? b : a;
+    }
+
+    /// @brief Left operand.
+    View<::Rodin::Variational::FunctionBase<LHSDerived>> lhs;
+
+    /// @brief Right operand.
+    View<::Rodin::Variational::FunctionBase<RHSDerived>> rhs;
+  };
+
+  /// @brief Maximum of a real function and a real constant.
+  template <class NestedDerived>
+  struct View<
+    ::Rodin::Variational::Max<::Rodin::Variational::FunctionBase<NestedDerived>, Real>>
+  {
+    /// @param node Function expression.
+    View(
+      const ::Rodin::Variational::Max<::Rodin::Variational::FunctionBase<NestedDerived>,
+        Real>& node)
+      : lhs(node.getLHS()),
+        rhs(node.getRHS())
+    {}
+
+    /// @param p Device or integration point. @return Function value.
+    template <class Point>
+    KOKKOS_INLINE_FUNCTION Real getValue(const Point& p) const
+    {
+      const Real a = evaluate(lhs, p);
+      return a < rhs ? rhs : a;
+    }
+
+    /// @brief Function operand.
+    View<::Rodin::Variational::FunctionBase<NestedDerived>> lhs;
+
+    /// @brief Constant operand.
+    Real rhs;
+  };
+
+  /// @brief Maximum of a real constant and a real function.
+  template <class NestedDerived>
+  struct View<
+    ::Rodin::Variational::Max<Real, ::Rodin::Variational::FunctionBase<NestedDerived>>>
+    : View<::Rodin::Variational::Max<::Rodin::Variational::FunctionBase<NestedDerived>,
+        Real>>
+  {
+    /// @param node Function expression.
+    View(const ::Rodin::Variational::Max<Real,
+      ::Rodin::Variational::FunctionBase<NestedDerived>>& node)
+      : View<::Rodin::Variational::Max<
+          ::Rodin::Variational::FunctionBase<NestedDerived>, Real>>(node)
+    {}
+  };
+
   /// @brief Integer constant.
   template <>
   struct View<::Rodin::Variational::RealFunction<Integer>>
