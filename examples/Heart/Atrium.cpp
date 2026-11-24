@@ -369,7 +369,7 @@ namespace Rodin::Examples::Heart
 
     // Built from the same expression the momentum equation uses, so the two
     // cannot drift apart.
-    const auto sym = 0.5 * (Jacobian(m_uLin) + Transpose(Jacobian(m_uLin)));
+    const auto sym = 0.5 * (Jacobian(m_uOld) + Transpose(Jacobian(m_uOld)));
     const Real shear = std::sqrt(
       cy.gammaRegularization * cy.gammaRegularization + 2.0 * Dot(sym, sym).getValue(p));
 
@@ -381,7 +381,7 @@ namespace Rodin::Examples::Heart
   template <size_t K>
   Real Atrium<K>::tau1At(const Point& p) const
   {
-    const auto uc = m_uLin.getValue(p);
+    const auto uc = m_uOld.getValue(p);
     const Real h = cellSize(p);
     const Real nu = viscosityAt(p) / m_cfg.rho;
     return 1.0 / (4.0 * nu / (h * h) + 2.0 * std::sqrt(Math::dot(uc, uc)) / h);
@@ -551,7 +551,7 @@ namespace Rodin::Examples::Heart
 
     const auto symU = 0.5 * (Jacobian(m_u) + Transpose(Jacobian(m_u)));
     const auto symV = 0.5 * (Jacobian(m_v) + Transpose(Jacobian(m_v)));
-    const auto symLag = 0.5 * (Jacobian(m_uLin) + Transpose(Jacobian(m_uLin)));
+    const auto symLag = 0.5 * (Jacobian(m_uOld) + Transpose(Jacobian(m_uOld)));
 
     const auto shearLag =
       Sqrt(cy.gammaRegularization * cy.gammaRegularization + 2.0 * Dot(symLag, symLag));
@@ -559,15 +559,15 @@ namespace Rodin::Examples::Heart
       deltaMu * Pow(1.0 + Pow(cy.lambda * shearLag, cy.yasuda), (cy.n - 1.0) / cy.yasuda);
 
     const auto convU = Mult(Jacobian(m_u), m_uLin);
-    const auto temam = Div(m_uLin) * Dot(m_u, m_v);
+    const auto temam = Div(m_uOld) * Dot(m_u, m_v);
 
     const auto uNormal = Dot(m_u, normal) * normal;
     const auto uTangential = m_u - uNormal;
 
     const auto inletBackflow =
-      0.5 * rho * m_cfg.inletBackflowStabilization * Max(Dot(m_uLin, normal), 0.0);
+      0.5 * rho * m_cfg.inletBackflowStabilization * Max(Dot(m_uOld, normal), 0.0);
     const auto outletBackflow =
-      0.5 * rho * m_cfg.outletBackflowStabilization * Max(-Dot(m_uLin, normal), 0.0);
+      0.5 * rho * m_cfg.outletBackflowStabilization * Max(-Dot(m_uOld, normal), 0.0);
 
     // Time-dependent scalars enter through these, so the form is assigned once
     // and only reassembled.
@@ -580,9 +580,9 @@ namespace Rodin::Examples::Heart
 
       + rho * Integral(Dot(convU, m_v)) + 0.5 * rho * Integral(temam)
 
-      + VMSConvectionBilinearIntegrator(m_u, m_v, m_uLin, m_tauFn, rho) -
+      + VMSConvectionBilinearIntegrator(m_u, m_v, m_uOld, m_tauFn, rho) -
       VMSConvectionLinearIntegrator(
-        m_v, m_sub, m_uLin, m_convProjection, m_tauFn, rho, dt)
+        m_v, m_sub, m_uOld, m_convProjection, m_tauFn, rho, dt)
 
       + VMSGradDivBilinearIntegrator(m_u, m_v, m_tauCFn) -
       VMSGradDivLinearIntegrator(m_v, m_piTilde, m_sqrtTauCFn)
@@ -813,21 +813,24 @@ namespace Rodin::Examples::Heart
     {
       const auto vmsStart = CoronaryClock::now();
 
+      // The projections are those of the previous step, so that they are
+      // computed by the first pass only and the Newton passes solve a problem
+      // whose sole nonlinearity is the convective term.
       // Only the two orthogonal-subscale projections remain: Pi[(grad u)u] and
       // Pi[sqrt(tau_C) div u]. Those ARE L2 projections -- subtracting the
       // projection of the residual is what the method does. The taus are not:
       // they are evaluated pointwise by m_tauFn and friends.
-      if (m_cfg.useVMS)
+      if (m_cfg.useVMS && pass == 0)
       {
         phase("VMS: projecting the convective term");
-        projectVector(Mult(Jacobian(m_uLin), m_uLin), m_convProjection);
+        projectVector(Mult(Jacobian(m_uOld), m_uOld), m_convProjection);
 
         phase("VMS: projecting the dynamic subscale");
         const size_t dim = m_mesh.getSpaceDimension();
         projectVector(
           VectorFunction(dim,
             [this, rho, dt, dim](const Point& p) -> Math::SpatialVector<Real> {
-              const auto conv = Mult(Jacobian(m_uLin), m_uLin).getValue(p);
+              const auto conv = Mult(Jacobian(m_uOld), m_uOld).getValue(p);
               const auto proj = m_convProjection.getValue(p);
               const auto old = m_subOld.getValue(p);
               const Real tau = vmsTauAt(p);
@@ -843,7 +846,7 @@ namespace Rodin::Examples::Heart
         // as the reference does, leaves the explicit half larger than the
         // implicit one on the step where the viscosity drops.
         phase("VMS: projecting the grad-div residual");
-        project(m_sqrtTauCFn * Div(m_uLin), m_piTilde);
+        project(m_sqrtTauCFn * Div(m_uOld), m_piTilde);
       }
 
       m_timing.vms += secondsSince(vmsStart);

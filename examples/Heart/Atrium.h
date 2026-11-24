@@ -222,11 +222,12 @@ namespace Rodin::Examples::Heart
          * @brief Solves the convective term by Newton passes at each step.
          *
          * Each pass linearises rho (u . grad) u about the previous iterate,
-         * the first one being the velocity of the previous step, and
-         * evaluates the viscosity, the stabilisation parameters, the
-         * projections and the backflow terms at that iterate. Disabled, one
-         * pass is solved with the convecting velocity of the previous step
-         * (Oseen).
+         * the first one being the velocity of the previous step. The
+         * viscosity, the stabilisation parameters, the projections, the
+         * Temam term and the backflow terms are evaluated at the velocity of
+         * the previous step in every pass, so that the convective term is
+         * the sole nonlinearity of a step. Disabled, one pass is solved with
+         * the convecting velocity of the previous step (Oseen).
          */
         bool newton = false;
 
@@ -445,8 +446,9 @@ namespace Rodin::Examples::Heart
       VectorGridFunctionType m_uOld;
 
       /**
-       * @brief Velocity the step is linearised about, which is that of the
-       * previous step under Oseen and the previous iterate under Newton.
+       * @brief Velocity the convective term is linearised about, which is
+       * that of the previous step under Oseen and the previous iterate under
+       * Newton.
        */
       VectorGridFunctionType m_uLin;
 
