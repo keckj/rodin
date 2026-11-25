@@ -132,6 +132,11 @@ if (RODIN_USE_PETSC AND RODIN_USE_MPI)
   if (RODIN_USE_SCOTCH)
     target_link_libraries(Atrium PUBLIC Rodin::Scotch)
   endif()
+  # The flow step runs on the Kokkos device under -atrium_device.
+  if (TARGET Rodin::Kokkos::MPI AND TARGET Rodin::Kokkos::PETSc)
+    target_link_libraries(Atrium PUBLIC Rodin::Kokkos::MPI Rodin::Kokkos::PETSc)
+    target_compile_definitions(Atrium PRIVATE RODIN_EXAMPLES_ATRIUM_DEVICE)
+  endif()
 
   add_executable(CoronaryArtery
     CoronaryArtery.cpp

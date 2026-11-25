@@ -16,7 +16,8 @@
  *          -atrium_order (degree of the velocity, 1 or 2),
  *          -atrium_newton (Newton passes on the convective term at each step,
  *          instead of one Oseen solve), -atrium_newton_rtol,
- *          -atrium_newton_max_it.
+ *          -atrium_newton_max_it, -atrium_device (flow step assembled and
+ *          solved on the Kokkos device).
  */
 #include <algorithm>
 #include <cassert>
@@ -39,6 +40,9 @@
 #endif
 
 #include "Atrium.h"
+#ifdef RODIN_EXAMPLES_ATRIUM_DEVICE
+#include "AtriumDevice.h"
+#endif
 #include "CoronaryArtery/CoronaryArteryAlerts.h"
 #include "CoronaryArtery/CoronaryArteryTiming.h"
 
@@ -430,6 +434,15 @@ namespace Rodin::Examples::Heart
   {
     setupSpaces();
     setupFlow();
+    if (m_cfg.device)
+    {
+#ifdef RODIN_EXAMPLES_ATRIUM_DEVICE
+      m_device = std::make_unique<AtriumDeviceFlow<K>>(m_mesh, m_cfg, m_inletSet);
+#else
+      Alert::Exception() << "-atrium_device requires a build with Kokkos and PETSc."
+                         << Alert::Raise;
+#endif
+    }
     setupSpecies();
     setupWallShear();
 
@@ -782,6 +795,61 @@ namespace Rodin::Examples::Heart
     return rep.converged;
   }
 
+#ifdef RODIN_EXAMPLES_ATRIUM_DEVICE
+  template <size_t K>
+  void Atrium<K>::deviceBegin(int pass)
+  {
+    if (pass == 0)
+    {
+      m_device->setPrevious(m_uOld.getData());
+      m_device->setOpenings(m_pIn, m_pOut, m_mitralZ);
+    }
+    m_device->setIterate(m_uLin.getData());
+    if (m_cfg.useVMS && pass == 0)
+      m_device->project();
+  }
+
+  template <size_t K>
+  void Atrium<K>::deviceAssemble()
+  {
+    m_device->assemble();
+  }
+
+  template <size_t K>
+  ::KSP Atrium<K>::deviceSolve()
+  {
+    m_device->solve();
+    m_u.getSolution().setData(m_device->getVelocity());
+    m_p.getSolution().setData(m_device->getPressure());
+    return m_device->getKSP();
+  }
+
+  template <size_t K>
+  void Atrium<K>::deviceEnd()
+  {
+    if (m_cfg.useVMS)
+      m_device->advance();
+  }
+#else
+  template <size_t K>
+  void Atrium<K>::deviceBegin(int)
+  {}
+
+  template <size_t K>
+  void Atrium<K>::deviceAssemble()
+  {}
+
+  template <size_t K>
+  ::KSP Atrium<K>::deviceSolve()
+  {
+    return nullptr;
+  }
+
+  template <size_t K>
+  void Atrium<K>::deviceEnd()
+  {}
+#endif
+
   template <size_t K>
   bool Atrium<K>::solveFlow()
   {
@@ -820,7 +888,13 @@ namespace Rodin::Examples::Heart
       // Pi[sqrt(tau_C) div u]. Those ARE L2 projections -- subtracting the
       // projection of the residual is what the method does. The taus are not:
       // they are evaluated pointwise by m_tauFn and friends.
-      if (m_cfg.useVMS && pass == 0)
+      if (m_cfg.device)
+      {
+        phase("VMS: projecting on the device");
+        deviceBegin(pass);
+      }
+      // The host projections only feed the host form.
+      if (m_cfg.useVMS && pass == 0 && !m_cfg.device)
       {
         phase("VMS: projecting the convective term");
         projectVector(Mult(Jacobian(m_uOld), m_uOld), m_convProjection);
@@ -860,10 +934,13 @@ namespace Rodin::Examples::Heart
       }
 
       const auto assemblyStart = CoronaryClock::now();
-      m_flow.assemble();
+      if (m_cfg.device)
+        deviceAssemble();
+      else
+        m_flow.assemble();
       m_timing.assembly += secondsSince(assemblyStart);
 
-      if (!m_flowFieldSplitsSet)
+      if (!m_cfg.device && !m_flowFieldSplitsSet)
       {
         if (isRoot())
           ThreeDInfo() << "Creating field splits ..." << Alert::Raise;
@@ -883,16 +960,20 @@ namespace Rodin::Examples::Heart
       }
 
       const auto solveStart = CoronaryClock::now();
-      m_flow.solve(m_flowKSP);
+      ::KSP ksp = m_flowKSP.getHandle();
+      if (m_cfg.device)
+        ksp = deviceSolve();
+      else
+        m_flow.solve(m_flowKSP);
       const Real solveTime = secondsSince(solveStart);
       m_timing.solve += solveTime;
 
-      PetscErrorCode ierr = KSPGetConvergedReason(m_flowKSP.getHandle(), &reason);
+      PetscErrorCode ierr = KSPGetConvergedReason(ksp, &reason);
       assert(ierr == PETSC_SUCCESS);
       PetscInt iterations = 0;
-      ierr = KSPGetIterationNumber(m_flowKSP.getHandle(), &iterations);
+      ierr = KSPGetIterationNumber(ksp, &iterations);
       assert(ierr == PETSC_SUCCESS);
-      ierr = KSPGetResidualNorm(m_flowKSP.getHandle(), &m_residual);
+      ierr = KSPGetResidualNorm(ksp, &m_residual);
       assert(ierr == PETSC_SUCCESS);
       m_linearIterations += static_cast<int>(iterations);
       ++m_nonlinearIterations;
@@ -937,7 +1018,9 @@ namespace Rodin::Examples::Heart
     }
 
     m_uOld.setData(m_u.getSolution().getData());
-    if (m_cfg.useVMS)
+    if (m_cfg.device)
+      deviceEnd();
+    else if (m_cfg.useVMS)
       m_subOld.setData(m_sub.getData());
 
     // A direct solve always "succeeds": check the physics, not the solver.
@@ -1283,6 +1366,10 @@ namespace Rodin::Examples::Heart
 
 int main(int argc, char** argv)
 {
+#ifdef RODIN_EXAMPLES_ATRIUM_DEVICE
+  // Kokkos is started before PETSc and outlives it.
+  const ::Kokkos::ScopeGuard kokkos(argc, argv);
+#endif
   PetscInitialize(&argc, &argv, PETSC_NULLPTR, PETSC_NULLPTR);
 
   const auto setPETScDefault = [](const char* name, const char* value) {
@@ -1403,6 +1490,10 @@ int main(int argc, char** argv)
       PetscOptionsGetInt(PETSC_NULLPTR, PETSC_NULLPTR, "-atrium_steps", &integer, &got);
       if (got)
         cfg.maxSteps = static_cast<int>(integer);
+
+      PetscOptionsGetBool(PETSC_NULLPTR, PETSC_NULLPTR, "-atrium_device", &flag, &got);
+      if (got)
+        cfg.device = (flag == PETSC_TRUE);
 
       // Degree of the velocity: 1 is the stabilised P1-P1 pair, 2 is P2-P1.
       PetscInt order = 1;

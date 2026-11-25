@@ -30,6 +30,7 @@
 #include <array>
 #include <fstream>
 #include <functional>
+#include <memory>
 #include <string>
 
 #include "Rodin/Heart/CCMLC2014.h"
@@ -246,6 +247,14 @@ namespace Rodin::Examples::Heart
         /// @brief Number of steps solved, all of them when empty.
         Rodin::Optional<int> maxSteps;
 
+        /**
+         * @brief Assembles and solves the flow step on the Kokkos device.
+         *
+         * The 0D model, the fluxes, the wall shear, the species and the
+         * output stay on the host. Requires a build with Kokkos and PETSc.
+         */
+        bool device = false;
+
           ThrombosisParameters thrombosis;
           /// @brief Codina crosswind constant. 0 disables it.
           Real crosswindC = 0.7;
@@ -284,6 +293,9 @@ namespace Rodin::Examples::Heart
    *
    * @tparam K Degree of the velocity space.
    */
+  template <size_t K>
+  class AtriumDeviceFlow;
+
   template <size_t K>
   class Atrium : public AtriumBase
   {
@@ -391,6 +403,19 @@ namespace Rodin::Examples::Heart
 
       bool advance0D();
       bool solveFlow();
+
+      /// @brief Hands the state of a pass to the device and projects.
+      void deviceBegin(int pass);
+
+      /// @brief Assembles the flow system on the device.
+      void deviceAssemble();
+
+      /// @brief Solves on the device and copies the solution to the host.
+      /// @return Solver of the device flow system.
+      ::KSP deviceSolve();
+
+      /// @brief Closes a step solved on the device.
+      void deviceEnd();
       void solveSpecies();
       void computeWallShear();
       void closeCycle(Real elapsed);
@@ -527,6 +552,11 @@ namespace Rodin::Examples::Heart
       Real m_speed = 0.0;
       bool m_valveOpen = true;
       bool m_flowFieldSplitsSet = false;
+
+#ifdef RODIN_EXAMPLES_ATRIUM_DEVICE
+      /// @brief Flow step on the device, when the configuration asks for it.
+      std::unique_ptr<AtriumDeviceFlow<K>> m_device;
+#endif
 
       /// @brief Linear solves of the last step.
       int m_nonlinearIterations = 0;
