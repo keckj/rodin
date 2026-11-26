@@ -410,24 +410,49 @@ namespace Rodin::Examples::Heart
         const auto outletBackflow = (0.5 * rho * m_cfg.outletBackflowStabilization) *
           Max(-Dot(m_uOld, normal), 0.0);
 
+        // The coefficients tau and mu are not polynomial, so the quadrature
+        // order of the terms carrying them is a policy, and the device
+        // inference differs from the host one. Each order below is the one
+        // the host path uses, so that both paths assemble the same system:
+        // the VMS integrators of VMSConvectionIntegrator.h use 4K - 2, 3K - 1,
+        // 2K - 2 and K with tau counted as order 0, the plain host Integral
+        // falls back to k_trial + k_test - 2 for a pair of derivatives
+        // (PSPG, with a P1 pressure: 0) and to k_trial + k_test otherwise
+        // (viscous: 2K). Inferred orders left the two P1 paths 1e-4 apart in
+        // max|u| after 20 steps.
+        auto vmsBilinear =
+          Integral((rho * rho) * vmsTau() * Jacobian(m_u) * m_uOld, Jacobian(m_v) * m_uOld);
+        vmsBilinear.setOrder(4 * K - 2);
+        auto vmsLinear = Integral(
+          (rho * rho) * vmsTau() * (m_convProjection + (1.0 / dt) * m_subOld),
+          Jacobian(m_v) * m_uOld);
+        vmsLinear.setOrder(3 * K - 1);
+        auto gradDivBilinear = Integral(sqrtC * sqrtC * Div(m_u), Div(m_v));
+        gradDivBilinear.setOrder(2 * K - 2);
+        auto gradDivLinear = Integral(sqrtC * m_piTilde, Div(m_v));
+        gradDivLinear.setOrder(K);
+        auto viscous = Integral(2.0 * viscosity() * symU, symV);
+        viscous.setOrder(2 * K);
+        auto pspg = Integral(tauP() * Grad(m_p), Grad(m_q));
+        pspg.setOrder(0);
+
         const auto oseen = Integral((rho / dt) * m_u, m_v) -
           Integral((rho / dt) * m_uOld, m_v)
 
           + Integral(rho * Jacobian(m_u) * m_uLin, m_v) +
           Integral((0.5 * rho) * Div(m_uOld) * m_u, m_v)
 
-          + Integral((rho * rho) * vmsTau() * Jacobian(m_u) * m_uOld,
-              Jacobian(m_v) * m_uOld) -
-          Integral(rho * (rho * vmsTau() * m_convProjection + m_sub),
-            Jacobian(m_v) * m_uOld)
+          // Dynamic orthogonal subscale, same form as the host path: the
+          // residual (grad u) u^n - Pi is implicit, the linear part only
+          // carries the history tau rho / dt u'^n of the previous step.
+          + vmsBilinear - vmsLinear
 
-          + Integral(sqrtC * sqrtC * Div(m_u), Div(m_v)) -
-          Integral(sqrtC * m_piTilde, Div(m_v))
+          + gradDivBilinear - gradDivLinear
 
-          + Integral(2.0 * viscosity() * symU, symV) - Integral(m_p, Div(m_v)) +
+          + viscous - Integral(m_p, Div(m_v)) +
           Integral(Div(m_u), m_q) + Integral(m_cfg.pressurePenalty * m_p, m_q)
 
-          + Integral(tauP() * Grad(m_p), Grad(m_q))
+          + pspg
 
           + BoundaryIntegral(m_pIn * normal, m_v).over(m_inlets) +
           BoundaryIntegral(m_pOut * normal, m_v).over(m_cfg.outlet)

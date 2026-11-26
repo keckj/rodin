@@ -593,9 +593,15 @@ namespace Rodin::Examples::Heart
 
       + rho * Integral(Dot(convU, m_v)) + 0.5 * rho * Integral(temam)
 
+      // Dynamic orthogonal subscale u'^{n+1} = tau rho (Pi - (grad u^{n+1}) u^n)
+      // + tau rho / dt u'^n: the residual part is implicit through the bilinear
+      // integrator minus the projection, so the linear integrator only carries
+      // the history tau rho / dt u'^n of the previous step. Passing m_sub
+      // (already tau rho (Pi - conv) + tau rho / dt u'^n) would count the
+      // orthogonal residual twice. Same form in AtriumDevice.h.
       + VMSConvectionBilinearIntegrator(m_u, m_v, m_uOld, m_tauFn, rho) -
       VMSConvectionLinearIntegrator(
-        m_v, m_sub, m_uOld, m_convProjection, m_tauFn, rho, dt)
+        m_v, m_subOld, m_uOld, m_convProjection, m_tauFn, rho, dt)
 
       + VMSGradDivBilinearIntegrator(m_u, m_v, m_tauCFn) -
       VMSGradDivLinearIntegrator(m_v, m_piTilde, m_sqrtTauCFn)
@@ -605,6 +611,10 @@ namespace Rodin::Examples::Heart
       m_cfg.pressurePenalty * Integral(m_p, m_q)
 
       // PSPG. Required by the equal-order pair.
+      // The quadrature orders of this term and of the viscous one are inferred
+      // as the taus and the viscosity report no degree: k_p + k_q - 2 = 0 for
+      // this pair of gradients, 2K for the viscous term. AtriumDevice.h sets
+      // the same orders explicitly so that both paths assemble the same system.
       + Integral(m_tauPFn * Grad(m_p), Grad(m_q))
 
       + BoundaryIntegral(pInFn * Dot(m_v, normal)).over(m_inletSet) +

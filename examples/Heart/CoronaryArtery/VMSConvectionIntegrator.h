@@ -31,18 +31,15 @@
  *     \left(
  *       \tau_K \rho \Pi_h[(\nabla u_h^n)u_h^n]
  *       +
- *       u_h^{\prime,n+1}
+ *       \frac{\tau_K \rho}{\Delta t} u_h^{\prime,n}
  *     \right)
  *     \cdot
  *     \bigl((\nabla v_h)u_h^n\bigr)
  *   \, dx .
  * @f]
  *
- * The dynamic subscale @f$u_h^{\prime,n+1}@f$ is not computed inside this
- * header. It is computed in the driver and passed as @c OldSubScale.  The
- * subscale is the (dissipative) response to the unresolved convective
- * residual, @f$u' = -\tau_K R@f$, so the projection-minus-residual term enters
- * with @c Pi MINUS the raw convective acceleration (NOT the other way round):
+ * It is minus @f$\rho (u_h^{\prime,n+1}, (\nabla v_h)u_h^n)@f$ for the
+ * dynamic orthogonal subscale
  *
  * @f[
  *   u_h^{\prime,n+1}
@@ -51,15 +48,22 @@
  *   \left(
  *     \Pi_h[(\nabla u_h^n)u_h^n]
  *     -
- *     (\nabla u_h^n)u_h^n
+ *     (\nabla u_h^{n+1})u_h^n
  *   \right)
  *   +
- *   \tau_K \frac{\rho}{\Delta t} u_h^{\prime,n}.
+ *   \tau_K \frac{\rho}{\Delta t} u_h^{\prime,n},
  * @f]
  *
- * Equivalently, as written in the driver:
+ * whose residual part is implicit: the bilinear integrator carries
+ * @f$(\nabla u_h^{n+1})u_h^n@f$, the linear one the projection and the
+ * history @f$u_h^{\prime,n}@f$ of the previous step, weighted by
+ * @f$\tau_K \rho / \Delta t@f$. The caller stores the subscale of the step
+ * for the next one (the driver evaluates it at the frozen velocity,
  * @f$ u' = \tau_K \rho\,(\tfrac{1}{\Delta t} u_h^{\prime,n}
- *          - ((\nabla u_h^n)u_h^n - \Pi_h[(\nabla u_h^n)u_h^n])) @f$.
+ *          - ((\nabla u_h^n)u_h^n - \Pi_h[(\nabla u_h^n)u_h^n])) @f$)
+ * and passes the PREVIOUS one, @f$u_h^{\prime,n}@f$, as @c OldSubScale.
+ * Passing the current subscale instead counts the orthogonal residual twice,
+ * once implicitly and once explicitly.
  *
  * The stabilization parameter is:
  *
@@ -838,7 +842,7 @@ namespace Rodin::Examples::Heart
    *     \left(
    *       \tau_K \rho u_h^{proj}
    *       +
-   *       u_h^{\prime,n+1}
+   *       \frac{\tau_K \rho}{\Delta t} u_h^{\prime,n}
    *     \right)
    *     \cdot
    *     \bigl((\nabla v_h)u_h^n\bigr)
@@ -855,14 +859,16 @@ namespace Rodin::Examples::Heart
    * Therefore the total VMS contribution is:
    *
    * @f[
-   *   A_K(u_h,v_h) - L_K(v_h).
+   *   A_K(u_h,v_h) - L_K(v_h)
+   *   =
+   *   -\rho \bigl(u_h^{\prime,n+1}, (\nabla v_h)u_h^n\bigr)
    * @f]
    *
-   * With the documented subscale update, this makes the stabilization act on
-   * the projected fine-scale part of the convective acceleration. If
-   * @f$u_h = u_h^n@f$ and the dynamic history is zero, the projected component
+   * with the dynamic subscale of the file header, whose residual part
+   * @f$(\nabla u_h^{n+1})u_h^n - \Pi_h[(\nabla u_h^n)u_h^n]@f$ is implicit.
+   * If the history is zero and @f$u_h = u_h^n@f$, the projected component
    * cancels the matching part of the bilinear term, leaving only the
-   * orthogonal convective correction.
+   * orthogonal convective correction (quasi-static subscale).
    *
    * @tparam TestFunction Test velocity field type.
    * @tparam OldSubScale Dynamic subscale field type.
@@ -883,7 +889,8 @@ namespace Rodin::Examples::Heart
        * @brief Constructor.
        *
        * @param[in] v Test velocity @f$v_h@f$.
-       * @param[in] subOld Dynamic subscale @f$u_h^{\prime,n+1}@f$.
+       * @param[in] subOld Dynamic subscale of the PREVIOUS step, @f$u_h^{\prime,n}@f$,
+       *                   weighted here by @f$\tau_K \rho / \Delta t@f$.
        * @param[in] uOld Frozen convective velocity @f$u_h^n@f$.
        * @param[in] uProj Projected convective acceleration
        *                  @f$\Pi_h[(\nabla u_h^n)u_h^n]@f$.
@@ -947,7 +954,7 @@ namespace Rodin::Examples::Heart
         /*
          * Conservative quadrature choice for
          *
-         *   rho (tau rho uProj + subScale) . ((grad Psi) uOld).
+         *   rho tau rho (uProj + subOld / dt) . ((grad Psi) uOld).
          *
          * The projected fields can be polynomial, while tau is usually a
          * projected representation of a non-polynomial expression.
@@ -1015,8 +1022,8 @@ namespace Rodin::Examples::Heart
             /*
              * Local vector-basis entry:
              *
-             *   int_K rho
-             *     (tau rho uProj + sub)
+             *   int_K rho tau rho
+             *     (uProj + subOld / dt)
              *     ·
              *     ((grad Psi_b) uOld).
              *
