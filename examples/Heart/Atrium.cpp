@@ -1490,10 +1490,11 @@ int main(int argc, char** argv)
     setPETScDefault("-pc_fieldsplit_type", "schur");
     setPETScDefault("-pc_fieldsplit_schur_fact_type", "full");
     setPETScDefault("-pc_fieldsplit_schur_precondition", "selfp");
-    setPETScDefault("-fieldsplit_0_ksp_type", "preonly");
-    setPETScDefault("-fieldsplit_0_pc_type", "gamg");
-    setPETScDefault("-fieldsplit_1_ksp_type", "preonly");
-    setPETScDefault("-fieldsplit_1_pc_type", "gamg");
+    // The splits carry the names of the trial functions on both paths.
+    setPETScDefault("-fieldsplit_velocity_ksp_type", "preonly");
+    setPETScDefault("-fieldsplit_velocity_pc_type", "gamg");
+    setPETScDefault("-fieldsplit_pressure_ksp_type", "preonly");
+    setPETScDefault("-fieldsplit_pressure_pc_type", "gamg");
   }
 
   boost::mpi::environment env(argc, argv);

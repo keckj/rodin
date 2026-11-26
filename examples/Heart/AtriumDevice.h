@@ -238,6 +238,11 @@ namespace Rodin::Examples::Heart
           m_wss(m_wssTrial, m_wssTest),
           m_wssKSP(m_wss)
       {
+        // Same split names as the host flow problem, so that the
+        // -fieldsplit_velocity_* and -fieldsplit_pressure_* options of the
+        // default solver reach both paths.
+        m_u.setName("velocity");
+        m_p.setName("pressure");
         m_scalarProjectionKSP.setPrefix("atrium_sproj_");
         m_vectorProjectionKSP.setPrefix("atrium_vproj_");
         m_wssKSP.setPrefix("atrium_wss_");
