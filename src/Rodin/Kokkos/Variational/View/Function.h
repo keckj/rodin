@@ -47,29 +47,64 @@ namespace Rodin::Kokkos::Variational
     {}
   };
 
-  /// @brief Real function given by a callable taking a device point.
-  template <class F>
-  struct View<::Rodin::Variational::RealFunction<F>>
+  namespace Internal
   {
-    static_assert(std::is_invocable_r_v<Real, const F&,
-                    const ::Rodin::Kokkos::View<::Rodin::Geometry::Point>&>,
-      "A function evaluated on a Kokkos mesh must be a KOKKOS_LAMBDA taking a "
-      "const ::Rodin::Kokkos::View<::Rodin::Geometry::Point>&.");
+    /**
+     * @brief Real function given by a callable taking a device point.
+     * @tparam F Callable wrapped by the real function.
+     * @tparam Expression Whether the callable is a function expression.
+     */
+    template <class F,
+      bool Expression = std::is_base_of_v<::Rodin::Variational::FunctionBase<F>, F>>
+    struct RealFunctionView
+    {
+      static_assert(std::is_invocable_r_v<Real, const F&,
+                      const ::Rodin::Kokkos::View<::Rodin::Geometry::Point>&>,
+        "A function evaluated on a Kokkos mesh must be a KOKKOS_LAMBDA taking a "
+        "const ::Rodin::Kokkos::View<::Rodin::Geometry::Point>&.");
 
+      /// @param node Function expression.
+      RealFunctionView(const ::Rodin::Variational::RealFunction<F>& node)
+        : f(node.getFunction())
+      {}
+
+      /// @param p Device point. @return Function value.
+      KOKKOS_INLINE_FUNCTION Real getValue(
+        const ::Rodin::Kokkos::View<::Rodin::Geometry::Point>& p) const
+      {
+        return f(p);
+      }
+
+      /// @brief Device copy of the callable.
+      F f;
+    };
+
+    /**
+     * @brief Real function wrapping a function expression, as the components
+     * of a VectorFunction built from expressions are.
+     * @tparam F Function expression, evaluated through its own view.
+     */
+    template <class F>
+    struct RealFunctionView<F, true> : View<F>
+    {
+      /// @param node Function expression.
+      RealFunctionView(const ::Rodin::Variational::RealFunction<F>& node)
+        : View<F>(node.getFunction())
+      {}
+    };
+  }
+
+  /**
+   * @brief Real function given by a callable taking a device point or by a
+   * function expression.
+   */
+  template <class F>
+  struct View<::Rodin::Variational::RealFunction<F>> : Internal::RealFunctionView<F>
+  {
     /// @param node Function expression.
     View(const ::Rodin::Variational::RealFunction<F>& node)
-      : f(node.getFunction())
+      : Internal::RealFunctionView<F>(node)
     {}
-
-    /// @param p Device point. @return Function value.
-    KOKKOS_INLINE_FUNCTION Real getValue(
-      const ::Rodin::Kokkos::View<::Rodin::Geometry::Point>& p) const
-    {
-      return f(p);
-    }
-
-    /// @brief Device copy of the callable.
-    F f;
   };
 
   /// @brief Real function wrapping a real function, as a vector component.
@@ -639,7 +674,8 @@ namespace Rodin::Kokkos::Variational
   /**
    * @brief Vector function given component-wise.
    *
-   * Each component is a real constant or a callable taking a device point.
+   * Each component is a real constant, a callable taking a device point or
+   * a function expression.
    */
   template <class V, class... Values>
   struct View<::Rodin::Variational::VectorFunction<V, Values...>>

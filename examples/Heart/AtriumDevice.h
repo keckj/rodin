@@ -45,6 +45,43 @@ namespace Rodin::Examples::Heart
   };
 
   /**
+   * @brief Nodal magnitude of a vector field with interleaved components.
+   *
+   * The device H1 vector spaces number the degree of freedom of component c
+   * of node n as n * components + c, so the owned coefficients of a vector
+   * field and of a scalar field on the same mesh pair up node by node.
+   *
+   * @tparam MemorySpace Kokkos memory space holding both vectors.
+   */
+  template <class MemorySpace>
+  struct AtriumNodalMagnitude
+  {
+    /// @brief Unmanaged view of the read coefficients.
+    using Input = ::Kokkos::View<const Rodin::Real*, MemorySpace,
+      ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
+
+    /// @brief Unmanaged view of the written coefficients.
+    using Output =
+      ::Kokkos::View<Rodin::Real*, MemorySpace, ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
+
+    Input field; ///< Vector coefficients, interleaved.
+    Output magnitude; ///< Scalar coefficients.
+    size_t components; ///< Components of the vector field.
+
+    /// @param n Node. Writes the Euclidean norm of the field at the node.
+    KOKKOS_INLINE_FUNCTION void operator()(const size_t n) const
+    {
+      Rodin::Real sum = 0;
+      for (size_t c = 0; c < components; ++c)
+      {
+        const Rodin::Real value = field(n * components + c);
+        sum += value * value;
+      }
+      magnitude(n) = ::Kokkos::sqrt(sum);
+    }
+  };
+
+  /**
    * @brief Flow step of the atrium assembled and solved on a Kokkos device.
    *
    * This is the coupled velocity and pressure problem of Atrium, with the
@@ -53,6 +90,10 @@ namespace Rodin::Examples::Heart
    * in callbacks, are functions of the previous velocity here, and the
    * orthogonal-subscale terms are integrals of such functions. The quadrature
    * of those terms is the one the device chooses for each integrand.
+   *
+   * The wall shear stress recovery, its cycle accumulators and the fluxes
+   * through the openings of the step are computed here too, with the host
+   * forms of Atrium, so that a step leaves nothing but its output to the host.
    *
    * The device spaces number their degrees of freedom as the host spaces do,
    * so the velocity and the pressure are exchanged with the host as vectors.
@@ -144,6 +185,9 @@ namespace Rodin::Examples::Heart
       using ScalarSolverType =
         decltype(Rodin::PETSc::Solver::KSP(std::declval<ScalarProblemType&>()));
 
+      /// @brief Linear form integrated against the pressure test functions.
+      using FluxFormType = Rodin::Variational::LinearForm<ScalarFESType, ::Vec>;
+
       /**
        * @brief Copies the mesh to the device and builds the problems.
        * @param[in] mesh Host mesh, which must outlive this object.
@@ -174,22 +218,44 @@ namespace Rodin::Examples::Heart
           m_pIn(m_sh),
           m_pOut(m_sh),
           m_mitralZ(m_sh),
+          m_wssTrial(m_vh),
+          m_wssTest(m_vh),
+          m_gradRec0(m_vh),
+          m_gradRec1(m_vh),
+          m_gradRec2(m_vh),
+          m_netShear(m_vh),
+          m_absShear(m_sh),
+          m_shearMagnitude(m_sh),
+          m_qFlux(m_sh),
+          m_one(m_sh),
+          m_flux(m_qFlux),
           m_flow(m_u, m_p, m_v, m_q),
           m_flowKSP(m_flow),
           m_scalarProjection(m_sTrial, m_sTest),
           m_scalarProjectionKSP(m_scalarProjection),
           m_vectorProjection(m_wTrial, m_wTest),
-          m_vectorProjectionKSP(m_vectorProjection)
+          m_vectorProjectionKSP(m_vectorProjection),
+          m_wss(m_wssTrial, m_wssTest),
+          m_wssKSP(m_wss)
       {
         m_scalarProjectionKSP.setPrefix("atrium_sproj_");
         m_vectorProjectionKSP.setPrefix("atrium_vproj_");
+        m_wssKSP.setPrefix("atrium_wss_");
         fill(m_uOld, 0);
         fill(m_uLin, 0);
         fill(m_subOld, 0);
         fill(m_sub, 0);
         fill(m_convProjection, 0);
         fill(m_piTilde, 0);
+        fill(m_gradRec0, 0);
+        fill(m_gradRec1, 0);
+        fill(m_gradRec2, 0);
+        fill(m_netShear, 0);
+        fill(m_absShear, 0);
+        fill(m_shearMagnitude, 0);
+        fill(m_one, 1);
         setup();
+        setupWallShear();
       }
 
       AtriumDeviceFlow(const AtriumDeviceFlow&) = delete;
@@ -266,14 +332,116 @@ namespace Rodin::Examples::Heart
       void solve()
       {
         m_flow.solve(m_flowKSP);
-        m_u.getSolution().sync();
-        m_p.getSolution().sync();
+        // The wall shear recovery and the fluxes read the solution on the
+        // cells and faces next to the other ranks, so its ghosts are refreshed.
+        refresh(m_u.getSolution());
+        refresh(m_p.getSolution());
       }
 
       /// @brief Keeps the subscale of the step for the next one.
       void advance()
       {
         copy(m_sub.getData(), m_subOld);
+      }
+
+      /**
+       * @brief Recovers the wall shear stress of the solved velocity.
+       *
+       * The three rows of the velocity gradient are projected onto the
+       * velocity space, the tangential traction is projected onto the wall
+       * and the nodal magnitude is taken, as on the host path; the cycle
+       * accumulators receive dt times the stress and dt times its magnitude.
+       */
+      void computeWallShear()
+      {
+        using namespace Rodin::Variational;
+        const auto& uSol = m_u.getSolution();
+        const auto rows = Transpose(Jacobian(uSol));
+        const VectorFunction e0{Real(1), Real(0), Real(0)};
+        const VectorFunction e1{Real(0), Real(1), Real(0)};
+        const VectorFunction e2{Real(0), Real(0), Real(1)};
+
+        // Row i of the Jacobian is (J^T) e_i: the device has no Component
+        // view, the product has the same quadrature order as the host rows.
+        m_vectorProjection = Integral(m_wTrial, m_wTest) - Integral(rows * e0, m_wTest);
+        m_vectorProjection.solve(m_vectorProjectionKSP);
+        copy(m_wTrial.getSolution().getData(), m_gradRec0);
+
+        m_vectorProjection = Integral(m_wTrial, m_wTest) - Integral(rows * e1, m_wTest);
+        m_vectorProjection.solve(m_vectorProjectionKSP);
+        copy(m_wTrial.getSolution().getData(), m_gradRec1);
+
+        m_vectorProjection = Integral(m_wTrial, m_wTest) - Integral(rows * e2, m_wTest);
+        m_vectorProjection.solve(m_vectorProjectionKSP);
+        copy(m_wTrial.getSolution().getData(), m_gradRec2);
+
+        m_wss.assemble();
+        m_wss.solve(m_wssKSP);
+        auto& wss = m_wssTrial.getSolution();
+        refresh(wss);
+
+        // Nodal interpolation of |tau_w|, not an L2 projection, as on the
+        // host: the magnitude is non-negative node by node.
+        magnitude(wss.getData(), m_shearMagnitude);
+
+        axpy(m_cfg.dt, wss.getData(), m_netShear);
+        axpy(m_cfg.dt, m_shearMagnitude.getData(), m_absShear);
+      }
+
+      /// @brief Returns the recovered wall shear stress. @return Coefficients.
+      ::Vec getWallShear()
+      {
+        return m_wssTrial.getSolution().getData();
+      }
+
+      /// @brief Returns the nodal magnitude of the stress. @return Coefficients.
+      ::Vec getShearMagnitude()
+      {
+        return m_shearMagnitude.getData();
+      }
+
+      /// @brief Returns int tau_w dt over the cycle. @return Coefficients.
+      ::Vec getNetShear()
+      {
+        return m_netShear.getData();
+      }
+
+      /// @brief Returns int |tau_w| dt over the cycle. @return Coefficients.
+      ::Vec getAbsShear()
+      {
+        return m_absShear.getData();
+      }
+
+      /// @brief Zeroes the cycle accumulators, ghosts included.
+      void resetCycle()
+      {
+        fill(m_netShear, 0);
+        fill(m_absShear, 0);
+      }
+
+      /**
+       * @brief Integrates the solved fields over the openings.
+       * @param[out] qIn Flux of the velocity through the inlets.
+       * @param[out] qOut Flux of the velocity through the outlet.
+       * @param[out] pOutlet Integral of the pressure over the outlet.
+       */
+      void computeFluxes(Real& qIn, Real& qOut, Real& pOutlet)
+      {
+        using namespace Rodin::Variational;
+        const BoundaryNormal normal(m_mesh);
+        const auto& uSol = m_u.getSolution();
+
+        m_flux = BoundaryIntegral(Dot(uSol, normal), m_qFlux).over(m_inlets);
+        m_flux.assemble();
+        qIn = m_flux(m_one);
+
+        m_flux = BoundaryIntegral(Dot(uSol, normal), m_qFlux).over(m_cfg.outlet);
+        m_flux.assemble();
+        qOut = m_flux(m_one);
+
+        m_flux = BoundaryIntegral(m_p.getSolution(), m_qFlux).over(m_cfg.outlet);
+        m_flux.assemble();
+        pOutlet = m_flux(m_one);
       }
 
       /// @brief Returns the solver of the flow system. @return PETSc handle.
@@ -340,6 +508,80 @@ namespace Rodin::Examples::Heart
         assert(ierr == PETSC_SUCCESS);
         ierr = VecGhostUpdateEnd(field.getData(), INSERT_VALUES, SCATTER_FORWARD);
         assert(ierr == PETSC_SUCCESS);
+      }
+
+      /// @brief y <- y + a x on a device field, with the ghosts refreshed.
+      template <class GridFunction>
+      static void axpy(Real a, ::Vec x, GridFunction& y)
+      {
+        [[maybe_unused]] PetscErrorCode ierr = VecAXPY(y.getData(), a, x);
+        assert(ierr == PETSC_SUCCESS);
+        refresh(y);
+      }
+
+      /**
+       * @brief Writes the nodal magnitude of a vector field into a scalar one.
+       *
+       * Runs where PETSc keeps the coefficients: on the device for device
+       * vectors, on the host execution space otherwise.
+       */
+      void magnitude(::Vec field, ScalarGridFunctionType& out)
+      {
+        const size_t components = m_mesh.getSpaceDimension();
+        PetscInt nField = 0, nOut = 0;
+        PetscErrorCode ierr = VecGetLocalSize(field, &nField);
+        assert(ierr == PETSC_SUCCESS);
+        ierr = VecGetLocalSize(out.getData(), &nOut);
+        assert(ierr == PETSC_SUCCESS);
+        if (static_cast<size_t>(nField) != components * static_cast<size_t>(nOut))
+        {
+          Rodin::Alert::MemberFunctionException(*this, __func__)
+            << "The vector field has " << nField << " owned coefficients, the scalar one "
+            << nOut << "." << Rodin::Alert::Raise;
+        }
+
+        const PetscScalar* in = nullptr;
+        PetscScalar* res = nullptr;
+        PetscMemType inType = PETSC_MEMTYPE_HOST, resType = PETSC_MEMTYPE_HOST;
+        ierr = VecGetArrayReadAndMemType(field, &in, &inType);
+        assert(ierr == PETSC_SUCCESS);
+        ierr = VecGetArrayWriteAndMemType(out.getData(), &res, &resType);
+        assert(ierr == PETSC_SUCCESS);
+
+        const size_t n = static_cast<size_t>(nOut);
+        if (PetscMemTypeHost(inType) && PetscMemTypeHost(resType))
+        {
+          nodalMagnitude<::Kokkos::DefaultHostExecutionSpace>(in, res, n, components);
+        }
+        else if (PetscMemTypeDevice(inType) && PetscMemTypeDevice(resType))
+        {
+          nodalMagnitude<typename MeshType::ExecutionSpace>(in, res, n, components);
+        }
+        else
+        {
+          Rodin::Alert::MemberFunctionException(*this, __func__)
+            << "The two fields are not kept in the same memory." << Rodin::Alert::Raise;
+        }
+
+        ierr = VecRestoreArrayWriteAndMemType(out.getData(), &res);
+        assert(ierr == PETSC_SUCCESS);
+        ierr = VecRestoreArrayReadAndMemType(field, &in);
+        assert(ierr == PETSC_SUCCESS);
+        (void)ierr;
+        refresh(out);
+      }
+
+      /// @brief Runs the nodal magnitude kernel in an execution space.
+      template <class Execution>
+      static void nodalMagnitude(const Real* in, Real* res, size_t n, size_t components)
+      {
+        using Memory = typename Execution::memory_space;
+        using Kernel = AtriumNodalMagnitude<Memory>;
+        const Kernel kernel{typename Kernel::Input(in, n * components),
+          typename Kernel::Output(res, n), components};
+        ::Kokkos::parallel_for("Atrium nodal shear magnitude",
+          ::Kokkos::RangePolicy<Execution>(0, n), kernel);
+        Execution().fence();
       }
 
       /// @brief Size of the cells as a function the device evaluates.
@@ -479,6 +721,34 @@ namespace Rodin::Examples::Heart
         }
       }
 
+      /// @brief Assigns the wall shear problem, which is then only reassembled.
+      void setupWallShear()
+      {
+        using namespace Rodin::Variational;
+        const BoundaryNormal normal(m_mesh);
+        const auto& cy = m_cfg.viscosity;
+        const auto& uSol = m_u.getSolution();
+
+        // Same form as Atrium::setupWallShear: the viscosity is that of the
+        // solved velocity, the traction is built from the recovered rows of
+        // its gradient.
+        const auto symU = 0.5 * (Jacobian(uSol) + Transpose(Jacobian(uSol)));
+        const auto shear =
+          Sqrt(cy.gammaRegularization * cy.gammaRegularization + 2.0 * Dot(symU, symU));
+        const auto mu = cy.muInf +
+          (cy.mu0 - cy.muInf) *
+            Pow(1.0 + Pow(cy.lambda * shear, cy.yasuda), (cy.n - 1.0) / cy.yasuda);
+
+        const auto traction = VectorFunction(mu * Dot(m_gradRec0, normal),
+          mu * Dot(m_gradRec1, normal), mu * Dot(m_gradRec2, normal));
+        const auto wallStress = traction - Dot(traction, normal) * normal;
+
+        const Real reg = 1.0e-3;
+        m_wss = BoundaryIntegral(Dot(m_wssTrial, m_wssTest)).over(m_cfg.wall) +
+          Integral(reg * m_wssTrial, m_wssTest) -
+          BoundaryIntegral(Dot(wallStress, m_wssTest)).over(m_cfg.wall);
+      }
+
       Config m_cfg;
       Rodin::FlatSet<AtriumBase::Attribute> m_inlets;
       MeshType m_mesh;
@@ -507,12 +777,29 @@ namespace Rodin::Examples::Heart
       ScalarGridFunctionType m_pOut;
       ScalarGridFunctionType m_mitralZ;
 
+      // Wall shear stress recovery and its cycle accumulators.
+      VectorTrialFunctionType m_wssTrial;
+      VectorTestFunctionType m_wssTest;
+      VectorGridFunctionType m_gradRec0;
+      VectorGridFunctionType m_gradRec1;
+      VectorGridFunctionType m_gradRec2;
+      VectorGridFunctionType m_netShear;
+      ScalarGridFunctionType m_absShear;
+      ScalarGridFunctionType m_shearMagnitude;
+
+      // Fluxes through the openings.
+      ScalarTestFunctionType m_qFlux;
+      ScalarGridFunctionType m_one;
+      FluxFormType m_flux;
+
       FlowProblemType m_flow;
       FlowSolverType m_flowKSP;
       ScalarProblemType m_scalarProjection;
       ScalarSolverType m_scalarProjectionKSP;
       VectorProblemType m_vectorProjection;
       VectorSolverType m_vectorProjectionKSP;
+      VectorProblemType m_wss;
+      VectorSolverType m_wssKSP;
 
       bool m_fieldSplitsSet = false;
   };

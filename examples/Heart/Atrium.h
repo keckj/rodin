@@ -416,6 +416,18 @@ namespace Rodin::Examples::Heart
 
       /// @brief Closes a step solved on the device.
       void deviceEnd();
+
+      /// @brief Recovers the wall shear stress on the device.
+      void deviceWallShear();
+
+      /// @brief Integrates the fluxes through the openings on the device.
+      void deviceFluxes();
+
+      /// @brief Copies the wall shear stress of the device to the host field.
+      void devicePullWallShear();
+
+      /// @brief Copies the device cycle accumulators to the host and zeroes them.
+      void devicePullCycle();
       void solveSpecies();
       void computeWallShear();
       void closeCycle(Real elapsed);
@@ -550,6 +562,7 @@ namespace Rodin::Examples::Heart
       Real m_qIn = 0.0;
       Real m_qOut = 0.0;
       Real m_speed = 0.0;
+      Real m_maxShear = 0.0;
       bool m_valveOpen = true;
       bool m_flowFieldSplitsSet = false;
 

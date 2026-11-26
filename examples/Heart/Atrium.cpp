@@ -840,6 +840,35 @@ namespace Rodin::Examples::Heart
     if (m_cfg.useVMS)
       m_device->advance();
   }
+
+  template <size_t K>
+  void Atrium<K>::deviceWallShear()
+  {
+    m_device->computeWallShear();
+  }
+
+  template <size_t K>
+  void Atrium<K>::deviceFluxes()
+  {
+    Real pOutlet = 0.0;
+    m_device->computeFluxes(m_qIn, m_qOut, pOutlet);
+    m_outletPressure = pOutlet / m_outletArea;
+  }
+
+  template <size_t K>
+  void Atrium<K>::devicePullWallShear()
+  {
+    m_wss.setData(m_device->getWallShear());
+    m_shearMagnitude.setData(m_device->getShearMagnitude());
+  }
+
+  template <size_t K>
+  void Atrium<K>::devicePullCycle()
+  {
+    m_netShear.setData(m_device->getNetShear());
+    m_absShear.setData(m_device->getAbsShear());
+    m_device->resetCycle();
+  }
 #else
   template <size_t K>
   void Atrium<K>::deviceBegin(int)
@@ -857,6 +886,22 @@ namespace Rodin::Examples::Heart
 
   template <size_t K>
   void Atrium<K>::deviceEnd()
+  {}
+
+  template <size_t K>
+  void Atrium<K>::deviceWallShear()
+  {}
+
+  template <size_t K>
+  void Atrium<K>::deviceFluxes()
+  {}
+
+  template <size_t K>
+  void Atrium<K>::devicePullWallShear()
+  {}
+
+  template <size_t K>
+  void Atrium<K>::devicePullCycle()
   {}
 #endif
 
@@ -1059,6 +1104,18 @@ namespace Rodin::Examples::Heart
       std::cout.flush();
     }
 
+    if (m_cfg.device)
+    {
+      // Recovery, magnitude and accumulators all live on the device; the host
+      // fields are refreshed when they are written or when the cycle closes.
+      deviceWallShear();
+      PetscErrorCode ierr = VecMax(m_device->getShearMagnitude(), PETSC_NULLPTR, &m_maxShear);
+      assert(ierr == PETSC_SUCCESS);
+      (void)ierr;
+      m_timing.shear = secondsSince(shearStart);
+      return;
+    }
+
     projectVector(VectorFunction(Component(Jacobian(uSol), 0, 0),
                     Component(Jacobian(uSol), 0, 1), Component(Jacobian(uSol), 0, 2)),
       m_gradRec0);
@@ -1085,6 +1142,7 @@ namespace Rodin::Examples::Heart
     // negative. Interpolating the magnitude at the nodes cannot.
     m_shearMagnitude.project(Sqrt(Dot(m_wss, m_wss)));
     axpy(m_cfg.dt, m_shearMagnitude.getData(), m_absShear.getData());
+    m_maxShear = m_shearMagnitude.max();
 
     m_timing.shear = secondsSince(shearStart);
   }
@@ -1177,6 +1235,12 @@ namespace Rodin::Examples::Heart
   template <size_t K>
   void Atrium<K>::computeFluxes()
   {
+    if (m_cfg.device)
+    {
+      deviceFluxes();
+      return;
+    }
+
     const auto normal = BoundaryNormal(m_mesh);
     const auto& uSol = m_u.getSolution();
 
@@ -1301,6 +1365,8 @@ namespace Rodin::Examples::Heart
 
       if (endOfCycle)
       {
+        if (m_cfg.device)
+          devicePullCycle();
         closeCycle(cycleElapsed);
         cycleElapsed = 0.0;
 
@@ -1330,6 +1396,8 @@ namespace Rodin::Examples::Heart
       if (output)
       {
         const auto outputStart = CoronaryClock::now();
+        if (m_cfg.device)
+          devicePullWallShear();
         m_xdmf.write(m_t).flush();
         m_timing.output = secondsSince(outputStart);
       }
@@ -1345,7 +1413,7 @@ namespace Rodin::Examples::Heart
                       << " Pa  pv=" << m_pOut
                       << " Pa  valve=" << (m_valveOpen ? "open" : "closed")
                       << "  qIn=" << m_qIn << "  qOut=" << m_qOut << " m^3/s"
-                      << Alert::Raise;
+                      << "  max|tau_w|=" << m_maxShear << " Pa" << Alert::Raise;
 
         Alert::Info() << "[solver] passes=" << m_nonlinearIterations
                       << "  linear iterations=" << m_linearIterations
