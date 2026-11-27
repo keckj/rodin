@@ -260,6 +260,18 @@ namespace Rodin::Kokkos::Variational
                 Rodin::Kokkos::Geometry::StaticBasis<Shape::Value>::Count;
               if constexpr (DOFsType::getCapacity(N) <= IntegrationPointView::Capacity)
               {
+                // Spaces binding their capacity on every polytope of the
+                // geometry, such as H1 on simplices, have a static bound too.
+                if constexpr (!p1 && Internal::isFullGeometry<
+                  typename FESType::DOFsType, Shape::Value, N>())
+                {
+                  if (vdim == VectorCapacity)
+                  {
+                    integratePolytopes<N, true, Shape>(fes.getMesh(), m_polytopes, test,
+                      dofs, vdim, values, offset, sign, accumulate, indices);
+                    return true;
+                  }
+                }
                 integratePolytopes<N, p1, Shape>(fes.getMesh(), m_polytopes, test, dofs,
                   vdim, values, offset, sign, accumulate, indices);
                 return true;
@@ -290,8 +302,9 @@ namespace Rodin::Kokkos::Variational
       /**
        * @brief Integrates the polytopes of at most Vertices vertices.
        *
-       * When Exact, the space is P1, every polytope has Vertices vertices and
-       * the vector dimension is maximal, so the local loop has a static bound.
+       * When Exact, every polytope has Vertices vertices, the space binds its
+       * capacity on it (P1, or H1 on a single geometry) and the vector
+       * dimension is maximal, so the local loop has a static bound.
        * Shape is the geometry tag of the integration points.
        *
        * @param mesh Resident mesh.

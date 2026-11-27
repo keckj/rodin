@@ -45,6 +45,25 @@ namespace Rodin::Kokkos::Variational::Internal
   template <class FES>
   using BackendOf = typename MeshBackend<typename FES::MeshType>::Type;
 
+  /**
+   * @brief Whether every polytope of a reference geometry binds as many
+   * degrees of freedom as the capacity of its vertex count.
+   *
+   * The kernels then take static local bounds on this geometry. Degrees of
+   * freedom without a count per geometry are never full.
+   * @tparam DOFs Device degrees of freedom.
+   * @tparam G Reference geometry.
+   * @tparam N Vertex count of the geometry.
+   */
+  template <class DOFs, ::Rodin::Geometry::Polytope::Type G, Index N>
+  constexpr bool isFullGeometry()
+  {
+    if constexpr (requires { DOFs::getCount(G); })
+      return DOFs::getCount(G) == DOFs::getCapacity(N);
+    else
+      return false;
+  }
+
   /// @brief Whether a space is a P1 space.
   template <class FES>
   struct IsP1Space

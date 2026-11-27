@@ -776,6 +776,17 @@ namespace Rodin::Kokkos::Variational
         return result;
       }
 
+      /**
+       * @brief Gets the number of local degrees of freedom of a geometry.
+       * @param g Reference geometry.
+       * @return Number of nodes, zero for the unsupported pyramid.
+       */
+      KOKKOS_INLINE_FUNCTION static constexpr Index getCount(
+        ::Rodin::Geometry::Polytope::Type g)
+      {
+        return LagrangeBasis<K, MemorySpace>::getCount(g);
+      }
+
       /// @brief Gets the offset between components. @return Scalar space size.
       KOKKOS_INLINE_FUNCTION Index getStride() const
       {

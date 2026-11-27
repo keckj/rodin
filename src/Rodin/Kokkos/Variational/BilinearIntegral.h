@@ -332,6 +332,21 @@ namespace Rodin::Kokkos::Variational
             if constexpr (TrialDOFsType::getCapacity(N) <= Capacity &&
               TestDOFsType::getCapacity(N) <= Capacity)
             {
+              // Spaces binding their capacity on every polytope of the
+              // geometry, such as H1 on simplices, have static bounds too.
+              constexpr bool full = Internal::isFullGeometry<
+                typename TrialFESType::DOFsType, Shape::Value, N>() &&
+                Internal::isFullGeometry<typename TestFESType::DOFsType, Shape::Value, N>();
+              if constexpr (!p1 && full)
+              {
+                if (maximal)
+                {
+                  integratePolytopes<N, true, Shape>(mesh, m_polytopes, trial, test,
+                    trialDOFs, trialVDim, testDOFs, testVDim, values, offset, sign,
+                    accumulate, compact, rows, cols);
+                  return true;
+                }
+              }
               integratePolytopes<N, p1, Shape>(mesh, m_polytopes, trial, test, trialDOFs,
                 trialVDim, testDOFs, testVDim, values, offset, sign, accumulate, compact,
                 rows, cols);
@@ -455,9 +470,10 @@ namespace Rodin::Kokkos::Variational
       /**
        * @brief Integrates the polytopes of at most Vertices vertices.
        *
-       * When Exact, both spaces are P1, every polytope has Vertices vertices
-       * and both vector dimensions are maximal, so the local loops have
-       * static bounds. Shape is the geometry tag of the integration points.
+       * When Exact, every polytope has Vertices vertices, both spaces bind
+       * their capacity on it (P1, or H1 on a single geometry) and both
+       * vector dimensions are maximal, so the local loops have static
+       * bounds. Shape is the geometry tag of the integration points.
        *
        * @param mesh Resident mesh.
        * @param polytopes Selected polytopes, located by prepare().
