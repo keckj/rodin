@@ -1590,6 +1590,11 @@ int main(int argc, char** argv)
     // product took 3.3 of the 4.8 s of each preconditioner rebuild, and the
     // plain aggregation also converges in fewer iterations.
     setPETScDefault("-fieldsplit_pressure_pc_gamg_aggressive_coarsening", "0");
+    // PCMG smooths its finest level with Amat by default, which for this
+    // split is the implicit Schur complement: every smoother product then
+    // runs a velocity V-cycle. Smoothing on the assembled selfp matrix
+    // halves the solve time for the same iteration count.
+    setPETScDefault("-fieldsplit_pressure_pc_use_amat", "false");
   }
 
   boost::mpi::environment env(argc, argv);
