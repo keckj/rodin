@@ -331,7 +331,8 @@ namespace Rodin::Kokkos::Variational
           polytopes.getSpacing(), polytopes.getRegion(), polytopes.getDimension(), test,
           dofs, vdim, values, offset, sign, accumulate, indices.extent(0) > 0, indices};
         ::Kokkos::parallel_for("Rodin linear form integration",
-          QuadratureType::policy(execution, polytopes.getPolytopeCount()), kernel);
+          QuadratureType::integrationPolicy(execution, polytopes.getPolytopeCount()),
+          kernel);
       }
 
       /**

@@ -246,6 +246,30 @@ namespace Rodin::Kokkos::Variational
           ::Kokkos::Experimental::WorkItemProperty::HintLightWeight);
       }
 
+      /// @brief Most threads per block of the integration kernels.
+      static constexpr unsigned IntegrationThreads = 256;
+
+      /**
+       * @brief Builds the range policy of an integration kernel, one thread
+       * per polytope.
+       *
+       * Without a bound, HIP compiles a kernel for blocks of 1024 threads,
+       * which caps a gfx90a wavefront at 128 vector registers: the local
+       * matrix of a polytope then spills to scratch memory. Blocks of
+       * IntegrationThreads threads leave the registers to the local arrays.
+       *
+       * @param execution Execution space instance.
+       * @param count Iteration count.
+       * @return Range policy over @f$ [0, count) @f$.
+       */
+      static auto integrationPolicy(const ExecutionSpace& execution, Index count)
+      {
+        return ::Kokkos::Experimental::require(
+          ::Kokkos::RangePolicy<ExecutionSpace, ::Kokkos::IndexType<Index>,
+            ::Kokkos::LaunchBounds<IntegrationThreads, 1>>(execution, 0, count),
+          ::Kokkos::Experimental::WorkItemProperty::HintLightWeight);
+      }
+
       /**
        * @brief Finds the first polytope of every reference geometry.
        * @param mesh Resident mesh.

@@ -634,7 +634,8 @@ namespace Rodin::Kokkos::Variational
           test, trialDOFs, trialVDim, testDOFs, testVDim, values, offset, sign,
           accumulate, compact, rows.extent(0) > 0, rows, cols};
         ::Kokkos::parallel_for("Rodin bilinear form integration",
-          QuadratureType::policy(execution, polytopes.getPolytopeCount()), kernel);
+          QuadratureType::integrationPolicy(execution, polytopes.getPolytopeCount()),
+          kernel);
       }
 
       /**
