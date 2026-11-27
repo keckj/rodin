@@ -52,10 +52,13 @@ namespace Rodin::Kokkos::Variational
     /**
      * @brief Real function given by a callable taking a device point.
      * @tparam F Callable wrapped by the real function.
-     * @tparam Expression Whether the callable is a function expression.
+     * @tparam Expression Whether the callable is a function expression,
+     * deriving from FunctionBase directly or through RealFunctionBase as Dot
+     * does.
      */
     template <class F,
-      bool Expression = std::is_base_of_v<::Rodin::Variational::FunctionBase<F>, F>>
+      bool Expression = std::is_base_of_v<::Rodin::Variational::FunctionBase<F>, F> ||
+        std::is_base_of_v<::Rodin::Variational::RealFunctionBase<F>, F>>
     struct RealFunctionView
     {
       static_assert(std::is_invocable_r_v<Real, const F&,
