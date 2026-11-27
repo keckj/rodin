@@ -1585,6 +1585,11 @@ int main(int argc, char** argv)
 #endif
     setPETScDefault("-fieldsplit_pressure_ksp_type", "preonly");
     setPETScDefault("-fieldsplit_pressure_pc_type", "gamg");
+    // The aggressive coarsening squares the graph of the selfp Schur
+    // complement, which is denser than the velocity block: on a MI210 the
+    // product took 3.3 of the 4.8 s of each preconditioner rebuild, and the
+    // plain aggregation also converges in fewer iterations.
+    setPETScDefault("-fieldsplit_pressure_pc_gamg_aggressive_coarsening", "0");
   }
 
   boost::mpi::environment env(argc, argv);
