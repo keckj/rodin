@@ -1044,6 +1044,14 @@ namespace Rodin::Examples::Heart
         reused = m_cfg.pcReuse && m_pcBuilt && !m_pcRefresh && m_pcMitralZ == m_mitralZ;
         ierr = KSPSetReusePreconditioner(ksp, reused ? PETSC_TRUE : PETSC_FALSE);
         assert(ierr == PETSC_SUCCESS);
+        // The solve sets the solver from the options again, which reaches
+        // the velocity block once the splits exist.
+        if (!reused && !m_cfg.velocityPCOpen.empty())
+        {
+          ierr = PetscOptionsSetValue(PETSC_NULLPTR, "-fieldsplit_velocity_pc_type",
+            velocityPC().c_str());
+          assert(ierr == PETSC_SUCCESS);
+        }
         if (m_cfg.device)
           deviceSolve();
         else
@@ -1115,6 +1123,7 @@ namespace Rodin::Examples::Heart
         KSPInfo() << (reason > 0 ? "Converged" : "Did NOT converge")
                   << "  iterations = " << iterations << "  (" << solveTime << " s)"
                   << "  pc " << (reused ? "kept" : "built")
+                  << (m_cfg.velocityPCOpen.empty() ? "" : " velocity " + velocityPC())
                   << "  pass " << (pass + 1) << "  update = " << m_update << Alert::Raise;
       }
 
@@ -1518,13 +1527,18 @@ int main(int argc, char** argv)
 
   // Default flow solver: flexible GMRES on the full Schur factorization of
   // the velocity-pressure splits, the Schur complement approximated by
-  // A10 diag(A00)^-1 A01 and both blocks preconditioned by one GAMG V-cycle.
-  // On the P1P1 atrium at 1800 Pa it converges in 21-24 iterations and gives
-  // the same max|u|, fluxes and wall shear as the MUMPS LU to six digits, 6x
-  // faster on 96 CPU ranks (0.47 s against 2.93 s) and 7.6x faster on one
-  // MI210 (4.5 s against 34.4 s). The command line still wins: the direct
-  // solver is back with -pc_type lu -pc_factor_mat_solver_type mumps, in
-  // which case the field split options below are left unused.
+  // A10 diag(A00)^-1 A01 and preconditioned by one GAMG V-cycle. On the P1P1
+  // atrium at 1800 Pa it gives the same max|u|, fluxes and wall shear as the
+  // MUMPS LU to six digits. The velocity block takes one GAMG V-cycle while
+  // the mitral valve is open and block Jacobi with ILU(0) on each process
+  // while it is closed: the closed valve adds a large n n^T Robin block to
+  // the outlet velocity rows, which the Chebyshev/Jacobi smoothers of GAMG do
+  // not see on the component-major numbering (fgmres stalls at the closure,
+  // step 175, l1 Jacobi included), and ILU is several times slower than GAMG
+  // on a GPU. Naming -fieldsplit_velocity_pc_type keeps one preconditioner
+  // for the whole run. The command line still wins: the direct solver is
+  // back with -pc_type lu -pc_factor_mat_solver_type mumps, in which case
+  // the field split options below are left unused.
   const bool directSolver = [] {
     PetscBool lu = PETSC_FALSE;
     [[maybe_unused]] PetscErrorCode ierr =
@@ -1532,6 +1546,8 @@ int main(int argc, char** argv)
     assert(ierr == PETSC_SUCCESS);
     return lu == PETSC_TRUE;
   }();
+  std::string velocityPCOpen;
+  std::string velocityPCClosed;
   if (directSolver)
   {
     setPETScDefault("-ksp_type", "preonly");
@@ -1549,7 +1565,24 @@ int main(int argc, char** argv)
     setPETScDefault("-pc_fieldsplit_schur_precondition", "selfp");
     // The splits carry the names of the trial functions on both paths.
     setPETScDefault("-fieldsplit_velocity_ksp_type", "preonly");
+    PetscBool velocitySet = PETSC_FALSE;
+    [[maybe_unused]] PetscErrorCode ierr = PetscOptionsHasName(
+      PETSC_NULLPTR, PETSC_NULLPTR, "-fieldsplit_velocity_pc_type", &velocitySet);
+    assert(ierr == PETSC_SUCCESS);
+    if (velocitySet == PETSC_FALSE)
+    {
+      velocityPCOpen = "gamg";
+      velocityPCClosed = "bjacobi";
+    }
     setPETScDefault("-fieldsplit_velocity_pc_type", "gamg");
+    setPETScDefault("-fieldsplit_velocity_sub_pc_type", "ilu");
+#ifdef RODIN_EXAMPLES_ATRIUM_DEVICE
+    // The device matrices are factored and solved by Kokkos Kernels.
+    PetscBool device = PETSC_FALSE;
+    PetscOptionsGetBool(PETSC_NULLPTR, PETSC_NULLPTR, "-atrium_device", &device, PETSC_NULLPTR);
+    if (device == PETSC_TRUE)
+      setPETScDefault("-fieldsplit_velocity_sub_pc_factor_mat_solver_type", "kokkos");
+#endif
     setPETScDefault("-fieldsplit_pressure_ksp_type", "preonly");
     setPETScDefault("-fieldsplit_pressure_pc_type", "gamg");
   }
@@ -1663,6 +1696,9 @@ int main(int argc, char** argv)
         PETSC_NULLPTR, PETSC_NULLPTR, "-atrium_pc_refresh_ratio", &real, &got);
       if (got)
         cfg.pcRefreshRatio = real;
+
+      cfg.velocityPCOpen = velocityPCOpen;
+      cfg.velocityPCClosed = velocityPCClosed;
 
       got = PETSC_FALSE;
       PetscOptionsGetInt(PETSC_NULLPTR, PETSC_NULLPTR, "-atrium_steps", &integer, &got);

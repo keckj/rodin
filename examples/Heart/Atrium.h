@@ -260,6 +260,19 @@ namespace Rodin::Examples::Heart
         /// @brief Iteration growth that rebuilds a kept preconditioner.
         Real pcRefreshRatio = 1.5;
 
+        /**
+         * @brief Velocity block preconditioners of the field-split solver
+         * while the mitral valve is open and while it is closed, the
+         * command line choice when empty.
+         *
+         * The preconditioner type follows the valve when it is rebuilt,
+         * which a valve change always does.
+         */
+        std::string velocityPCOpen;
+
+        /// @brief Velocity block preconditioner while the valve is closed.
+        std::string velocityPCClosed;
+
         /// @brief Number of steps solved, all of them when empty.
         Rodin::Optional<int> maxSteps;
 
@@ -419,6 +432,12 @@ namespace Rodin::Examples::Heart
 
       bool advance0D();
       bool solveFlow();
+
+      /// @brief Velocity block preconditioner for the state of the valve.
+      const std::string& velocityPC() const
+      {
+        return m_valveOpen ? m_cfg.velocityPCOpen : m_cfg.velocityPCClosed;
+      }
 
       /// @brief Hands the state of a pass to the device and projects.
       void deviceBegin(int pass);
