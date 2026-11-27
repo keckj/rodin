@@ -329,9 +329,10 @@ namespace Rodin::Kokkos::Variational
         const PolytopeKernel<Vertices, Exact, Shape, Test> kernel{mesh.getView(),
           polytopes.getQuadrature(), polytopes.getAttributes(), polytopes.getOffsets(),
           polytopes.getSpacing(), polytopes.getRegion(), polytopes.getDimension(), test,
-          dofs, vdim, values, offset, sign, accumulate, indices.extent(0) > 0, indices};
+          dofs, vdim, values, offset, sign, accumulate, indices.extent(0) > 0, indices,
+          polytopes.getSelected()};
         ::Kokkos::parallel_for("Rodin linear form integration",
-          QuadratureType::integrationPolicy(execution, polytopes.getPolytopeCount()),
+          QuadratureType::integrationPolicy(execution, polytopes.getLaunchCount()),
           kernel);
       }
 
@@ -436,12 +437,16 @@ namespace Rodin::Kokkos::Variational
         /// @brief Entry indices, test degrees of freedom.
         ::Kokkos::View<Index*, MemorySpace> indices;
 
+        /// @brief Integrated polytopes by launch index, empty for the identity.
+        ::Kokkos::View<Index*, MemorySpace> selected;
+
         /**
          * @brief Integrates a polytope if it is selected.
-         * @param p Polytope index.
+         * @param i Launch index.
          */
-        KOKKOS_INLINE_FUNCTION void operator()(Index p) const
+        KOKKOS_INLINE_FUNCTION void operator()(Index i) const
         {
+          const Index p = selected.extent(0) > 0 ? selected(i) : i;
           const auto polytope = view.getPolytope(dimension, p);
           if (!Rodin::Kokkos::Geometry::isIntegrated(
                 view, region, polytope, attributes))

@@ -13,6 +13,7 @@
  * @brief Prepared entity selection, quadrature and finite-element entry offsets.
  */
 
+#include <cassert>
 #include <memory>
 #include "Rodin/Alert/MemberFunctionException.h"
 #include "Rodin/Kokkos/Geometry/Region.h"
@@ -169,7 +170,8 @@ namespace Rodin::Assembly
           return m_count;
         m_region = region;
         m_count = locate(execution, mesh.getView(), region, dimension, m_attributes,
-          m_offsets, count, trialDOFs, trialVDim, testDOFs, testVDim, m_spacing);
+          m_offsets, count, trialDOFs, trialVDim, testDOFs, testVDim, m_spacing,
+          m_selected, m_launchCount);
         m_located = located;
         return m_count;
       }
@@ -224,6 +226,28 @@ namespace Rodin::Assembly
       size_t getCount() const
       {
         return m_count;
+      }
+
+      /**
+       * @brief Gets the integrated polytopes when they are not all the
+       * polytopes of the dimension.
+       * @return Indices of the integrated polytopes in increasing order, or an
+       * empty view when the launch index is the polytope index.
+       */
+      const ::Kokkos::View<Index*, MemorySpace>& getSelected() const
+      {
+        return m_selected;
+      }
+
+      /**
+       * @brief Gets the number of indices an integration kernel is launched
+       * over.
+       * @return Number of selected polytopes when getSelected() lists them,
+       * the polytope count otherwise.
+       */
+      Index getLaunchCount() const
+      {
+        return m_launchCount;
       }
 
       /**
@@ -332,6 +356,34 @@ namespace Rodin::Assembly
       };
 
       /**
+       * @brief Lists the integrated polytopes in increasing order.
+       */
+      template <class TrialDOFs, class TestDOFs>
+      struct SelectedPolytopes
+      {
+        /// @brief Entry count of a polytope.
+        EntryCount<TrialDOFs, TestDOFs> count;
+
+        /// @brief Index of every integrated polytope.
+        ::Kokkos::View<Index*, MemorySpace> selected;
+
+        /**
+         * @brief Adds a polytope to the exclusive scan of the ranks.
+         * @param p Polytope index.
+         * @param update Rank of the polytope among the integrated ones.
+         * @param final Whether the pass writes the indices.
+         */
+        KOKKOS_INLINE_FUNCTION void operator()(Index p, Index& update, bool final) const
+        {
+          if (count(p) == 0)
+            return;
+          if (final)
+            selected(update) = p;
+          update += 1;
+        }
+      };
+
+      /**
        * @brief Computes the entry offsets of the polytopes.
        *
        * A polytope owns the product of its trial and test local counts. When
@@ -354,6 +406,10 @@ namespace Rodin::Assembly
        * @param testDOFs Device degrees of freedom of the test space.
        * @param testVDim Vector dimension of the test space.
        * @param spacing Set to the spacing of the entries.
+       * @param selection Set to the integrated polytopes when they are not all
+       * the polytopes, so that the kernels skip the others without a launch,
+       * and to an empty view otherwise.
+       * @param launch Set to the number of indices to launch the kernels over.
        * @return Number of entries.
        */
       template <class TrialDOFs, class TestDOFs>
@@ -363,8 +419,11 @@ namespace Rodin::Assembly
         const AttributesType& attributes,
         const ::Kokkos::View<Index*, MemorySpace>& offsets, Index count,
         const TrialDOFs& trialDOFs, Index trialVDim, const TestDOFs& testDOFs,
-        Index testVDim, size_t& spacing)
+        Index testVDim, size_t& spacing,
+        ::Kokkos::View<Index*, MemorySpace>& selection, Index& launch)
       {
+        selection = ::Kokkos::View<Index*, MemorySpace>();
+        launch = 0;
         if (count == 0)
         {
           spacing = 1;
@@ -385,6 +444,23 @@ namespace Rodin::Assembly
           QuadratureType::policy(execution, count),
           EntryOffsets<TrialDOFs, TestDOFs>{local, offsets, uniform}, total);
         spacing = uniform ? selected : 1;
+        launch = selected < count ? selected : count;
+        if (0 < selected && selected < count)
+        {
+          // Boundary and interface integrals select a small and scattered
+          // part of the faces: launching over them only keeps the waves of
+          // the kernels busy.
+          selection = ::Kokkos::View<Index*, MemorySpace>(
+            ::Kokkos::view_alloc(execution, ::Kokkos::WithoutInitializing,
+              std::string("Rodin selected polytopes")),
+            selected);
+          Index listed = 0;
+          ::Kokkos::parallel_scan("Rodin selected polytopes",
+            QuadratureType::policy(execution, count),
+            SelectedPolytopes<TrialDOFs, TestDOFs>{local, selection}, listed);
+          assert(listed == selected);
+          (void) listed;
+        }
         return uniform ? size_t(selected) * smallest : total;
       }
 
@@ -416,6 +492,8 @@ namespace Rodin::Assembly
       ::Kokkos::View<Index*, MemorySpace> m_offsets;
       size_t m_count = 0;
       size_t m_spacing = 1;
+      ::Kokkos::View<Index*, MemorySpace> m_selected;
+      Index m_launchCount = 0;
   };
 }
 

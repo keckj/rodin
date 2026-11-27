@@ -580,8 +580,8 @@ namespace Rodin::Kokkos::Variational
           polytopes.getAttributes(), polytopes.getOffsets(), polytopes.getSpacing(),
           polytopes.getRegion(), polytopes.getDimension(), trial, test, trialDOFs,
           trialVDim, testDOFs, testVDim, values, offset, sign, accumulate, compact,
-          rows.extent(0) > 0, rows, cols, level};
-        Policy policy(execution, polytopes.getPolytopeCount(), ::Kokkos::AUTO);
+          rows.extent(0) > 0, rows, cols, level, polytopes.getSelected()};
+        Policy policy(execution, polytopes.getLaunchCount(), ::Kokkos::AUTO);
         policy.set_scratch_size(level, ::Kokkos::PerTeam(scratch));
         // About TeamEntries / 2 entries per thread balance the occupancy against
         // the passes over the quadrature.
@@ -589,7 +589,7 @@ namespace Rodin::Kokkos::Variational
           (2 * TrialCapacity * TestCapacity + 32 * E - 1) / (32 * E) * 32;
         const int maximum = policy.team_size_max(kernel, ::Kokkos::ParallelForTag());
         int threads = std::max(1, std::min(maximum, int(std::min<Index>(wanted, 1024))));
-        Policy launch(execution, polytopes.getPolytopeCount(), threads);
+        Policy launch(execution, polytopes.getLaunchCount(), threads);
         launch.set_scratch_size(level, ::Kokkos::PerTeam(scratch));
         ::Kokkos::parallel_for("Rodin bilinear form team integration", launch, kernel);
       }
@@ -632,9 +632,9 @@ namespace Rodin::Kokkos::Variational
           polytopes.getQuadrature(), polytopes.getAttributes(), polytopes.getOffsets(),
           polytopes.getSpacing(), polytopes.getRegion(), polytopes.getDimension(), trial,
           test, trialDOFs, trialVDim, testDOFs, testVDim, values, offset, sign,
-          accumulate, compact, rows.extent(0) > 0, rows, cols};
+          accumulate, compact, rows.extent(0) > 0, rows, cols, polytopes.getSelected()};
         ::Kokkos::parallel_for("Rodin bilinear form integration",
-          QuadratureType::integrationPolicy(execution, polytopes.getPolytopeCount()),
+          QuadratureType::integrationPolicy(execution, polytopes.getLaunchCount()),
           kernel);
       }
 
@@ -972,13 +972,18 @@ namespace Rodin::Kokkos::Variational
         /// @brief Team scratch level holding the groups of quadrature points.
         int level;
 
+
+        /// @brief Integrated polytopes by launch index, empty for the identity.
+        ::Kokkos::View<Index*, MemorySpace> selected;
+
         /**
          * @brief Integrates the polytope of a team if it is selected.
-         * @param team Team handle, whose league rank is the polytope index.
+         * @param team Team handle, whose league rank is the launch index.
          */
         KOKKOS_INLINE_FUNCTION void operator()(const Member& team) const
         {
-          const Index p = team.league_rank();
+          const Index p =
+            selected.extent(0) > 0 ? selected(team.league_rank()) : team.league_rank();
           const auto polytope = view.getPolytope(dimension, p);
           if (!Rodin::Kokkos::Geometry::isIntegrated(
                 view, region, polytope, attributes))
@@ -1180,12 +1185,16 @@ namespace Rodin::Kokkos::Variational
         /// @brief Column indices, trial degrees of freedom.
         ::Kokkos::View<Index*, MemorySpace> cols;
 
+        /// @brief Integrated polytopes by launch index, empty for the identity.
+        ::Kokkos::View<Index*, MemorySpace> selected;
+
         /**
          * @brief Integrates a polytope if it is selected.
-         * @param p Polytope index.
+         * @param i Launch index.
          */
-        KOKKOS_INLINE_FUNCTION void operator()(Index p) const
+        KOKKOS_INLINE_FUNCTION void operator()(Index i) const
         {
+          const Index p = selected.extent(0) > 0 ? selected(i) : i;
           const auto polytope = view.getPolytope(dimension, p);
           if (!Rodin::Kokkos::Geometry::isIntegrated(
                 view, region, polytope, attributes))
