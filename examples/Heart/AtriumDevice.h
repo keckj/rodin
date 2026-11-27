@@ -744,9 +744,12 @@ namespace Rodin::Examples::Heart
           (cy.mu0 - cy.muInf) *
             Pow(1.0 + Pow(cy.lambda * shear, cy.yasuda), (cy.n - 1.0) / cy.yasuda);
 
-        const auto traction = VectorFunction(mu * Dot(m_gradRec0, normal),
-          mu * Dot(m_gradRec1, normal), mu * Dot(m_gradRec2, normal));
-        const auto wallStress = traction - Dot(traction, normal) * normal;
+        // The viscosity is factored out of the tangential projection: each
+        // occurrence of mu in the expression evaluates the velocity gradient
+        // on the incident cell again.
+        const auto normalRows = VectorFunction(
+          Dot(m_gradRec0, normal), Dot(m_gradRec1, normal), Dot(m_gradRec2, normal));
+        const auto wallStress = mu * (normalRows - Dot(normalRows, normal) * normal);
 
         const Real reg = 1.0e-3;
         m_wss = BoundaryIntegral(Dot(m_wssTrial, m_wssTest)).over(m_cfg.wall) +
