@@ -45,6 +45,56 @@ namespace Rodin::Examples::Heart
   };
 
   /**
+   * @brief Value of a function stored per cell, read at the points of the cell.
+   * @tparam MemorySpace Kokkos memory space holding the values.
+   */
+  template <class MemorySpace>
+  struct AtriumCellValue
+  {
+    /// @brief Value of every cell of the local mesh.
+    ::Kokkos::View<const Rodin::Real*, MemorySpace> values;
+
+    /// @param p Point of a cell. @return Value of the cell.
+    KOKKOS_INLINE_FUNCTION Rodin::Real operator()(
+      const Rodin::Kokkos::View<Rodin::Geometry::Point>& p) const
+    {
+      KOKKOS_ASSERT(p.getPolytope().getDimension() == 3);
+      return values(p.getPolytope().getIndex());
+    }
+  };
+
+  /**
+   * @brief Evaluates a device function at the barycenter of every cell.
+   * @tparam Value Device view of the function.
+   * @tparam MemorySpace Kokkos memory space of the values.
+   */
+  template <class Value, class MemorySpace>
+  struct AtriumCellEvaluation
+  {
+    /// @brief Device mesh.
+    Rodin::Kokkos::View<Rodin::Geometry::MeshBase> mesh;
+
+    /// @brief Device view of the evaluated function.
+    Value value;
+
+    /// @brief Value of every cell.
+    ::Kokkos::View<Rodin::Real*, MemorySpace> values;
+
+    /// @brief Dimension of the cells.
+    Rodin::Index dimension;
+
+    /// @param i Cell. Writes the value of the function at its barycenter.
+    KOKKOS_INLINE_FUNCTION void operator()(const Rodin::Index i) const
+    {
+      const auto cell = mesh.getPolytope(dimension, i);
+      Rodin::Kokkos::Geometry::Vector reference(dimension);
+      for (Rodin::Index s = 0; s < dimension; ++s)
+        reference(s) = Rodin::Real(1) / Rodin::Real(dimension + 1);
+      values(i) = value.getValue(cell.getPoint(reference));
+    }
+  };
+
+  /**
    * @brief Nodal magnitude of a vector field with interleaved components.
    *
    * The device H1 vector spaces number the degree of freedom of component c
@@ -188,6 +238,12 @@ namespace Rodin::Examples::Heart
       /// @brief Linear form integrated against the pressure test functions.
       using FluxFormType = Rodin::Variational::LinearForm<ScalarFESType, ::Vec>;
 
+      /// @brief Memory space of the device mesh.
+      using MemorySpace = typename MeshType::MemorySpace;
+
+      /// @brief Values stored per cell of the local mesh.
+      using CellValues = ::Kokkos::View<Real*, MemorySpace>;
+
       /**
        * @brief Copies the mesh to the device and builds the problems.
        * @param[in] mesh Host mesh, which must outlive this object.
@@ -259,6 +315,13 @@ namespace Rodin::Examples::Heart
         fill(m_absShear, 0);
         fill(m_shearMagnitude, 0);
         fill(m_one, 1);
+        if constexpr (K == 1)
+        {
+          m_cellViscosity = CellValues(
+            ::Kokkos::view_alloc(std::string("Atrium cell viscosity")),
+            m_mesh.getLocal().getPolytopeCount(m_mesh.getLocal().getDimension()));
+          updateViscosity();
+        }
         setup();
         setupWallShear();
       }
@@ -274,6 +337,7 @@ namespace Rodin::Examples::Heart
       void setPrevious(::Vec velocity)
       {
         copy(velocity, m_uOld);
+        updateViscosity();
       }
 
       /**
@@ -595,8 +659,57 @@ namespace Rodin::Examples::Heart
         return Rodin::Variational::RealFunction(AtriumCellSize{});
       }
 
-      /// @brief Carreau-Yasuda viscosity at the previous velocity.
+      /**
+       * @brief Carreau-Yasuda viscosity at the previous velocity.
+       *
+       * With P1 velocities the Jacobian of the previous velocity, hence the
+       * viscosity, is constant on each cell, so it is read from the values
+       * updateViscosity() computes once per step instead of being evaluated
+       * again at every quadrature point of every form.
+       */
       auto viscosity() const
+      {
+        if constexpr (K == 1)
+        {
+          return Rodin::Variational::RealFunction(
+            AtriumCellValue<MemorySpace>{m_cellViscosity});
+        }
+        else
+        {
+          return pointViscosity();
+        }
+      }
+
+      /// @brief Evaluates the viscosity of every cell at the previous velocity.
+      void updateViscosity()
+      {
+        if constexpr (K == 1)
+        {
+          const auto& local = m_mesh.getLocal();
+          const auto& execution = local.getContext().getExecutionSpace();
+          const auto mu = pointViscosity();
+          const auto value = lowerFunction(mu);
+          const Rodin::Index dimension = local.getDimension();
+          ::Kokkos::parallel_for("Atrium cell viscosity",
+            ::Kokkos::RangePolicy<typename MeshType::ExecutionSpace,
+              ::Kokkos::IndexType<Rodin::Index>>(
+              execution, 0, local.getPolytopeCount(dimension)),
+            AtriumCellEvaluation<std::decay_t<decltype(value)>, MemorySpace>{
+              local.getView(), value, m_cellViscosity, dimension});
+          execution.fence("Atrium cell viscosity");
+        }
+      }
+
+      /// @return Device view of a function, as the device integrals lower it.
+      template <class Derived>
+      static auto lowerFunction(const Rodin::Variational::FunctionBase<Derived>& fn)
+      {
+        return ::Rodin::Kokkos::Variational::View<
+          Rodin::Variational::FunctionBase<Derived>>(fn);
+      }
+
+      /// @brief Carreau-Yasuda viscosity at the previous velocity, pointwise.
+      auto pointViscosity() const
       {
         using namespace Rodin::Variational;
         const auto& cy = m_cfg.viscosity;
@@ -810,6 +923,9 @@ namespace Rodin::Examples::Heart
       VectorSolverType m_wssKSP;
 
       bool m_fieldSplitsSet = false;
+
+      /// @brief Viscosity of every cell at the previous velocity, P1 only.
+      CellValues m_cellViscosity;
   };
 }
 
