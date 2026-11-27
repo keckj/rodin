@@ -244,6 +244,22 @@ namespace Rodin::Examples::Heart
          */
         Real newtonRelativeTolerance = 1.0e-6;
 
+        /**
+         * @brief Whether the preconditioner of the flow system is kept from
+         * one solve to the next.
+         *
+         * Building the field-split preconditioner costs several solves on a
+         * GPU, where the sparse matrix products of the Schur approximation
+         * and of the multigrid hierarchies dominate the step. A kept
+         * preconditioner is rebuilt when the mitral resistance changes, when
+         * a solve fails, and when the first pass of a step needs more than
+         * pcRefreshRatio times the iterations of the last rebuild.
+         */
+        bool pcReuse = true;
+
+        /// @brief Iteration growth that rebuilds a kept preconditioner.
+        Real pcRefreshRatio = 1.5;
+
         /// @brief Number of steps solved, all of them when empty.
         Rodin::Optional<int> maxSteps;
 
@@ -413,6 +429,7 @@ namespace Rodin::Examples::Heart
       /// @brief Solves on the device and copies the solution to the host.
       /// @return Solver of the device flow system.
       ::KSP deviceSolve();
+      ::KSP deviceKSP();
 
       /// @brief Closes a step solved on the device.
       void deviceEnd();
@@ -565,6 +582,11 @@ namespace Rodin::Examples::Heart
       Real m_maxShear = 0.0;
       bool m_valveOpen = true;
       bool m_flowFieldSplitsSet = false;
+      // State of the kept flow preconditioner, see Config::pcReuse.
+      bool m_pcBuilt = false;
+      bool m_pcRefresh = false;
+      Real m_pcMitralZ = 0.0;
+      PetscInt m_pcFreshIterations = 0;
 
 #ifdef RODIN_EXAMPLES_ATRIUM_DEVICE
       /// @brief Flow step on the device, when the configuration asks for it.

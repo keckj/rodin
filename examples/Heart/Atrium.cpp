@@ -17,7 +17,9 @@
  *          -atrium_newton (Newton passes on the convective term at each step,
  *          instead of one Oseen solve), -atrium_newton_rtol,
  *          -atrium_newton_max_it, -atrium_device (flow step assembled and
- *          solved on the Kokkos device).
+ *          solved on the Kokkos device), -atrium_pc_reuse (keep the flow
+ *          preconditioner between solves, on by default),
+ *          -atrium_pc_refresh_ratio (iteration growth that rebuilds it).
  */
 #include <algorithm>
 #include <cassert>
@@ -835,6 +837,12 @@ namespace Rodin::Examples::Heart
   }
 
   template <size_t K>
+  ::KSP Atrium<K>::deviceKSP()
+  {
+    return m_device->getKSP();
+  }
+
+  template <size_t K>
   void Atrium<K>::deviceEnd()
   {
     if (m_cfg.useVMS)
@@ -880,6 +888,12 @@ namespace Rodin::Examples::Heart
 
   template <size_t K>
   ::KSP Atrium<K>::deviceSolve()
+  {
+    return nullptr;
+  }
+
+  template <size_t K>
+  ::KSP Atrium<K>::deviceKSP()
   {
     return nullptr;
   }
@@ -1015,19 +1029,58 @@ namespace Rodin::Examples::Heart
       }
 
       const auto solveStart = CoronaryClock::now();
-      ::KSP ksp = m_flowKSP.getHandle();
-      if (m_cfg.device)
-        ksp = deviceSolve();
-      else
-        m_flow.solve(m_flowKSP);
+      ::KSP ksp = m_cfg.device ? deviceKSP() : m_flowKSP.getHandle();
+      PetscErrorCode ierr = PETSC_SUCCESS;
+      PetscInt iterations = 0;
+      bool reused = false;
+      for (;;)
+      {
+        // The kept preconditioner was built with the same mitral resistance:
+        // the closed valve adds a Robin term several orders of magnitude
+        // larger than the open one, which a kept hierarchy does not know.
+        reused = m_cfg.pcReuse && m_pcBuilt && !m_pcRefresh && m_pcMitralZ == m_mitralZ;
+        ierr = KSPSetReusePreconditioner(ksp, reused ? PETSC_TRUE : PETSC_FALSE);
+        assert(ierr == PETSC_SUCCESS);
+        if (m_cfg.device)
+          deviceSolve();
+        else
+          m_flow.solve(m_flowKSP);
+        ierr = KSPGetConvergedReason(ksp, &reason);
+        assert(ierr == PETSC_SUCCESS);
+        ierr = KSPGetIterationNumber(ksp, &iterations);
+        assert(ierr == PETSC_SUCCESS);
+        if (!reused)
+        {
+          m_pcBuilt = true;
+          m_pcRefresh = false;
+          m_pcMitralZ = m_mitralZ;
+          if (pass == 0)
+            m_pcFreshIterations = iterations;
+          break;
+        }
+        if (reason > 0)
+          break;
+        // A kept preconditioner that fails is rebuilt and the solve is
+        // repeated from where it stopped.
+        if (isRoot())
+        {
+          KSPInfo() << "Did NOT converge with the kept preconditioner after "
+                    << iterations << " iterations, rebuilding it" << Alert::Raise;
+        }
+        m_linearIterations += static_cast<int>(iterations);
+        m_pcRefresh = true;
+      }
+      // The first pass of a step is the one compared with the rebuild: the
+      // Newton passes need fewer iterations as they converge.
+      if (reused && pass == 0 &&
+          static_cast<Real>(iterations) >
+            m_cfg.pcRefreshRatio * static_cast<Real>(m_pcFreshIterations))
+      {
+        m_pcRefresh = true;
+      }
       const Real solveTime = secondsSince(solveStart);
       m_timing.solve += solveTime;
 
-      PetscErrorCode ierr = KSPGetConvergedReason(ksp, &reason);
-      assert(ierr == PETSC_SUCCESS);
-      PetscInt iterations = 0;
-      ierr = KSPGetIterationNumber(ksp, &iterations);
-      assert(ierr == PETSC_SUCCESS);
       ierr = KSPGetResidualNorm(ksp, &m_residual);
       assert(ierr == PETSC_SUCCESS);
       m_linearIterations += static_cast<int>(iterations);
@@ -1058,6 +1111,7 @@ namespace Rodin::Examples::Heart
       {
         KSPInfo() << (reason > 0 ? "Converged" : "Did NOT converge")
                   << "  iterations = " << iterations << "  (" << solveTime << " s)"
+                  << "  pc " << (reused ? "kept" : "built")
                   << "  pass " << (pass + 1) << "  update = " << m_update << Alert::Raise;
       }
 
@@ -1595,6 +1649,17 @@ int main(int argc, char** argv)
         PETSC_NULLPTR, PETSC_NULLPTR, "-atrium_newton_max_it", &integer, &got);
       if (got)
         cfg.newtonMaxIterations = static_cast<int>(integer);
+
+      got = PETSC_FALSE;
+      PetscOptionsGetBool(PETSC_NULLPTR, PETSC_NULLPTR, "-atrium_pc_reuse", &flag, &got);
+      if (got)
+        cfg.pcReuse = (flag == PETSC_TRUE);
+
+      got = PETSC_FALSE;
+      PetscOptionsGetReal(
+        PETSC_NULLPTR, PETSC_NULLPTR, "-atrium_pc_refresh_ratio", &real, &got);
+      if (got)
+        cfg.pcRefreshRatio = real;
 
       got = PETSC_FALSE;
       PetscOptionsGetInt(PETSC_NULLPTR, PETSC_NULLPTR, "-atrium_steps", &integer, &got);
