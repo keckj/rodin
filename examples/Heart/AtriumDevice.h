@@ -698,7 +698,9 @@ namespace Rodin::Examples::Heart
           ::Kokkos::view_alloc(std::string("Atrium shear nodes host"), ::Kokkos::WithoutInitializing),
           p1End - p1Begin);
         ::Kokkos::deep_copy(m_shearNodesHost, unset);
-        const size_t vertices = m_mesh.getHost().getPolytopeCount(0);
+        // The distributed mesh counts its vertices globally, getDOFs takes the
+        // local index of a vertex of the shard, ghosts included.
+        const size_t vertices = m_mesh.getHost().getShard().getPolytopeCount(0);
         for (Rodin::Index v = 0; v < vertices; ++v)
         {
           const Rodin::Index p1 = m_sh.getDOFs(0, v).coeff(0);
