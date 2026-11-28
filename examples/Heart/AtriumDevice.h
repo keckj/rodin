@@ -99,7 +99,9 @@ namespace Rodin::Examples::Heart
    *
    * The device H1 vector spaces number the degree of freedom of component c
    * of node n as n * components + c, so the owned coefficients of a vector
-   * field and of a scalar field on the same mesh pair up node by node.
+   * field and of a scalar field of the same degree pair up node by node. A
+   * P1 magnitude of a field of higher degree reads, through nodes, the node
+   * of the field at the vertex of each P1 coefficient.
    *
    * @tparam MemorySpace Kokkos memory space holding both vectors.
    */
@@ -117,14 +119,16 @@ namespace Rodin::Examples::Heart
     Input field; ///< Vector coefficients, interleaved.
     Output magnitude; ///< Scalar coefficients.
     size_t components; ///< Components of the vector field.
+    const Rodin::Index* nodes; ///< Node of the field at each coefficient, or null if the same.
 
     /// @param n Node. Writes the Euclidean norm of the field at the node.
     KOKKOS_INLINE_FUNCTION void operator()(const size_t n) const
     {
+      const size_t node = nodes ? static_cast<size_t>(nodes[n]) : n;
       Rodin::Real sum = 0;
       for (size_t c = 0; c < components; ++c)
       {
-        const Rodin::Real value = field(n * components + c);
+        const Rodin::Real value = field(node * components + c);
         sum += value * value;
       }
       magnitude(n) = ::Kokkos::sqrt(sum);
@@ -315,6 +319,8 @@ namespace Rodin::Examples::Heart
         fill(m_absShear, 0);
         fill(m_shearMagnitude, 0);
         fill(m_one, 1);
+        if constexpr (K > 1)
+          setupShearNodes();
         if constexpr (K == 1)
         {
           m_cellViscosity = CellValues(
@@ -602,7 +608,9 @@ namespace Rodin::Examples::Heart
         assert(ierr == PETSC_SUCCESS);
         ierr = VecGetLocalSize(out.getData(), &nOut);
         assert(ierr == PETSC_SUCCESS);
-        if (static_cast<size_t>(nField) != components * static_cast<size_t>(nOut))
+        const bool sameNodes = (K == 1);
+        if (sameNodes ? static_cast<size_t>(nField) != components * static_cast<size_t>(nOut)
+                      : m_shearNodes.extent(0) != static_cast<size_t>(nOut))
         {
           Rodin::Alert::MemberFunctionException(*this, __func__)
             << "The vector field has " << nField << " owned coefficients, the scalar one "
@@ -620,11 +628,13 @@ namespace Rodin::Examples::Heart
         const size_t n = static_cast<size_t>(nOut);
         if (PetscMemTypeHost(inType) && PetscMemTypeHost(resType))
         {
-          nodalMagnitude<::Kokkos::DefaultHostExecutionSpace>(in, res, n, components);
+          nodalMagnitude<::Kokkos::DefaultHostExecutionSpace>(in, res, nField, n, components,
+            sameNodes ? nullptr : m_shearNodesHost.data());
         }
         else if (PetscMemTypeDevice(inType) && PetscMemTypeDevice(resType))
         {
-          nodalMagnitude<typename MeshType::ExecutionSpace>(in, res, n, components);
+          nodalMagnitude<typename MeshType::ExecutionSpace>(in, res, nField, n, components,
+            sameNodes ? nullptr : m_shearNodes.data());
         }
         else
         {
@@ -642,15 +652,76 @@ namespace Rodin::Examples::Heart
 
       /// @brief Runs the nodal magnitude kernel in an execution space.
       template <class Execution>
-      static void nodalMagnitude(const Real* in, Real* res, size_t n, size_t components)
+      static void nodalMagnitude(const Real* in, Real* res, size_t nIn, size_t n,
+        size_t components, const Rodin::Index* nodes)
       {
         using Memory = typename Execution::memory_space;
         using Kernel = AtriumNodalMagnitude<Memory>;
-        const Kernel kernel{typename Kernel::Input(in, n * components),
-          typename Kernel::Output(res, n), components};
+        const Kernel kernel{typename Kernel::Input(in, nIn), typename Kernel::Output(res, n),
+          components, nodes};
         ::Kokkos::parallel_for("Atrium nodal shear magnitude",
           ::Kokkos::RangePolicy<Execution>(0, n), kernel);
         Execution().fence();
+      }
+
+      /**
+       * @brief Maps each owned P1 coefficient to the owned node of the
+       * velocity space at the same vertex, for K > 1.
+       *
+       * The distributed vector space numbers component c of node n as
+       * n * components + c, n being the node of the scalar space of the same
+       * degree, so the host scalar space of degree K gives the nodes. A
+       * vertex owned in P1 must be owned in degree K, as both spaces give
+       * a shared vertex to the same process.
+       */
+      void setupShearNodes()
+      {
+        const Rodin::Variational::H1<K, Real, Rodin::Geometry::Mesh<Rodin::Context::MPI>>
+          nodes(std::integral_constant<size_t, K>{}, m_mesh.getHost());
+        Rodin::Index p1Begin = 0, p1End = 0, kBegin = 0, kEnd = 0;
+        m_sh.getOwnershipRange(p1Begin, p1End);
+        nodes.getOwnershipRange(kBegin, kEnd);
+        PetscInt nVector = 0;
+        PetscErrorCode ierr = VecGetLocalSize(m_uOld.getData(), &nVector);
+        assert(ierr == PETSC_SUCCESS);
+        (void)ierr;
+        if ((kEnd - kBegin) * m_mesh.getSpaceDimension() != static_cast<size_t>(nVector))
+        {
+          Rodin::Alert::MemberFunctionException(*this, __func__)
+            << "The velocity has " << nVector << " owned coefficients, not "
+            << m_mesh.getSpaceDimension() << " times the " << (kEnd - kBegin)
+            << " owned nodes of degree " << K << "." << Rodin::Alert::Raise;
+        }
+
+        const Rodin::Index unset = kEnd - kBegin;
+        m_shearNodesHost = ::Kokkos::View<Rodin::Index*, ::Kokkos::HostSpace>(
+          ::Kokkos::view_alloc(std::string("Atrium shear nodes host"), ::Kokkos::WithoutInitializing),
+          p1End - p1Begin);
+        ::Kokkos::deep_copy(m_shearNodesHost, unset);
+        const size_t vertices = m_mesh.getHost().getPolytopeCount(0);
+        for (Rodin::Index v = 0; v < vertices; ++v)
+        {
+          const Rodin::Index p1 = m_sh.getDOFs(0, v).coeff(0);
+          if (p1 < p1Begin || p1 >= p1End)
+            continue;
+          const Rodin::Index node = nodes.getDOFs(0, v).coeff(0);
+          if (node < kBegin || node >= kEnd)
+          {
+            Rodin::Alert::MemberFunctionException(*this, __func__)
+              << "Vertex " << v << " is owned in P1 but not in degree " << K << "."
+              << Rodin::Alert::Raise;
+          }
+          m_shearNodesHost(p1 - p1Begin) = node - kBegin;
+        }
+        for (size_t i = 0; i < m_shearNodesHost.extent(0); ++i)
+        {
+          if (m_shearNodesHost(i) == unset)
+          {
+            Rodin::Alert::MemberFunctionException(*this, __func__)
+              << "Owned P1 coefficient " << i << " has no vertex." << Rodin::Alert::Raise;
+          }
+        }
+        m_shearNodes = ::Kokkos::create_mirror_view_and_copy(MemorySpace{}, m_shearNodesHost);
       }
 
       /// @brief Size of the cells as a function the device evaluates.
@@ -926,6 +997,12 @@ namespace Rodin::Examples::Heart
 
       /// @brief Viscosity of every cell at the previous velocity, P1 only.
       CellValues m_cellViscosity;
+
+      /// @brief Velocity node at the vertex of each owned P1 coefficient, K > 1 only.
+      ::Kokkos::View<Rodin::Index*, MemorySpace> m_shearNodes;
+
+      /// @brief Host copy of m_shearNodes, for fields kept in host memory.
+      ::Kokkos::View<Rodin::Index*, ::Kokkos::HostSpace> m_shearNodesHost;
   };
 }
 
