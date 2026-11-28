@@ -985,7 +985,9 @@ namespace Rodin::Examples::Heart
                 out(c) = tau * rho * (old(c) / dt - (conv(c) - proj(c)));
               return out;
             }),
-          m_sub);
+          // Exact at order 2K for the memory term u'_old / dt (see the device
+          // projection), and started from the previous subscale.
+          m_sub, 2 * K, &m_sub);
 
         // Same sqrt(tau_C) that multiplies div(v) in the linear term and whose
         // square is the implicit coefficient. Lagging one of the two by a step,

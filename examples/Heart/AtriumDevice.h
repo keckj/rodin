@@ -380,9 +380,20 @@ namespace Rodin::Examples::Heart
         m_vectorProjection.solve(m_vectorProjectionKSP);
         copy(m_wTrial.getSolution().getData(), m_convProjection);
 
-        m_vectorProjection = Integral(m_wTrial, m_wTest) -
-          Integral(rho * vmsTau() * ((1.0 / dt) * m_subOld - conv + m_convProjection),
-            m_wTest);
+        // The right-hand side carries the memory term rho tau / dt u'_old, a
+        // degree K field against degree K test functions, so it is integrated
+        // exactly at order 2K. Below that the quadrature over-weights it (the
+        // largest eigenvalue of M^-1 M_Q is 4.19 for P2 at order 2) and the
+        // memory factor rho tau / dt < 1 is amplified instead of damped.
+        auto subscale = Integral(
+          rho * vmsTau() * ((1.0 / dt) * m_subOld - conv + m_convProjection), m_wTest);
+        subscale.setOrder(2 * K);
+        // The solver starts from the previous subscale rather than from the
+        // convective projection left in the shared trial function.
+        [[maybe_unused]] PetscErrorCode ierr =
+          VecCopy(m_sub.getData(), m_wTrial.getSolution().getData());
+        assert(ierr == PETSC_SUCCESS);
+        m_vectorProjection = Integral(m_wTrial, m_wTest) - subscale;
         m_vectorProjection.solve(m_vectorProjectionKSP);
         copy(m_wTrial.getSolution().getData(), m_sub);
 

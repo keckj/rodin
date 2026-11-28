@@ -417,12 +417,26 @@ namespace Rodin::Examples::Heart
         out.setData(m_sTrial.getSolution().getData());
       }
 
-      /// @brief L2 projection of a vector expression, reusing one mass matrix.
+      /**
+       * @brief L2 projection of a vector expression, reusing one mass matrix.
+       * @param order Quadrature order of the right-hand side, inferred when 0.
+       * @param start Initial guess of the solver, the solution of the previous
+       * projection when null.
+       */
       template <class Expression>
-      void projectVector(const Expression& expr, VectorGridFunctionType& out)
+      void projectVector(const Expression& expr, VectorGridFunctionType& out,
+        size_t order = 0, const VectorGridFunctionType* start = nullptr)
       {
-        m_vectorProjection = Rodin::Variational::Integral(m_wTrial, m_wTest) -
-          Rodin::Variational::Integral(expr, m_wTest);
+        auto rhs = Rodin::Variational::Integral(expr, m_wTest);
+        if (order > 0)
+          rhs.setOrder(order);
+        if (start)
+        {
+          [[maybe_unused]] PetscErrorCode ierr =
+            VecCopy(start->getData(), m_wTrial.getSolution().getData());
+          assert(ierr == PETSC_SUCCESS);
+        }
+        m_vectorProjection = Rodin::Variational::Integral(m_wTrial, m_wTest) - rhs;
         m_vectorProjection.solve(m_vectorProjectionKSP);
         out.setData(m_wTrial.getSolution().getData());
       }
