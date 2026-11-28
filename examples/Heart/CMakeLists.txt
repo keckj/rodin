@@ -117,26 +117,53 @@ endif()
 if (RODIN_USE_PETSC AND RODIN_USE_MPI)
   # Atrium: four pressure inlets, one outlet closed by the 0D LV through a
   # mitral diode, VMS/PSPG-stabilised P1/P1 flow and the coagulation kinetics.
-  add_executable(Atrium Atrium.cpp)
-  target_link_libraries(Atrium
-    PUBLIC
-    Rodin::Heart
-    Rodin::Variational
-    Rodin::PETSc
-    Rodin::MPI
-    Rodin::Alert
-    Rodin::Solver
-    Rodin::Geometry
-    Rodin::Assembly)
-  target_include_directories(Atrium PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  if (RODIN_USE_SCOTCH)
-    target_link_libraries(Atrium PUBLIC Rodin::Scotch)
-  endif()
-  # The flow step runs on the Kokkos device under -atrium_device.
+  #
+  # Atrium<1> and Atrium<2> are instantiated in one object library each, and
+  # the device flow step is spread over several sources, so that the device
+  # compiler works on ten small units in parallel instead of one: under NVCC
+  # the single unit took hours. Each source instantiates the members it
+  # defines for the degree RODIN_EXAMPLES_ATRIUM_K.
+  set(ATRIUM_UNITS AtriumHost.cpp)
+  set(ATRIUM_DEVICE OFF)
   if (TARGET Rodin::Kokkos::MPI AND TARGET Rodin::Kokkos::PETSc)
-    target_link_libraries(Atrium PUBLIC Rodin::Kokkos::MPI Rodin::Kokkos::PETSc)
-    target_compile_definitions(Atrium PRIVATE RODIN_EXAMPLES_ATRIUM_DEVICE)
+    set(ATRIUM_DEVICE ON)
+    list(APPEND ATRIUM_UNITS
+      AtriumDeviceSetup.cpp
+      AtriumDeviceAssemble.cpp
+      AtriumDeviceProject.cpp
+      AtriumDeviceShear.cpp)
   endif()
+
+  add_executable(Atrium Atrium.cpp)
+  foreach(ATRIUM_K 1 2)
+    add_library(AtriumP${ATRIUM_K} OBJECT ${ATRIUM_UNITS})
+    target_compile_definitions(AtriumP${ATRIUM_K}
+      PRIVATE RODIN_EXAMPLES_ATRIUM_K=${ATRIUM_K})
+    target_link_libraries(Atrium PRIVATE AtriumP${ATRIUM_K})
+  endforeach()
+
+  foreach(ATRIUM_TARGET Atrium AtriumP1 AtriumP2)
+    target_link_libraries(${ATRIUM_TARGET}
+      PUBLIC
+      Rodin::Heart
+      Rodin::Variational
+      Rodin::PETSc
+      Rodin::MPI
+      Rodin::Alert
+      Rodin::Solver
+      Rodin::Geometry
+      Rodin::Assembly)
+    target_include_directories(${ATRIUM_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    if (RODIN_USE_SCOTCH)
+      target_link_libraries(${ATRIUM_TARGET} PUBLIC Rodin::Scotch)
+    endif()
+    # The flow step runs on the Kokkos device under -atrium_device.
+    if (ATRIUM_DEVICE)
+      target_link_libraries(${ATRIUM_TARGET}
+        PUBLIC Rodin::Kokkos::MPI Rodin::Kokkos::PETSc)
+      target_compile_definitions(${ATRIUM_TARGET} PRIVATE RODIN_EXAMPLES_ATRIUM_DEVICE)
+    endif()
+  endforeach()
 
   add_executable(CoronaryArtery
     CoronaryArtery.cpp

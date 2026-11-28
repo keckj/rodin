@@ -453,6 +453,9 @@ namespace Rodin::Examples::Heart
         return m_valveOpen ? m_cfg.velocityPCOpen : m_cfg.velocityPCClosed;
       }
 
+      /// @brief Builds the device flow, with its spaces, fields and forms.
+      void deviceCreate();
+
       /// @brief Hands the state of a pass to the device and projects.
       void deviceBegin(int pass);
 
